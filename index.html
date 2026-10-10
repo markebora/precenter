@@ -20,7 +20,7 @@ button.pri:hover{background:#F5CB3C}
 button.on{background:var(--ink);color:var(--bg)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 #app{display:grid;grid-template-columns:230px minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"tb tb tb" "lib ctr rgt" "bin bin rgt";gap:8px;padding:8px;height:100vh;height:100dvh}
-#tb{grid-area:tb}#lib{grid-area:lib}#ctr{grid-area:ctr}#rgt{grid-area:rgt}#bot{grid-area:bin;display:flex;gap:8px;height:var(--bot-h,270px);min-height:0}#bot:not(:has(>:not([hidden]))){display:none}#bin{flex:1 1 0;min-width:0}#editSec{flex:0 0 44%;min-width:0}#bin[hidden]+#editSec,#bin.min+#editSec{flex:1 1 auto}
+#tb{grid-area:tb}#lib{grid-area:lib}#ctr{grid-area:ctr}#rgt{grid-area:rgt}#bot{grid-area:bin;display:flex;gap:8px;height:var(--bot-h,min(350px,38vh));min-height:0}#bot:not(:has(>:not([hidden]))){display:none}#bin{flex:1 1 0;min-width:0}#editSec{flex:0 0 44%;min-width:0}#bin[hidden]+#editSec,#bin.min+#editSec{flex:1 1 auto}
 .col{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .hd{font-family:Poppins,Inter,sans-serif;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid var(--line);font-weight:700}
 .scroll{overflow:auto;padding:6px;min-height:0;flex:1}
@@ -420,7 +420,7 @@ body.stg .msg{background:#E8B923;color:#171200;font:700 3vw Poppins,Inter,sans-s
 .aul{max-height:120px;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-bottom:6px}
 .aul button{display:block;width:100%;text-align:left;border:0;border-radius:0;border-bottom:1px solid var(--line);background:none;padding:4px 8px}
 .aul button.on{background:var(--acc);color:var(--accink);font-weight:700}
-.mcb{width:min(640px,94vw)}
+.mcb{width:min(900px,96vw)}.mcs select.pv{min-width:104px}.mcs input.pv{min-width:70px}
 .mcw{display:flex;gap:12px;align-items:flex-start}
 .mcL{width:150px;flex:none;display:flex;flex-direction:column;gap:4px}
 .mcL button{text-align:left;padding:4px 8px}.mcL button.sel{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:700}
@@ -596,7 +596,7 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
           <button id="bBlack" title="Black out (B)">&#9632;</button>
         </div>
       </div>
-      <div id="clrRow" role="toolbar" aria-label="Clear layers"><span class="cl">CLEAR</span><button data-c="all" title="Clear everything except audio, or bring the slide back (F1)">All</button><button data-c="slide" title="Clear or restore the slide text (F2)">Text</button><button data-c="media" title="Clear or restore the background media (F3)">Media</button><button data-c="prop" title="Clear props (F4)">Props</button><button data-c="msg" title="Clear messages (F5)">Messages</button><button data-c="audio" title="Stop the audio (F6)">Audio</button><button data-c="ann" title="Clear the announcement banner (F7)">Announcement</button><button data-c="test" title="Test patterns for the screens">Test &#9662;</button></div>
+      <div id="clrRow" role="toolbar" aria-label="Clear layers"><span class="cl">CLEAR</span><button data-c="all" title="Clear everything except audio, or bring the slide back (F1)">All</button><button data-c="slide" title="Clear or restore the slide text (F2)">Text</button><button data-c="media" title="Clear or restore the background media (F3)">Media</button><button data-c="prop" title="Clear props (F4)">Props</button><button data-c="msg" title="Clear messages (F5)">Messages</button><button data-c="audio" title="Stop the audio (F6)">Audio</button><button data-c="ann" title="Clear the announcement banner (F7)">Announcement</button><button data-c="cam" title="Clear the live video input">Video input</button><button data-c="test" title="Test patterns for the screens">Test &#9662;</button></div>
       <div class="opn" id="opn"><span class="opl">NOTE</span><span class="opt ph" id="opnT"></span><button id="opnA" hidden title="Timed auto-advance. Click to stop it for this slide."></button><button id="opnE" title="Add or edit the note and auto-advance for this slide">Edit</button></div>
       <div class="lyr" role="group" aria-label="Layers">
         <div class="lyH"><span>LAYERS<span id="lyCnt"></span></span><span class="lyHR"><button id="lyLook" title="Switch look">Look</button><button id="lyMin" aria-expanded="true" aria-controls="lyList" title="Minimize the layers list to make room for the tabs below">&#9662;</button></span></div>
@@ -970,7 +970,7 @@ if(/^#stage/.test(location.hash)){
   const LSIZ={both:[8.4,2.4,3.6,1.2],live:[10,2.4,3,1],next:[5,1.6,5.4,1.6],notes:[6.4,2,3,1.2],clock:[6,2,3,1]};
   const fitT=(el,max,min)=>{let f=max;el.style.fontSize=f+'vw';const box=el.parentNode,cs=getComputedStyle(box),av=box.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);while(f>min&&el.scrollHeight>av){f-=.3;el.style.fontSize=f+'vw'}};
   const clk=()=>{$('#sk').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};setInterval(clk,1000);clk();
-  bc.onmessage=e=>{if(e.data.tp!==undefined){dscTestPattern(e.data.tp,'STAGE '+(stN+1));return}if(!e.data.d)return;const p=applyLook(e.data,'s');
+  bc.onmessage=e=>{if(e.data.tp!==undefined){dscTestPattern(e.data.tp,'STAGE '+(stN+1));return}if(!e.data.d||e.data.only==='a')return;const p=applyLook(e.data,'s');
     const lay=(p.stl&&p.stl[stN])||'both',z=LSIZ[lay]||LSIZ.both;
     document.body.className='stg lay-'+lay;
     document.querySelector('.card.live').hidden=lay==='clock';
@@ -995,7 +995,7 @@ if(/^#stage/.test(location.hash)){
     if(m.atok!==undefined){window._atok=m.atok;window._atokAt=Date.now();return}
     if(m.vc){vcApply(o.querySelector('video'),m.vc);return}
     if(m.blob){if(!libO[m.blob.name])libO[m.blob.name]=URL.createObjectURL(m.blob.file);if(lastP){const nm=m.blob.name,own=lastP.d.lib===nm;if(own)lastP.u=libO[nm];if(own||(lastP.d.lay||[]).some(x=>x&&x.lib===nm))paint(o,applyLook(lastP,'a'))}return}
-    if(m.d){m.u=(m.d.lib&&libO[m.d.lib])||'';lastP=m;paint(o,applyLook(m,'a'))}};
+    if(m.d&&m.only!=='s'){m.u=(m.d.lib&&libO[m.d.lib])||'';lastP=m;paint(o,applyLook(m,'a'))}};
   bc.postMessage({hello:1});
   document.title='Lyrics Output';
   o.addEventListener('click',()=>{try{document.documentElement.requestFullscreen()}catch(e){}});
@@ -3053,8 +3053,9 @@ function clrLayer(k){
   else if(k==='tm')te=0;
   else if(k==='prop'){S.props.forEach(x=>x.on=false);save();drawProps()}
   else if(k==='audio')audStop();
+  else if(k==='cam'){if(window.dscCam)window.dscCam.on=false}
 }
-function restoreLayer(k){if(k==='slide')clear=false;else if(k==='media')noMedia=false}
+function restoreLayer(k){if(k==='slide')clear=false;else if(k==='media')noMedia=false;else if(k==='cam'){if(window.dscCam)window.dscCam.on=true}}
 function clrGroup(){const g=cgGet();if(!g.length){toast('Tick at least one layer below to use Clear group.');return}g.forEach(clrLayer);push()}
 function drawLayers(){
   const host=$('#lyList');if(!host)return;
@@ -3065,7 +3066,8 @@ function drawLayers(){
     {k:'prop',n:'Props',live:S.props.some(x=>x.on),val:S.props.filter(x=>x.on).map(propName).join(', ')},
     {k:'msg',n:'Message',live:!!(msgOn||smsgOn),val:[msgOn?msg:'',smsgOn?'(stage) '+smsg:''].filter(Boolean).join(' | ')},
     {k:'tm',n:'Timer',live:!!te,val:te?'running':''},
-    {k:'audio',n:'Audio',live:!aud.el.paused,val:aud.cur>=0&&aud.list[aud.cur]?aud.list[aud.cur].name:''}
+    {k:'audio',n:'Audio',live:!aud.el.paused,val:aud.cur>=0&&aud.list[aud.cur]?aud.list[aud.cur].name:''},
+    {k:'cam',n:'Video input',live:!!(window.dscCam&&window.dscCam.on),val:(window.dscCam&&window.dscCam.on)?'live':''}
   ];
   host.innerHTML='';
   {const c=document.createElement('div');c.className='lyCap';c.textContent='\u2611 = included when you press Clear group (\u2297 or G). \u2715 clears just that layer.';host.appendChild(c)}
@@ -3331,7 +3333,7 @@ function tmGo(t,minOverride){
 async function runStep(st,run,depth){
   const pr=()=>S.props.find(x=>x.id===st.v);
   switch(st.a){
-    case'clearAll':['slide','media','prop','msg','tm'].forEach(clrLayer);push();break;
+    case'clearAll':['slide','media','prop','msg','tm','cam'].forEach(clrLayer);push();break;
     case'clearGroup':clrGroup();break;
     case'clearLayer':clrLayer(st.v||'slide');push();break;
     case'black':black=st.v==='off'?false:st.v==='on'?true:!black;push();break;
@@ -3395,7 +3397,7 @@ function stepRow(steps,i,redraw){
   else if(kind==='num')inp('v','','number','80px');
   else if(kind==='text')inp('v','Text');
   else if(kind==='track'){const e=inp('v','Track name');const dl=document.createElement('datalist');dl.id='mcDl';dl.innerHTML=aud.list.map(a=>'<option value="'+a.name.replace(/"/g,'&quot;')+'">').join('');r.appendChild(dl);e.setAttribute('list','mcDl')}
-  else if(kind==='layer')sel([['slide','Slide'],['media','Media'],['prop','Props'],['msg','Messages'],['tm','Timer'],['audio','Audio'],['ann','Announcement']].map(([k,n])=>optH(k,n,st.v)).join(''),'v','Layer');
+  else if(kind==='layer')sel([['slide','Slide'],['media','Media'],['prop','Props'],['msg','Messages'],['tm','Timer'],['audio','Audio'],['ann','Announcement'],['cam','Video input']].map(([k,n])=>optH(k,n,st.v)).join(''),'v','Layer');
   else if(kind==='media'){const L=libList.filter(x=>!x.deck);sel(L.length?L.map(x=>optH(x.name,(x.type==='video'?'▶ ':'')+x.name.split('/').pop(),st.v)).join(''):none('(add media to the bin first)'),'v','Media file')}
   else if(kind==='ann'){const L=(window.dscAnn&&dscAnn.items)?dscAnn.items():[];sel(L.length?L.map(x=>optH(x.id,(x.t||'').slice(0,34),st.v)).join(''):none('(add an announcement first)'),'v','Announcement')}
   else if(kind==='stg'){const n=Math.max(1,(window.lpScr&&lpScr.layouts?lpScr.layouts().length:1));
@@ -4623,7 +4625,7 @@ const info=(title,rows)=>{
   w.onclick=x;document.addEventListener('keydown',k,true);w.appendChild(b);document.body.appendChild(w)};
 const setView=v=>()=>{gview=v;try{localStorage.setItem('lp-view',v)}catch(e){}drawGrid()};
 const MENUS={
- File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Export current item\u2026',fn:()=>dscExportItems([cur()],cur().title)},{t:'Import items\u2026',fn:()=>dscImportPick(null)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
+ File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Export current item\u2026',fn:()=>dscExportItems([cur()],cur().title)},{t:'Import items\u2026',fn:()=>dscImportPick(null)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
  Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
@@ -4715,15 +4717,16 @@ if(/^#(output|stage)/.test(location.hash))return;
 const row=document.getElementById('clrRow');if(!row)return;
 const NAMES={bars:'color bars',grid:'grid',id:'identify',white:'white'};
 window.dscTP=k=>{window._tp=k||null;bc.postMessage({tp:k||null});toast(k?'Test pattern on: '+NAMES[k]+'. Turn it off before service.':'Test pattern off.')};
-const live={slide:()=>!clear&&!!slideText(cur(),idx),media:()=>!noMedia,prop:()=>S.props.some(x=>x.on),msg:()=>!!(msgOn||smsgOn),audio:()=>!!(aud.el&&!aud.el.paused),ann:()=>!!(window.dscAnn&&dscAnn.on())};
+const live={slide:()=>!clear&&!!slideText(cur(),idx),media:()=>!noMedia,prop:()=>S.props.some(x=>x.on),msg:()=>!!(msgOn||smsgOn),audio:()=>!!(aud.el&&!aud.el.paused),ann:()=>!!(window.dscAnn&&dscAnn.on()),cam:()=>!!(window.dscCam&&window.dscCam.on)};
 const act={
-  all(){const any=live.slide()||live.media()||live.prop()||live.msg()||live.ann()||te;if(any)['slide','media','prop','msg','tm','ann'].forEach(clrLayer);else{restoreLayer('slide');restoreLayer('media')}push()},
+  all(){const any=live.slide()||live.media()||live.prop()||live.msg()||live.ann()||live.cam()||te;if(any)['slide','media','prop','msg','tm','ann','cam'].forEach(clrLayer);else{restoreLayer('slide');restoreLayer('media')}push()},
   slide(){clear?restoreLayer('slide'):clrLayer('slide');push()},
   media(){noMedia?restoreLayer('media'):clrLayer('media');push()},
   prop(){clrLayer('prop');push()},
   msg(){clrLayer('msg');push()},
   audio(){audStop();push()},
-  ann(){dscAnn.off()}
+  ann(){dscAnn.off()},
+  cam(){clrLayer('cam');push()}
 };
 row.querySelectorAll('button[data-c]').forEach(b=>{
   const k=b.dataset.c;
@@ -4736,7 +4739,7 @@ function upd(){
   try{row.querySelectorAll('button[data-c]').forEach(b=>{
     const k=b.dataset.c;
     if(k==='test'){b.classList.toggle('live',!!window._tp);return}
-    if(k==='all'){const any=live.slide()||live.media()||live.prop()||live.msg()||live.ann()||!!te;b.classList.toggle('live',any);b.textContent=any?'All':'All \u21ba';return}
+    if(k==='all'){const any=live.slide()||live.media()||live.prop()||live.msg()||live.ann()||live.cam()||!!te;b.classList.toggle('live',any);b.textContent=any?'All':'All \u21ba';return}
     const lv=live[k]();b.classList.toggle('live',lv);
     if(k==='slide')b.textContent=clear?'Text \u21ba':'Text';
     if(k==='media')b.textContent=noMedia?'Media \u21ba':'Media';
@@ -5637,6 +5640,7 @@ function decVideo(ob,o){
   ob.appendChild(v);const p=v.play();if(p&&p.catch)p.catch(()=>{});
 }
 const camP={};
+window.dscGetCam=dev=>getCam(dev);
 function getCam(dev){
   const k=dev||'';
   if(!camP[k]){camP[k]=navigator.mediaDevices.getUserMedia({video:dev?{deviceId:{exact:dev}}:true,audio:false}).catch(e=>{delete camP[k];throw e})}
@@ -5834,7 +5838,7 @@ sedPanel=function(){
 })();
 </script>
 <script>
-/* ---- bottom panels: one default height (270px), drag the top edge to resize, double-click it to reset; right-panel tabs as icons ---- */
+/* ---- bottom panels: one default height (350px, or 38% of a short window), drag the top edge to resize, double-click it to reset; right-panel tabs as icons ---- */
 (function(){
 if(/^#(output|stage)/.test(location.hash))return;
 const bot=document.getElementById('bot'),root=document.documentElement;
@@ -6056,6 +6060,272 @@ sedRender=function(){_sr2();try{
   if(!E)return;const lay=document.querySelector('#sedCv>.tx.lay:not(.mstL)');
   if(lay)[...lay.children].forEach((el,k)=>{const o=E.objs[k];if(o&&o.hid){el.style.opacity='.25';el.style.outline='1px dashed #888'}});
 }catch(e){}};
+})();
+/* ---- Actions: video input, slide destination, web requests, MIDI, OSC, audio input ---- */
+(function(){
+const isOut=/^#(output|stage)/.test(location.hash);
+/* live video input layer: drawn under the text in every window */
+const _pt=paint;
+paint=function(stage,p){
+  const r=_pt.apply(this,arguments);
+  try{
+    stage.querySelectorAll(':scope>.camL').forEach(x=>x.remove());
+    if(!p||!p.cam||p.black)return r;
+    const v=document.createElement('video');v.className='camL';v.muted=true;v.autoplay=true;v.playsInline=true;
+    v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:'+(p.cam.fit==='contain'?'contain':'cover')+(p.cam.mirror?';transform:scaleX(-1)':'');
+    stage.insertBefore(v,stage.querySelector(':scope>.tx')||null);
+    window.dscGetCam(p.cam.dev).then(st=>{v.srcObject=st;const q=v.play();if(q&&q.catch)q.catch(()=>{})}).catch(()=>{});
+  }catch(e){}
+  return r;
+};
+if(isOut)return;
+const _pl=payload;
+payload=function(){const p=_pl.apply(this,arguments),c=window.dscCam;if(c&&c.on&&!p.black)p.cam={dev:c.dev||'',fit:c.fit||'cover',mirror:!!c.mirror};return p};
+const num=(v,d,a,b)=>{v=parseFloat(v);if(isNaN(v))v=d;return Math.max(a,Math.min(b,v))};
+
+/* ----- MIDI ----- */
+let midiP=null;
+const midiAcc=()=>midiP||(midiP=(navigator.requestMIDIAccess?navigator.requestMIDIAccess({sysex:false}).then(a=>{bindMidi(a);a.onstatechange=()=>bindMidi(a);return a}):Promise.reject(new Error('MIDI is not available in this browser (use Chrome or Edge)'))));
+async function midiOut(st){
+  const a=await midiAcc(),outs=[...a.outputs.values()],o=st.dev?outs.find(x=>x.id===st.dev):outs[0];
+  if(!o)throw new Error('no MIDI output found');
+  const ch=num(st.ch,1,1,16)-1,n=num(st.n,60,0,127),v=num(st.x,100,0,127),t=st.t||'noteon';
+  o.send(t==='noteoff'?[0x80|ch,n,v]:t==='cc'?[0xB0|ch,n,v]:t==='pc'?[0xC0|ch,n]:[0x90|ch,n,v]);
+}
+let learn=null;
+function bindMidi(a){a.inputs.forEach(i=>{i.onmidimessage=onMidi})}
+function onMidi(e){
+  const d=e.data;if(!d||d.length<2)return;const k=d[0]&0xF0,ch=(d[0]&0x0F)+1;if(d[0]>=0xF0)return;
+  let type=k===0x90&&d[2]>0?'noteon':(k===0x80||(k===0x90&&d[2]===0))?'noteoff':k===0xB0?'cc':k===0xC0?'pc':null;if(!type)return;
+  const n=d[1],val=d.length>2?d[2]:0;
+  if(learn){const l=learn;learn=null;l({src:type,ch,n});return}
+  (S.trigs||[]).forEach(t=>{
+    if(t.src!==type)return;if(t.ch&&+t.ch!==ch)return;if(+t.n!==n)return;
+    if(type==='cc'&&val<num(t.min,0,0,127))return;
+    fire(t);
+  });
+}
+/* ----- OSC over a WebSocket bridge (browsers cannot send UDP themselves) ----- */
+const enc=new TextEncoder(),dec=new TextDecoder();
+function ostr(s){const b=enc.encode(s),o=new Uint8Array((b.length+4)&~3);o.set(b);return o}
+function oscEnc(addr,args){
+  let tags=',';const body=[];
+  args.forEach(a=>{
+    if(typeof a==='number'&&Number.isInteger(a)){tags+='i';const b=new Uint8Array(4);new DataView(b.buffer).setInt32(0,a);body.push(b)}
+    else if(typeof a==='number'){tags+='f';const b=new Uint8Array(4);new DataView(b.buffer).setFloat32(0,a);body.push(b)}
+    else{tags+='s';body.push(ostr(String(a)))}});
+  const parts=[ostr(addr),ostr(tags),...body],len=parts.reduce((x,p)=>x+p.length,0),o=new Uint8Array(len);let p=0;parts.forEach(x=>{o.set(x,p);p+=x.length});return o;
+}
+function oscDec(buf){
+  const u=new Uint8Array(buf),dv=new DataView(buf);let p=0;
+  const rs=()=>{let e=p;while(e<u.length&&u[e]!==0)e++;const t=dec.decode(u.slice(p,e));p=(e+4)&~3;return t};
+  const addr=rs(),tags=u.length>p?rs().slice(1):'',args=[];
+  for(const t of tags){if(t==='i'){args.push(dv.getInt32(p));p+=4}else if(t==='f'){args.push(dv.getFloat32(p));p+=4}else if(t==='s')args.push(rs());else if(t==='T')args.push(true);else if(t==='F')args.push(false);else break}
+  return{addr,args};
+}
+window.dscOsc={enc:oscEnc,dec:oscDec};
+let ws=null,wsUrl='',wsState='off';
+function oscConnect(){
+  const url=((S.osc&&S.osc.url)||'').trim();
+  if(!/^wss?:\/\//i.test(url))return Promise.reject(new Error('OSC needs a WebSocket address like ws://localhost:8080'));
+  if(ws&&ws.readyState<=1&&wsUrl===url)return ws.readyState===1?Promise.resolve(ws):new Promise((ok,no)=>{ws.addEventListener('open',()=>ok(ws),{once:true});ws.addEventListener('error',()=>no(new Error('OSC bridge not reachable')),{once:true})});
+  try{if(ws)ws.close()}catch(e){}
+  wsUrl=url;wsState='connecting';
+  return new Promise((ok,no)=>{
+    let w;try{w=new WebSocket(url)}catch(e){wsState='error';no(new Error('OSC address not allowed: '+e.message));return}
+    w.binaryType='arraybuffer';ws=w;
+    w.onopen=()=>{wsState='on';ok(w);try{drawTrig()}catch(e){}};
+    w.onerror=()=>{wsState='error';no(new Error('OSC bridge not reachable at '+url+' (is the bridge running? On an https page only wss:// or ws://localhost work)'));try{drawTrig()}catch(e){}};
+    w.onclose=()=>{if(ws===w)wsState='off';try{drawTrig()}catch(e){}};
+    w.onmessage=async m=>{
+      try{let msg;
+        if(typeof m.data==='string'){const j=JSON.parse(m.data);msg={addr:j.address||j.addr,args:j.args||[]}}
+        else if(m.data instanceof ArrayBuffer)msg=oscDec(m.data);else msg=oscDec(await m.data.arrayBuffer());
+        if(!msg||!msg.addr)return;
+        (S.trigs||[]).forEach(t=>{if(t.src!=='osc'||!t.addr)return;const a=t.addr.trim(),ok2=a.endsWith('*')?msg.addr.startsWith(a.slice(0,-1)):msg.addr===a;if(ok2)fire(t)});
+        if(learn){const l=learn;learn=null;l({src:'osc',addr:msg.addr})}
+      }catch(e){}};
+  });
+}
+function parseArgs(t){return String(t||'').trim().split(/\s+/).filter(Boolean).map(x=>/^-?\d+$/.test(x)?parseInt(x,10):/^-?\d*\.\d+$/.test(x)?parseFloat(x):x)}
+/* ----- audio input ----- */
+const AI={ctx:null,stream:null,an:null,gain:null,src:null,dev:null,mon:false,lvl:0,buf:null,iv:null};
+async function aiOpen(dev){
+  if(AI.stream&&AI.dev===(dev||''))return;
+  aiClose();
+  AI.stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:dev?{exact:dev}:undefined,echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+  AI.dev=dev||'';AI.ctx=AI.ctx||new (window.AudioContext||window.webkitAudioContext)();try{await AI.ctx.resume()}catch(e){}
+  AI.src=AI.ctx.createMediaStreamSource(AI.stream);AI.an=AI.ctx.createAnalyser();AI.an.fftSize=1024;AI.src.connect(AI.an);
+  AI.gain=AI.ctx.createGain();AI.gain.gain.value=0;AI.buf=new Uint8Array(AI.an.fftSize);
+  AI.iv=setInterval(aiTick,80);
+}
+function aiClose(){clearInterval(AI.iv);AI.iv=null;try{AI.stream&&AI.stream.getTracks().forEach(t=>t.stop())}catch(e){}try{AI.src&&AI.src.disconnect();AI.gain&&AI.gain.disconnect()}catch(e){}AI.stream=null;AI.mon=false;AI.lvl=0}
+function aiMon(on){
+  if(!AI.gain)return;
+  try{AI.gain.disconnect()}catch(e){}
+  if(on){AI.src.connect(AI.gain);AI.gain.connect(AI.ctx.destination);AI.gain.gain.value=1}else{AI.gain.gain.value=0;try{AI.src.disconnect(AI.gain)}catch(e){}}
+  AI.mon=!!on;
+}
+const aiState=new Map();window.dscAudioIn={level:()=>AI.lvl,on:()=>!!AI.stream};
+function aiTick(){
+  AI.an.getByteTimeDomainData(AI.buf);let sum=0;for(let i=0;i<AI.buf.length;i++){const x=(AI.buf[i]-128)/128;sum+=x*x}
+  AI.lvl=Math.min(100,Math.sqrt(sum/AI.buf.length)*300);
+  const now=Date.now();
+  (S.trigs||[]).forEach(t=>{
+    if(t.src!=='audio')return;const st=aiState.get(t.id)||{since:0,armed:true,low:0};aiState.set(t.id,st);const th=num(t.thr,40,1,100);
+    if(AI.lvl>=th){if(!st.since)st.since=now;st.low=0;if(st.armed&&now-st.since>=num(t.ms,300,0,10000)){st.armed=false;fire(t)}}
+    else{st.since=0;if(!st.armed){st.low=st.low||now;if(now-st.low>800){st.armed=true;st.low=0}}}
+  });
+  const m=document.getElementById('aiMeter');if(m)m.style.width=AI.lvl+'%';
+}
+/* ----- triggers ----- */
+const lastFire=new Map();
+function fire(t){
+  const now=Date.now();if(now-(lastFire.get(t.id)||0)<150)return;lastFire.set(t.id,now);
+  const m=(S.macros||[]).find(x=>String(x.id)===String(t.mac));
+  if(m){runMacro(m);toast('Trigger: '+m.n)}
+}
+/* ----- extra actions ----- */
+const PLUS={
+  camShow(st){window.dscCam={dev:st.v||'',fit:st.f||'cover',mirror:!!st.mi,on:true};push()},
+  vidPlay(st){if(!vidEl()){toast('Action: there is no background video on this slide.');return}const o=st.v||'play';if(o==='restart'){vidCtl('seek',0);vidCtl('play')}else vidCtl(o==='pause'?'pause':'play')},
+  slideTo(st){
+    const it=st.v?S.songs.find(x=>String(x.id)===String(st.v)):cur();if(!it){toast('Action: that item is not in this playlist.');return}
+    const n=Math.max(1,Math.round(+st.n||1));
+    if(!st.d||st.d==='live'){
+      if(!st.v||String(it.id)===String(S.sel)){go(Math.min(n,expand(cur()).length)-1)}
+      else{S.sel=it.id;idx=Math.min(n,expand(it).length)-1;save();drawAll();try{dscSlideAct()}catch(e){}}
+      return;
+    }
+    const sv=[S.sel,idx];let p;
+    try{S.sel=it.id;idx=Math.min(n,expand(it).length)-1;p=payload()}finally{S.sel=sv[0];idx=sv[1]}
+    p.only=st.d==='stage'?'s':'a';
+    const ln=p.d&&p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
+    bc.postMessage(p);toast('Slide '+n+' sent to the '+(st.d==='stage'?'stage':'audience')+' screens only.');
+  },
+  async http(st){
+    const u=String(st.v||'').trim();
+    if(!/^https?:\/\//i.test(u)){toast('Action: a web request needs a full address starting with http:// or https://');return}
+    if(location.protocol==='https:'&&/^http:\/\//i.test(u)&&!/^http:\/\/(localhost|127\.|\[::1\])/i.test(u)){toast('Web request blocked: this page is on https, so the browser will not send to a plain http:// address. Use an https:// address.');return}
+    const m=(st.m||'GET').toUpperCase(),hasBody=['POST','PUT','PATCH','DELETE'].includes(m)&&st.b;
+    const h={};String(st.h||'').split('\n').forEach(l=>{const i=l.indexOf(':');if(i>0)h[l.slice(0,i).trim()]=l.slice(i+1).trim()});
+    if(hasBody&&!Object.keys(h).some(k=>k.toLowerCase()==='content-type'))h['Content-Type']={json:'application/json',form:'application/x-www-form-urlencoded'}[st.ct]||'text/plain';
+    const body=hasBody?String(st.b):undefined;
+    try{const r=await fetch(u,{method:m,headers:h,body,keepalive:!body||body.length<60000});toast('Web request '+m+': '+r.status+(r.statusText?' '+r.statusText:''))}
+    catch(e){toast('Web request '+m+' sent, but the browser can\u2019t show a reply. If nothing happened on the other end, check the address, or that device/site may need to allow web pages to call it (CORS).')}
+  },
+  async midiSend(st){await midiOut(st)},
+  async oscSend(st){
+    const a=String(st.v||'').trim();if(!a.startsWith('/')){toast('Action: an OSC address starts with /, for example /cue/1/go');return}
+    const w=await oscConnect();w.send(oscEnc(a,parseArgs(st.b)));
+  },
+  async aiMonitor(st){
+    const o=st.v||'toggle';
+    if(o==='off'){aiMon(false);if(!(S.trigs||[]).some(t=>t.src==='audio'&&S.trigOn))aiClose();return}
+    await aiOpen(st.dev||'');aiMon(o==='on'?true:!AI.mon);toast(AI.mon?'Audio input is playing through this computer. Use headphones or keep the volume down to avoid feedback.':'Audio input is no longer played through this computer.');
+  }
+};
+const _rs=runStep;
+runStep=async function(st,run,depth){const f=PLUS[st.a];if(f)return f(st,run,depth);return _rs.apply(this,arguments)};
+/* put the new actions in the catalog */
+const G=n=>ACT_GROUPS.find(g=>g[0]===n)[1];
+[[ 'Media',['camShow','Show video input (live camera)','cam']],['Media',['vidPlay','Background video: play / pause / restart','vid']],
+ ['Interactive',['midiSend','Communication: MIDI message','midi']],['Interactive',['oscSend','Communication: OSC message','osc']],['Interactive',['aiMonitor','Audio input: listen through this computer','ai']],
+ ['Slide',['slideTo','Slide destination (item, slide, screen)','dest']]].forEach(([g,a])=>{G(g).push(a);MACRO_ACTS.push(a)});
+/* rows for the new action kinds */
+const _sr=stepRow;
+stepRow=function(steps,i,redraw){
+  const r=_sr(steps,i,redraw),st=steps[i],kind=(MACRO_ACTS.find(a=>a[0]===st.a)||[])[2],first=r.querySelector('button');
+  const put=e=>{r.insertBefore(e,first);return e};
+  const sel=(opts,key,label,w)=>{const e=document.createElement('select');e.classList.add('pv');e.setAttribute('aria-label',label);if(w)e.style.cssText='width:'+w+';flex:none';
+    e.innerHTML=opts.map(([v,n])=>optH(v,n,st[key]===undefined?opts[0][0]:st[key])).join('');e.onchange=()=>{st[key]=e.value;save();if(key==='m'||key==='t')redraw()};put(e);return e};
+  const inp=(key,ph,type,w)=>{const e=document.createElement('input');if(type)e.type=type;e.placeholder=ph;e.title=ph;e.value=st[key]===undefined?'':st[key];e.classList.add('pv');if(w)e.style.cssText='width:'+w+';flex:none';e.setAttribute('aria-label',ph);e.oninput=e.onchange=()=>{st[key]=e.value;save()};put(e);return e};
+  const devSel=(key,ph,fill)=>{const e=sel([['',ph]],key,ph);fill().then(list=>{list.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;e.appendChild(o)});e.value=st[key]||''}).catch(()=>{});return e};
+  if(kind==='cam'){
+    devSel('v','Default video input',async()=>{try{return(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'&&d.deviceId).map((d,k)=>[d.deviceId,d.label||('Video input '+(k+1))])}catch(e){return[]}});
+    sel([['cover','Fill (crop)'],['contain','Fit']],'f','Fit',null);
+    const l=document.createElement('label');l.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;flex:none';const c=document.createElement('input');c.type='checkbox';c.style.width='auto';c.checked=!!st.mi;c.onchange=()=>{st.mi=c.checked;save()};l.append(c,'Mirror');put(l);
+  }else if(kind==='vid')sel([['play','Play'],['pause','Pause'],['restart','Restart']],'v','Video');
+  else if(kind==='dest'){
+    sel([['','This item'],...S.songs.map(x=>[String(x.id),(x.title||'Untitled')+' · '+secOf(x)])],'v','Item');
+    inp('n','Slide #','number','70px');
+    sel([['live','Audience + stage (live)'],['audience','Audience screens only'],['stage','Stage screens only']],'d','Send to');
+  }else if(kind==='midi'){
+    sel([['noteon','Note on'],['noteoff','Note off'],['cc','Control change'],['pc','Program change']],'t','Message type');
+    inp('ch','Channel 1-16','number','62px');inp('n',st.t==='cc'?'Controller 0-127':st.t==='pc'?'Program 0-127':'Note 0-127','number','74px');
+    if(st.t!=='pc')inp('x','Value 0-127','number','66px');
+    devSel('dev','First MIDI output',async()=>{const a=await midiAcc();return[...a.outputs.values()].map(o=>[o.id,o.name])});
+  }else if(kind==='osc'){inp('v','/address, e.g. /cue/1/go');inp('b','Values, e.g. 1 0.5 hello','text','150px')}
+  else if(kind==='ai'){
+    sel([['toggle','Toggle'],['on','On'],['off','Off']],'v','Listen');
+    devSel('dev','Default audio input',async()=>{try{return(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput'&&d.deviceId).map((d,k)=>[d.deviceId,d.label||('Audio input '+(k+1))])}catch(e){return[]}});
+  }else if(kind==='http'){
+    const m=r.querySelector('select[aria-label=Method]');
+    if(m){const cur=st.m||'GET';m.innerHTML=['GET','POST','PUT','PATCH','DELETE'].map(x=>optH(x,x,cur)).join('');m.value=cur;m.onchange=()=>{st.m=m.value;save();redraw()}}
+    const has=['POST','PUT','PATCH','DELETE'].includes(st.m||'GET');
+    if(has&&st.m!=='POST')inp('b','Body (optional)','text');
+    if(has)sel([['text','Text'],['json','JSON'],['form','Form']],'ct','Body type','72px');
+    const h=inp('h','Headers, one per line (Name: value)','text','150px');h.title='Optional. Example: Authorization: Bearer abc123';
+  }
+  return r;
+};
+/* ----- the MIDI / OSC / audio triggers window ----- */
+const SRC=[['noteon','MIDI note on'],['noteoff','MIDI note off'],['cc','MIDI control change'],['pc','MIDI program change'],['osc','OSC message'],['audio','Audio input level']];
+let dlg=null;
+function drawTrig(){
+  if(!dlg)return;const L=dlg.querySelector('.tgL'),ST=dlg.querySelector('.tgS');
+  S.trigs=S.trigs||[];S.osc=S.osc||{url:''};
+  ST.innerHTML='';
+  const row=(label,el)=>{const d=document.createElement('div');d.className='row';d.style.cssText='align-items:center;gap:6px;margin-bottom:6px';const b=document.createElement('b');b.style.cssText='width:64px;flex:none';b.textContent=label;d.append(b,...el);ST.appendChild(d)};
+  const url=document.createElement('input');url.placeholder='OSC bridge, e.g. ws://localhost:8080';url.value=S.osc.url||'';url.style.flex='1';url.oninput=()=>{S.osc.url=url.value;save()};
+  const cb=document.createElement('button');cb.textContent=wsState==='on'?'Reconnect':'Connect';cb.onclick=()=>{try{if(ws)ws.close()}catch(e){}ws=null;oscConnect().then(()=>toast('OSC connected.')).catch(e=>toast(e.message));drawTrig()};
+  const sp=document.createElement('span');sp.className='hint';sp.style.margin='0';sp.textContent=wsState==='on'?'connected':wsState==='connecting'?'connecting…':wsState==='error'?'not reachable':'not connected';
+  row('OSC',[url,cb,sp]);
+  const mi=document.createElement('button');mi.textContent='Connect MIDI';const ms=document.createElement('span');ms.className='hint';ms.style.margin='0';ms.textContent='Allow MIDI devices when your browser asks.';
+  mi.onclick=()=>midiAcc().then(a=>{ms.textContent=a.inputs.size+' input'+(a.inputs.size===1?'':'s')+', '+a.outputs.size+' output'+(a.outputs.size===1?'':'s')+' found'}).catch(e=>{ms.textContent=e.message});
+  row('MIDI',[mi,ms]);
+  const ds=document.createElement('select');ds.style.flex='1';ds.innerHTML='<option value="">Default audio input</option>';
+  navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices&&navigator.mediaDevices.enumerateDevices().then(l=>{l.filter(d=>d.kind==='audioinput'&&d.deviceId).forEach((d,k)=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('Audio input '+(k+1));ds.appendChild(o)});ds.value=S.aiDev||''}).catch(()=>{});
+  ds.onchange=()=>{S.aiDev=ds.value;save()};
+  const lb=document.createElement('button');lb.textContent=AI.stream?'Stop listening':'Start listening';
+  lb.onclick=async()=>{try{if(AI.stream){S.trigOn=false;save();aiClose()}else{await aiOpen(S.aiDev||'');S.trigOn=true;save()}}catch(e){toast('Audio input: '+e.message)}drawTrig()};
+  const mt=document.createElement('div');mt.style.cssText='flex:0 0 90px;height:8px;border-radius:4px;background:var(--chip);overflow:hidden';mt.innerHTML='<div id="aiMeter" style="height:100%;width:0;background:var(--acc)"></div>';
+  row('Audio',[ds,lb,mt]);
+  L.innerHTML='';
+  S.trigs.forEach((t,i)=>{
+    const r=document.createElement('div');r.className='mcs';r.style.marginBottom='6px';
+    const add=e=>{r.appendChild(e);return e};
+    const mk=(tag,props)=>Object.assign(document.createElement(tag),props);
+    const s1=add(mk('select'));s1.innerHTML=SRC.map(([v,n])=>optH(v,n,t.src)).join('');s1.onchange=()=>{t.src=s1.value;save();drawTrig()};
+    const inp=(key,ph,w,type)=>{const e=add(mk('input',{placeholder:ph,title:ph,value:t[key]===undefined?'':t[key]}));if(type)e.type=type;e.style.cssText='width:'+w+';flex:none';e.oninput=()=>{t[key]=e.value;save()};return e};
+    const learnB=(label)=>{const b=add(mk('button',{textContent:label||'Learn',title:'Press the key, pad or fader on your device now'}));b.onclick=()=>{b.textContent='Waiting…';(async()=>{try{if(t.src==='osc')await oscConnect();else await midiAcc()}catch(e){toast(e.message);b.textContent='Learn';return}learn=m=>{Object.assign(t,m);save();drawTrig()};setTimeout(()=>{if(learn){learn=null;b.textContent='Learn'}},15000)})()};return b};
+    if(['noteon','noteoff','cc','pc'].includes(t.src)){inp('ch','Channel (empty = any)','74px','number');inp('n',t.src==='cc'?'Controller':t.src==='pc'?'Program':'Note','72px','number');if(t.src==='cc')inp('min','Value ≥','62px','number');learnB()}
+    else if(t.src==='osc'){inp('addr','/address (end with * for any)','190px');learnB()}
+    else{inp('thr','Level 1-100','72px','number');inp('ms','Hold ms','72px','number')}
+    add(mk('span',{className:'hint',textContent:'run'})).style.margin='0';
+    const m=add(mk('select'));m.classList.add('pv');m.innerHTML=(S.macros.length?S.macros.map(x=>optH(x.id,x.n,t.mac)).join(''):'<option value="">(make a macro first)</option>');if(t.mac===undefined&&S.macros.length){t.mac=S.macros[0].id;save()}m.value=t.mac||'';m.onchange=()=>{t.mac=m.value;save()};
+    const x=add(mk('button',{textContent:'✕',title:'Remove trigger'}));x.onclick=()=>{S.trigs.splice(i,1);save();drawTrig()};
+    L.appendChild(r);
+  });
+  if(!S.trigs.length){const h=document.createElement('div');h.className='hint';h.textContent='No triggers yet. A trigger runs one of your macros when a MIDI note, a control change, an OSC message or a sound level arrives.';L.appendChild(h)}
+}
+window.dscTriggers=function(){
+  if(dlg)return;
+  const w=document.createElement('div');w.className='qe';
+  w.innerHTML='<div class="qb mcb" role="dialog" aria-label="MIDI, OSC and audio triggers" style="width:min(780px,96vw);max-height:90vh;overflow:auto"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px"><b>MIDI, OSC and audio triggers</b><button class="x pri">Done</button></div><div class="hint" style="margin:0 0 8px">Connect a device, then add triggers. Each trigger runs a macro (make macros on the Macros tab, and use the <b>Communication</b> actions there to send MIDI or OSC out). Browsers cannot send plain UDP, so OSC goes through a small WebSocket bridge.</div><div class="tgS"></div><div class="row" style="margin:10px 0 6px;align-items:center"><b>Triggers</b><button class="tgA">+ Add trigger</button></div><div class="tgL"></div></div>';
+  document.body.appendChild(w);dlg=w;
+  const done=()=>{document.removeEventListener('keydown',kd,true);w.remove();dlg=null;learn=null};
+  const kd=e=>{if(e.key==='Escape'){e.stopPropagation();done()}};document.addEventListener('keydown',kd,true);
+  w.querySelector('.x').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
+  w.querySelector('.tgA').onclick=()=>{S.trigs=S.trigs||[];S.trigs.push({id:'g'+Date.now().toString(36),src:'noteon',ch:'',n:60,mac:(S.macros[0]||{}).id||''});save();drawTrig()};
+  drawTrig();
+};
+/* start listening again after a reload if it was on */
+setTimeout(()=>{try{
+  if(S.trigOn&&(S.trigs||[]).some(t=>t.src==='audio'))aiOpen(S.aiDev||'').catch(()=>{});
+  if((S.trigs||[]).some(t=>/^(noteon|noteoff|cc|pc)$/.test(t.src)))midiAcc().catch(()=>{});
+  if((S.trigs||[]).some(t=>t.src==='osc')&&S.osc&&S.osc.url)oscConnect().catch(()=>{});
+}catch(e){}},1500);
 })();
 </script>
 </body>
