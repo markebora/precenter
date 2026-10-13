@@ -1,0 +1,108 @@
+# Disciples PreCenter: Windows desktop app
+
+This folder turns your PreCenter page (`app/index.html`) into a real Windows program with an
+installer, a portable `.exe`, an editable settings file, and file associations for `.dscservice`
+and `.dscitems`.
+
+**Status.** The page code, the shell logic (settings, address rules, permissions, opening files,
+NDI hand-off) and the icons were tested. The Windows `.exe` itself has **not** been built or run yet,
+because that needs a Windows machine or GitHub. Do the first build, then run the checklist at the bottom.
+
+## 1. Get the installer (.exe)
+
+### Option A: GitHub builds it for you (no setup on your PC)
+1. Put this folder in a GitHub repository (a private one is fine).
+2. Open the **Actions** tab, choose **Build Windows installer**, press **Run workflow**.
+3. When it finishes (about 5 minutes), open the run and download **Disciples-PreCenter-Windows**.
+   It holds `Disciples-PreCenter-Setup-1.0.0.exe` (installer) and `Disciples-PreCenter-Portable-1.0.0.exe`.
+4. Optional: push a tag like `v1.0.1` and the files are also attached to a GitHub release.
+
+### Option B: build on your own Windows PC
+1. Install **Node.js LTS** from https://nodejs.org.
+2. Double-click `build-windows.bat` (or run `npm install` then `npm run dist` in a terminal here).
+3. Your files appear in the `dist` folder.
+
+### Just try it without building
+`npm install` then `npm start` opens the app straight away.
+
+## 2. The settings file
+
+The first time the app runs it writes **`config.json`** to:
+
+`%APPDATA%\Disciples PreCenter\config.json`  (or use **File > Open settings file** in the app)
+
+Edit it in Notepad, save, and restart the app. Lines starting with `//` are notes. A mistake in the file
+never stops the app: it uses the defaults for that run and tells you what was wrong. Delete the file to
+get a fresh copy.
+
+| Setting | What it does |
+|---|---|
+| `mode`, `startUrl` | `"local"` runs the copy inside the app (works offline). `"remote"` loads `startUrl` (a full https address, for example your hosted copy). If it cannot load, the built-in copy opens instead. |
+| `siteUrl` | Your Disciples site, used by the Help menu. |
+| `window` | Start size, whether it starts maximized, and whether the menu bar is always visible (otherwise press Alt). |
+| `permissions` | What PreCenter may ask this computer for: camera and microphone, MIDI, pasting pictures, placing windows on other screens, full screen, screen sharing. `false` always refuses. |
+| `corsRelaxHosts` | Web services PreCenter may call from the app's own address (your Disciples site for sign-in, the Bible and Planning Center services). Add a host only if a feature says it is blocked. |
+| `externalLinks` | `"browser"` opens other links in your normal browser. `"block"` ignores them. |
+| `offlineLibraries` | Uses a built-in copy of JSZip so saving a service as one file works with no internet. |
+| `singleInstance` | A second launch brings the first window forward (and opens a file you double-clicked). |
+| `devTools` | Allows F12 developer tools. Leave off for church use. |
+| `ndi` | See "Turning on NDI". |
+
+Logs are in `%APPDATA%\Disciples PreCenter\logs\main.log`.
+
+## 3. How the app handles addresses (URLs)
+
+* PreCenter runs from its own address, `dsc://app/`, not from a file path. That is what lets sign-in,
+  saving, pop-up windows and the Audience/Stage screens behave as they do on the web.
+* The Audience, Stage, Identify and Remote windows are allowed to open. Web links (for example SongSelect)
+  open in your browser. Anything else (`file:`, `javascript:` and so on) is refused.
+* The main window cannot be navigated away from the app.
+* Sign-in asks your Disciples site for its settings. The app adds the permission headers for the hosts in
+  `corsRelaxHosts` so that works from `dsc://app`. **Risk:** if your Firebase key is restricted to certain
+  website addresses, sign-in from `dsc://app` may be refused. If that happens, either allow it in the Firebase
+  console or set `"mode": "remote"` with `startUrl` pointing at your hosted copy.
+
+## 4. Opening files
+
+Double-clicking a `.dscservice` or `.dscitems` file (or "Open with") opens it in PreCenter, the same as
+choosing it from the File menu inside the app. The app asks before replacing your current service.
+
+## 5. Turning on NDI (optional, not tested)
+
+NDI is **off** in this build, so the installer builds reliably. The app side is ready: Screens set to
+NDI are handed to the shell, which opens a hidden window per screen and sends its frames.
+
+To try it on a Windows PC:
+1. Install **NDI Tools** from https://ndi.video.
+2. In this folder run `npm install grandiose` (a native add-on; it needs the Visual Studio Build Tools),
+   then `npx @electron/rebuild`. Other NDI bindings also work: only `ndi/sender.js` talks to the binding,
+   and its method names must match the one you install.
+3. In `config.json` set `"ndi": { "enabled": true }`, restart, and set a screen's output to NDI under Screens.
+4. Check it in NDI Studio Monitor. Read NDI's licence and trademark terms before you share the app.
+
+Not included: NDI audio. 4K at 60 fps may be too heavy for the way frames are copied.
+
+## 6. First-run checklist (after your first build)
+
+- [ ] The installer runs, makes a Start menu entry and a desktop shortcut, and the app opens with the logo icon.
+- [ ] `config.json` appears in `%APPDATA%\Disciples PreCenter`. Change `window.width`, restart, see it apply.
+- [ ] Sign-in works (see the risk in section 3).
+- [ ] **Audience** opens on the projector (Extend displays) and **Stage** on its own screen.
+- [ ] Pasting a screenshot into the slide editor works.
+- [ ] **File > Save service to computer** writes one `.dscservice` file; double-clicking it opens it.
+- [ ] Camera/microphone/MIDI prompts behave as set in `permissions`.
+- [ ] Windows SmartScreen shows "unknown publisher" for an unsigned build: choose **More info > Run anyway**.
+  Signing the app (a code-signing certificate) removes that warning.
+
+## 7. Updating
+
+Replace `app/index.html` with the new PreCenter file, bump `"version"` in `package.json`, and build again.
+Installing the new setup file over the old one keeps your settings and saved data. (Automatic updates are not set up.)
+
+## 8. Troubleshooting
+
+* **Blank window**: open `logs\main.log`; or set `"mode": "local"` in `config.json`.
+* **"Settings were not used" message**: your `config.json` has a typo; the message names it.
+* **A web feature is blocked**: add its host to `corsRelaxHosts`.
+* **Antivirus flags the `.exe`**: it is unsigned and new; sign it or add an exception.
+* **Windows were placed on the wrong screen**: make sure `window-management` is `true` and the screens are set to Extend.
