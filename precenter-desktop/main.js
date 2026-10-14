@@ -152,20 +152,29 @@ function guardWebContents(wc) {
   });
 }
 
+const TITLE_H = 32;
+let customBar = false;
+
 function createMain() {
   const w = cfg.window;
+  customBar = !!w.customTitleBar && process.platform === 'win32';
   mainWin = new BrowserWindow({
     width: w.width, height: w.height, minWidth: 900, minHeight: 600,
     show: false, title: 'Disciples PreCenter', backgroundColor: w.backgroundColor,
     autoHideMenuBar: !w.menuBar,
     icon: path.join(__dirname, 'build', 'icon.png'),
+    // Own slim title strip: Windows still draws the minimize / maximize / close buttons for us.
+    ...(customBar ? { titleBarStyle: 'hidden', titleBarOverlay: { color: w.backgroundColor, symbolColor: '#ffffff', height: TITLE_H } } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      additionalArguments: customBar ? ['--dsc-titlebar=' + TITLE_H] : [],
       contextIsolation: true, nodeIntegration: false, sandbox: true,
       backgroundThrottling: false, spellcheck: false, devTools: !!cfg.devTools
     }
   });
 
+  mainWin.on('enter-full-screen', () => mainWin.webContents.send('win:fullscreen', true));
+  mainWin.on('leave-full-screen', () => mainWin.webContents.send('win:fullscreen', false));
   mainWin.once('ready-to-show', () => { if (w.maximized) mainWin.maximize(); mainWin.show(); });
   mainWin.webContents.on('did-finish-load', () => {
     // give the app a moment to start (and the sign-in gate to appear) before handing it files
@@ -229,6 +238,12 @@ function setupIpc() {
     version: app.getVersion(), configPath: cfgResult.path, dataPath: app.getPath('userData'),
     mode: cfg.mode, ndiEnabled: !!cfg.ndi.enabled, ndiAvailable: ndiSender.available()
   }));
+  ipcMain.on('win:overlay', (e, o) => {
+    if (!customBar || !mainWin || e.sender !== mainWin.webContents) return;
+    const ok = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+    if (!o || !ok(o.color) || !ok(o.symbolColor)) return;
+    try { mainWin.setTitleBarOverlay({ color: o.color, symbolColor: o.symbolColor, height: TITLE_H }); } catch (err) { log.warn('Title bar colors: ' + err.message); }
+  });
   ipcMain.handle('app:openConfig', () => shell.openPath(cfgResult.path));
   ipcMain.handle('app:openData', () => shell.openPath(app.getPath('userData')));
   ipcMain.handle('ndi:sync', async (_e, list) => {

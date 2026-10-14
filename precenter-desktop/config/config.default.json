@@ -15,6 +15,7 @@
     "width": 1500,
     "height": 900,
     "maximized": true,
+    "customTitleBar": true,    // true = slim app title strip with its own minimize / maximize / close; false = normal Windows title bar
     "menuBar": false,          // true shows File / View / Help all the time (otherwise press Alt)
     "backgroundColor": "#0e0f13"
   },

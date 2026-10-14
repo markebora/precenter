@@ -9,7 +9,7 @@ const DEFAULTS = {
   mode: 'local',
   startUrl: '',
   siteUrl: 'https://worship-chords-rho.vercel.app',
-  window: { width: 1500, height: 900, maximized: true, menuBar: false, backgroundColor: '#0e0f13' },
+  window: { width: 1500, height: 900, maximized: true, menuBar: false, customTitleBar: true, backgroundColor: '#0e0f13' },
   permissions: {
     media: true, midi: true, midiSysex: false, 'clipboard-read': true, 'clipboard-sanitized-write': true,
     'window-management': true, fullscreen: true, 'display-capture': true, notifications: false, geolocation: false
