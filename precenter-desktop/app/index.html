@@ -3047,7 +3047,7 @@ async function openAud(){
   Object.keys(outW).forEach(k=>{if(!keep[k])closeWin(outW[k])});
   outW=keep;
   outWin=keep[idxs[0]]||Object.values(keep)[0]||null;
-  if(hints.length)$('#outHint').textContent='Audience output sent to '+hints.join(', ')+'. Click inside each window once to make it fullscreen.';
+  if(hints.length)$('#outHint').textContent='Audience output sent to '+hints.join(', ')+'. ';
   dots();push();
 }
 async function openStg(){
@@ -4221,7 +4221,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.3',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.4',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -6838,7 +6838,10 @@ const DD=window.dscDisp={sd:null,list:[],err:'',
     const s=this.find(d.disp);
     return s?{s,f:`popup,left=${s.l},top=${s.t},width=${s.w},height=${s.h}`}:null;
   },
-  place(w,s){try{w.moveTo(s.l,s.t);w.resizeTo(s.w,s.h)}catch(e){}},
+  place(w,s){
+    const D=window.dscNative&&window.dscNative.displays;
+    if(D&&D.sendNamed){let n='';try{n=w.name}catch(e){}if(n){D.sendNamed(n,s.l+s.w/2,s.t+s.h/2).catch(()=>{});return}}
+    try{w.moveTo(s.l,s.t);w.resizeTo(s.w,s.h)}catch(e){}},
   identify(){
     this.list.forEach(s=>{
       const w=window.open('','dscId'+s.i,`popup,left=${s.l+40},top=${s.t+40},width=${Math.min(520,s.w-80)},height=${Math.min(320,s.h-80)}`);
