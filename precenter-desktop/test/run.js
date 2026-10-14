@@ -11,10 +11,8 @@ const { mimeFor, resolveAppFile } = require('../lib/files');
 
 const root = path.join(__dirname, '..');
 let pass = 0, fail = 0;
-function test(name, fn) {
-  try { fn(); pass++; console.log('PASS ' + name); }
-  catch (e) { fail++; console.log('FAIL ' + name + '\n     ' + String(e.message).split('\n')[0]); }
-}
+const queue = [];
+function test(name, fn) { queue.push([name, fn]); }
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'precenter-'));
 
 // ---- config ----
@@ -139,6 +137,75 @@ test('the app protocol cannot read outside the app folder', () => {
   assert.strictEqual(mimeFor('a.unknown'), 'application/octet-stream');
 });
 
+
+// ---- page updates ----
+const { createUpdater, parseVersion, looksValid, cmp } = require('../lib/update');
+const fakePage = v => '<!doctype html><html><head></head><body><script>const DSC_VERSION=\'' + v + '\',DSC_RELEASED=\'x\';</script>' + 'x'.repeat(120000) + '</body></html>\n';
+const fakeFetch = (status, body, etag) => async () => ({ status, ok: status >= 200 && status < 300, headers: { get: () => etag || null }, text: async () => body });
+function mkUpdater(bundledVer, fetchFn) {
+  const dir = tmp(), b = path.join(dir, 'bundled.html');
+  fs.writeFileSync(b, fakePage(bundledVer));
+  return { dir, up: createUpdater({ dir, url: 'https://x.example/index.html', bundledFile: b, fetchFn }) };
+}
+test('versions are read and compared', () => {
+  assert.deepStrictEqual(parseVersion(fakePage('1.2.3')), [1, 2, 3]);
+  assert.strictEqual(cmp([1, 0, 10], [1, 0, 9]), 1);
+  assert.strictEqual(cmp([1, 0, 0], [1, 0, 0]), 0);
+  assert.strictEqual(cmp([0, 9, 9], [1, 0, 0]), -1);
+});
+test('only a whole, real page is accepted', () => {
+  assert.ok(looksValid(fakePage('1.0.1')));
+  assert.ok(!looksValid('<html>404 Not Found</html>'));
+  assert.ok(!looksValid(fakePage('1.0.1').slice(0, 50000)));
+  assert.ok(!looksValid(fakePage('1.0.1').replace(/DSC_VERSION/, 'OTHER')));
+});
+test('a newer hosted page is downloaded and used from the next start', async () => {
+  const { dir, up } = mkUpdater('1.0.0', fakeFetch(200, fakePage('1.0.3'), '"abc"'));
+  assert.strictEqual(up.current().fromCache, false);
+  const r = await up.check();
+  assert.deepStrictEqual([r.status, r.version], ['updated', '1.0.3']);
+  assert.strictEqual(up.current().fromCache, false);           // not switched mid-session
+  const again = createUpdater({ dir, url: 'x', bundledFile: path.join(dir, 'bundled.html'), fetchFn: fakeFetch(500, '') });
+  assert.strictEqual(again.current().fromCache, true);         // next start uses it
+  assert.strictEqual(again.current().version.join('.'), '1.0.3');
+});
+test('same or older hosted page changes nothing', async () => {
+  const same = mkUpdater('1.0.2', fakeFetch(200, fakePage('1.0.2')));
+  assert.strictEqual((await same.up.check()).status, 'current');
+  assert.ok(!fs.existsSync(same.up.cacheFile));
+  const older = mkUpdater('1.0.2', fakeFetch(200, fakePage('1.0.1')));
+  assert.strictEqual((await older.up.check()).status, 'current');
+});
+test('offline, server errors and broken pages never break the app', async () => {
+  const off = mkUpdater('1.0.0', async () => { throw new Error('offline'); });
+  assert.strictEqual((await off.up.check()).status, 'offline');
+  const bad = mkUpdater('1.0.0', fakeFetch(200, '<html>oops</html>'));
+  assert.strictEqual((await bad.up.check()).status, 'invalid');
+  assert.ok(!fs.existsSync(bad.up.cacheFile));
+  const e500 = mkUpdater('1.0.0', fakeFetch(500, 'err'));
+  assert.strictEqual((await e500.up.check()).status, 'offline');
+});
+test('a cached page older than the built-in one is ignored (after the app itself is updated)', async () => {
+  const { dir, up } = mkUpdater('1.0.0', fakeFetch(200, fakePage('1.0.3')));
+  await up.check();
+  fs.writeFileSync(path.join(dir, 'bundled.html'), fakePage('1.1.0'));
+  const next = createUpdater({ dir, url: 'x', bundledFile: path.join(dir, 'bundled.html'), fetchFn: fakeFetch(500, '') });
+  assert.strictEqual(next.current().fromCache, false);
+  assert.strictEqual(next.current().version.join('.'), '1.1.0');
+});
+test('a damaged cached page is ignored', () => {
+  const { dir } = mkUpdater('1.0.0', fakeFetch(500, ''));
+  fs.mkdirSync(path.join(dir, 'app-cache'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'app-cache', 'index.html'), '<html>half');
+  const up = createUpdater({ dir, url: 'x', bundledFile: path.join(dir, 'bundled.html'), fetchFn: fakeFetch(500, '') });
+  assert.strictEqual(up.current().fromCache, false);
+});
+test('the update address must be https', () => {
+  const r = parseText('{ "update": { "enabled": true, "url": "http://evil.example/index.html" } }');
+  assert.strictEqual(r.config.update.enabled, false);
+  assert.ok(r.warnings.some(w => /update\.url/.test(w)));
+});
+
 // ---- package sanity ----
 test('every file the installer needs is present', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -150,5 +217,11 @@ test('every file the installer needs is present', () => {
   assert.strictEqual(pkg.build.npmRebuild, false);
 });
 
-console.log('\n' + pass + ' passed, ' + fail + ' failed');
-process.exit(fail ? 1 : 0);
+(async () => {
+  for (const [name, fn] of queue) {
+    try { await fn(); pass++; console.log('PASS ' + name); }
+    catch (e) { fail++; console.log('FAIL ' + name + '\n     ' + String(e.message).split('\n')[0]); }
+  }
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
+})();

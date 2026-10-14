@@ -6,8 +6,9 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULTS = {
-  mode: 'remote',
-  startUrl: 'https://precenter-bay.vercel.app',
+  mode: 'local',
+  startUrl: '',
+  update: { enabled: true, url: 'https://precenter-bay.vercel.app/index.html' },
   siteUrl: 'https://worship-chords-rho.vercel.app',
   window: { width: 1500, height: 900, maximized: true, menuBar: false, customTitleBar: true, backgroundColor: '#0e0f13' },
   permissions: {
@@ -69,6 +70,8 @@ function validate(cfg, warn) {
     try { const u = new URL(cfg.startUrl); ok = u.protocol === 'https:' || (u.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(u.hostname)); } catch (e) { /* not a URL */ }
     if (!ok) { warn.push('"startUrl" must be a full https:// address when mode is "remote". The built-in copy was used.'); cfg.mode = 'local'; }
   }
+  try { const u = new URL(cfg.update.url); if (!(u.protocol === 'https:' || (u.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(u.hostname)))) throw new Error('x'); }
+  catch (e) { warn.push('"update.url" must be a full https:// address. Page updates were turned off.'); cfg.update.enabled = false; }
   cfg.window.width = Math.max(600, Math.round(cfg.window.width));
   cfg.window.height = Math.max(400, Math.round(cfg.window.height));
   cfg.corsRelaxHosts = cfg.corsRelaxHosts.map(h => h.trim().toLowerCase()).filter(Boolean);

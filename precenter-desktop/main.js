@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, Menu, protocol, session, ipcMain, shell, dialog, desktopCapturer } = require('electron');
+const { app, BrowserWindow, Menu, protocol, session, ipcMain, shell, dialog, desktopCapturer, net } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { loadConfig } = require('./lib/config');
@@ -7,6 +7,7 @@ const { createUrlPolicy } = require('./lib/urls');
 const { isPermissionAllowed } = require('./lib/permissions');
 const { mimeFor, resolveAppFile } = require('./lib/files');
 const log = require('./lib/log');
+const { createUpdater } = require('./lib/update');
 const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 
@@ -26,6 +27,9 @@ let policy = null;
 let mainWin = null;
 let pendingFiles = [];
 let rendererReady = false;
+let updater = null;
+let updateChecked = false;
+const appVendor = {};      // special paths served from elsewhere (offline JSZip, the updated page)
 
 function defaultConfigFile() {
   const packaged = path.join(process.resourcesPath || '', 'config.default.json');
@@ -106,7 +110,7 @@ function setupSession() {
 }
 
 function setupProtocol() {
-  const vendor = {};
+  const vendor = appVendor;
   const jz = jszipPath();
   if (jz) vendor['vendor/jszip.min.js'] = jz;
   protocol.handle('dsc', async req => {
@@ -179,6 +183,7 @@ function createMain() {
   mainWin.webContents.on('did-finish-load', () => {
     // give the app a moment to start (and the sign-in gate to appear) before handing it files
     setTimeout(() => { rendererReady = true; flushFiles(); }, 2500);
+    if (!updateChecked) { updateChecked = true; setTimeout(() => { checkForPageUpdate(false).catch(e => log.error(e)); }, 6000); }
   });
   mainWin.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
     if (!isMain || code === -3) return;
@@ -191,6 +196,47 @@ function createMain() {
   mainWin.webContents.on('render-process-gone', (_e, d) => log.error('Renderer gone: ' + d.reason));
   mainWin.on('closed', () => { ndi.stopAll(); mainWin = null; app.quit(); });
   mainWin.loadURL(policy.startUrl());
+}
+
+// ---------- automatic page updates ----------
+function applyUpdaterChoice() {
+  const cur = updater.refresh();
+  if (cur.file) appVendor['index.html'] = cur.file; else delete appVendor['index.html'];
+  return cur;
+}
+
+function setupUpdater() {
+  if (cfg.mode !== 'local' || !cfg.update.enabled) return;
+  try {
+    updater = createUpdater({
+      dir: app.getPath('userData'), url: cfg.update.url, log,
+      bundledFile: path.join(APP_DIR, 'index.html'),
+      fetchFn: (u, o) => net.fetch(u, o)
+    });
+    const cur = applyUpdaterChoice();
+    log.info('Page version in use: ' + cur.version.join('.') + (cur.fromCache ? ' (downloaded update)' : ' (built in)'));
+  } catch (e) { log.error(e); updater = null; }
+}
+
+// Looks for a newer page. The new page is used from the next start, unless the person chooses to reload now.
+async function checkForPageUpdate(manual) {
+  if (!updater) {
+    if (manual) dialog.showMessageBox(mainWin, { type: 'info', message: 'Automatic page updates are off', detail: 'They only work when "mode" is "local" and "update.enabled" is true in config.json.' });
+    return;
+  }
+  const r = await updater.check();
+  if (r.status === 'updated') {
+    if (manual) {
+      const pick = dialog.showMessageBoxSync(mainWin, { type: 'question', buttons: ['Reload now', 'Later'], defaultId: 1, cancelId: 1,
+        message: 'Version ' + r.version + ' was downloaded', detail: 'Reloading now closes anything you have open in the app (unsaved work is lost). "Later" uses it the next time the app starts.' });
+      if (pick === 0) { applyUpdaterChoice(); mainWin.webContents.reloadIgnoringCache(); }
+    }
+  } else if (manual) {
+    const msg = r.status === 'current' ? 'You already have the newest version (' + r.version + ').'
+      : r.status === 'invalid' ? 'The hosted page did not look right, so nothing was changed.'
+      : 'Could not reach the hosted page. Check the internet connection.';
+    dialog.showMessageBox(mainWin, { type: 'info', message: 'Page update', detail: msg });
+  }
 }
 
 function buildMenu() {
@@ -210,6 +256,7 @@ function buildMenu() {
     ] },
     { label: '&Help', submenu: [
       { label: 'Open the Disciples site', click: () => shell.openExternal(cfg.siteUrl) },
+      { label: 'Check for page update', click: () => checkForPageUpdate(true) },
       { label: 'About', click: showAbout }
     ] }
   ];
@@ -224,6 +271,7 @@ function aboutText() {
     'Settings file: ' + cfgResult.path,
     'Log file: ' + (log.path || '(none)'),
     'Mode: ' + cfg.mode + (cfg.mode === 'remote' ? ' (' + cfg.startUrl + ')' : ''),
+    'Page: ' + (updater ? updater.current().version.join('.') + (updater.current().fromCache ? ' (downloaded update)' : ' (built in)') : 'built in'),
     'NDI: ' + (cfg.ndi.enabled ? (ndiSender.available() ? 'on' : 'on, but the NDI add-on is missing') : 'off')
   ].join('\n');
 }
@@ -276,6 +324,7 @@ if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
     log.info('Starting Disciples PreCenter ' + app.getVersion() + ' (' + cfg.mode + ')');
     cfgResult.warnings.forEach(w => log.warn(w));
     setupProtocol();
+    setupUpdater();
     setupSession();
     setupIpc();
     app.on('web-contents-created', (_e, wc) => guardWebContents(wc));

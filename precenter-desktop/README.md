@@ -37,6 +37,7 @@ get a fresh copy.
 
 | Setting | What it does |
 |---|---|
+| `update` | `enabled` (default true) and `url`. While `mode` is `local`, the app looks at this hosted page on every start, downloads it if its version is higher, and uses it from the next start (Help > Check for page update does it on demand). Offline or on any problem the copy already on the computer is used. |
 | `mode`, `startUrl` | `"local"` runs the copy inside the app (works offline). `"remote"` loads `startUrl` (a full https address, for example your hosted copy). If it cannot load, the built-in copy opens instead. |
 | `siteUrl` | Your Disciples site, used by the Help menu. |
 | `window` | Start size, whether it starts maximized, and whether the menu bar is always visible (otherwise press Alt). |
