@@ -293,6 +293,8 @@ function setupIpc() {
     try { mainWin.setTitleBarOverlay({ color: o.color, symbolColor: o.symbolColor, height: TITLE_H }); } catch (err) { log.warn('Title bar colors: ' + err.message); }
   });
   ipcMain.handle('app:openConfig', () => shell.openPath(cfgResult.path));
+  ipcMain.handle('app:checkUpdate', e => { if (mainWin && e.sender === mainWin.webContents) checkForPageUpdate(true).catch(err => log.error(err)); });
+  ipcMain.handle('app:about', e => { if (mainWin && e.sender === mainWin.webContents) showAbout(); });
   ipcMain.handle('app:openData', () => shell.openPath(app.getPath('userData')));
   ipcMain.handle('ndi:sync', async (_e, list) => {
     const cfgs = Array.isArray(list) ? list : [];
