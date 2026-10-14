@@ -62,15 +62,13 @@ if (barArg) {
       '#dscTitle{position:fixed;top:0;left:0;right:0;height:' + H + 'px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;-webkit-app-region:drag;-webkit-user-select:none;user-select:none;font:600 12px/1 system-ui,Segoe UI,sans-serif;letter-spacing:.2px}' +
       ':root.dsc-fs #dscTitle{display:none}' +
       '#dscTitle i{width:8px;height:8px;border-radius:50%;background:#E8B923;display:inline-block}' +
-      // The page's own menu bar (#mbar, fixed at top:0) is hidden behind the title strip, yet its 26px of
-      // body padding is still reserved -> the empty gap. Put the menu bar INSIDE the strip instead.
-      ':root:not(.dsc-fs) #mbar{top:0!important;left:176px!important;right:150px!important;height:' + H + 'px!important;z-index:2147483001!important;background:transparent!important;border:0!important;-webkit-app-region:drag}' +
-      ':root:not(.dsc-fs) #mbar .mb{-webkit-app-region:no-drag;height:24px}' +
-      ':root:not(.dsc-fs) #mbar .brand{display:none}' +
-      ':root:not(.dsc-fs) body.hasbars{padding-top:0!important}' +
+      // Title strip on top (title centered), the page's own menu bar (#mbar) directly under it.
+      // Layout: root padding H + body padding 26 (menu bar) + #app + 24 (status bar).
+      ':root:not(.dsc-fs) #mbar{top:' + H + 'px}' +
+      '#dscTitle{justify-content:center}' +
       'body #app{height:calc(100vh - ' + H + 'px);height:calc(100dvh - ' + H + 'px)}' +
-      ':root:not(.dsc-fs) body.hasbars #app{height:calc(100vh - ' + (H + 24) + 'px);height:calc(100dvh - ' + (H + 24) + 'px)}' +
-      ':root:not(.dsc-fs) body.tlopen #app{height:calc(100vh - ' + (H + 192) + 'px)!important;height:calc(100dvh - ' + (H + 192) + 'px)!important}' +
+      'body.hasbars #app{height:calc(100vh - ' + (H + 50) + 'px);height:calc(100dvh - ' + (H + 50) + 'px)}' +
+      'body.tlopen #app{height:calc(100vh - ' + (H + 218) + 'px)!important;height:calc(100dvh - ' + (H + 218) + 'px)!important}' +
       ':root.dsc-fs body #app{height:100vh;height:100dvh}' +
       ':root.dsc-fs body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}' +
       ':root.dsc-fs body.tlopen #app{height:calc(100vh - 218px)!important;height:calc(100dvh - 218px)!important}';
