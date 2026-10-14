@@ -5,8 +5,8 @@
 
   // "local"  = run the copy of PreCenter that is inside this app (works offline).
   // "remote" = load the address in "startUrl" instead (for example your hosted copy).
-  "mode": "local",
-  "startUrl": "",
+  "mode": "remote",
+  "startUrl": "https://precenter-bay.vercel.app",
 
   // Your Disciples site. PreCenter asks it for the sign-in settings.
   "siteUrl": "https://worship-chords-rho.vercel.app",
