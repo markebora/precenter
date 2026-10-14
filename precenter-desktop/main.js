@@ -152,7 +152,7 @@ function guardWebContents(wc) {
   });
 }
 
-const TITLE_H = 32;
+const TITLE_H = 28;
 let customBar = false;
 
 function createMain() {
