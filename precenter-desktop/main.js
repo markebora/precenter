@@ -202,7 +202,16 @@ function guardWebContents(wc) {
       const opts = (details && details.options) || {};
       win.__dscOpts = opts;
       const d = displayFromOptions(opts);
-      if (d) trackOutputWindow(win, d);
+      win.__dscName = (details && details.frameName) || '';
+      if (d) {
+        trackOutputWindow(win, d);
+        // Output / stage windows sent to a chosen screen go fullscreen there by themselves.
+        const isOut = /#(output|stage)/.test((details && details.url) || '');
+        const w = opts.width || 0, h = opts.height || 0, wa = d.workArea;
+        const fillsScreen = Math.abs(w - wa.width) <= 40 && Math.abs(h - wa.height) <= 40;
+        const notMain = d.id !== screen.getPrimaryDisplay().id;
+        if (isOut && (notMain || fillsScreen)) win.once('ready-to-show', () => placeOnDisplay(win, d, true));
+      }
     } catch (e) { log.warn('Output window tracking: ' + e.message); }
   });
   wc.on('will-navigate', (e, url) => {
@@ -318,6 +327,13 @@ function setupIpc() {
     const d = screen.getAllDisplays().find(x => x.id === displayId);
     if (!win || !d) return false;
     placeOnDisplay(win, d, fullscreen !== false);
+    return true;
+  });
+  // Called from the main window: send an already-open output/stage window (by its window name) to the display at a point.
+  ipcMain.handle('display:sendNamed', (e, name, x, y) => {
+    const win = BrowserWindow.getAllWindows().find(w => w !== mainWin && w.__dscName === String(name) && !w.isDestroyed());
+    if (!win || typeof x !== 'number' || typeof y !== 'number') return false;
+    placeOnDisplay(win, screen.getDisplayNearestPoint({ x: Math.round(x), y: Math.round(y) }), true);
     return true;
   });
   ipcMain.handle('app:openConfig', () => shell.openPath(cfgResult.path));

@@ -37,7 +37,8 @@ contextBridge.exposeInMainWorld('dscNative', {
   },
   displays: {
     list: () => ipcRenderer.invoke('display:list'),
-    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false)
+    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false),
+    sendNamed: (name, x, y) => ipcRenderer.invoke('display:sendNamed', name, x, y)
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
