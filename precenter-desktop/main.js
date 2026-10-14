@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, Menu, protocol, session, ipcMain, shell, dialog, desktopCapturer, net } = require('electron');
+const { app, BrowserWindow, Menu, protocol, session, ipcMain, shell, dialog, desktopCapturer, screen } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { loadConfig } = require('./lib/config');
@@ -7,7 +7,6 @@ const { createUrlPolicy } = require('./lib/urls');
 const { isPermissionAllowed } = require('./lib/permissions');
 const { mimeFor, resolveAppFile } = require('./lib/files');
 const log = require('./lib/log');
-const { createUpdater } = require('./lib/update');
 const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 
@@ -27,9 +26,6 @@ let policy = null;
 let mainWin = null;
 let pendingFiles = [];
 let rendererReady = false;
-let updater = null;
-let updateChecked = false;
-const appVendor = {};      // special paths served from elsewhere (offline JSZip, the updated page)
 
 function defaultConfigFile() {
   const packaged = path.join(process.resourcesPath || '', 'config.default.json');
@@ -110,7 +106,7 @@ function setupSession() {
 }
 
 function setupProtocol() {
-  const vendor = appVendor;
+  const vendor = {};
   const jz = jszipPath();
   if (jz) vendor['vendor/jszip.min.js'] = jz;
   protocol.handle('dsc', async req => {
@@ -140,6 +136,59 @@ function popupOptions() {
   };
 }
 
+
+// ---------- output windows: keep them on the screen the user picked ----------
+// Electron/Windows quirks this works around:
+//  - a window opened with left/top for a second monitor is sized with the FIRST monitor's DPI scale,
+//    so it overshoots the screen (lyrics cut off) until its bounds are applied a second time;
+//  - going fullscreen picks the display the window is *on*, which can still be the main one.
+function displayFromOptions(o) {
+  if (!o || typeof o.x !== 'number' || typeof o.y !== 'number') return null;
+  const w = o.width || 800, h = o.height || 600;
+  return screen.getDisplayNearestPoint({ x: Math.round(o.x + w / 2), y: Math.round(o.y + h / 2) });
+}
+
+// Move a window onto a display (twice, for the DPI quirk) and optionally make it fullscreen there.
+function placeOnDisplay(win, display, goFull) {
+  if (!win || win.isDestroyed() || !display) return;
+  const b = display.bounds;
+  const apply = () => {
+    if (win.isDestroyed()) return;
+    win.setBounds(b); win.setBounds(b);
+    if (goFull) setTimeout(() => { if (!win.isDestroyed()) win.setFullScreen(true); }, 150);
+  };
+  if (win.isFullScreen()) { win.once('leave-full-screen', apply); win.setFullScreen(false); }
+  else apply();
+}
+
+function trackOutputWindow(win, display) {
+  let target = display;          // the display this window is meant to live on
+  let fixing = false;
+  const remember = () => { if (!win.isDestroyed() && !win.isFullScreen() && !fixing) target = screen.getDisplayMatching(win.getBounds()); };
+  win.on('moved', remember);
+
+  // If it went fullscreen on the wrong display, put it back on the right one.
+  win.on('enter-full-screen', () => {
+    if (fixing || !target || win.isDestroyed()) return;
+    const cur = screen.getDisplayMatching(win.getBounds());
+    if (cur.id === target.id) return;
+    fixing = true;
+    log.info('Output window went fullscreen on display ' + cur.id + ', moving it to display ' + target.id);
+    win.once('leave-full-screen', () => {
+      if (win.isDestroyed()) return;
+      win.setBounds(target.bounds); win.setBounds(target.bounds);
+      setTimeout(() => { if (!win.isDestroyed()) win.setFullScreen(true); fixing = false; }, 150);
+    });
+    win.setFullScreen(false);
+  });
+
+  // Fix the DPI overshoot as soon as the window is on screen.
+  win.once('ready-to-show', () => {
+    const o = win.__dscOpts;
+    if (o && typeof o.x === 'number') { const b = { x: o.x, y: o.y, width: o.width || 800, height: o.height || 600 }; win.setBounds(b); win.setBounds(b); }
+  });
+}
+
 function guardWebContents(wc) {
   wc.setWindowOpenHandler(({ url }) => {
     const d = policy.windowOpen(url);
@@ -147,6 +196,14 @@ function guardWebContents(wc) {
     if (d === 'external') shell.openExternal(url).catch(e => log.error(e));
     else log.warn('Blocked window to ' + url);
     return { action: 'deny' };
+  });
+  wc.on('did-create-window', (win, details) => {
+    try {
+      const opts = (details && details.options) || {};
+      win.__dscOpts = opts;
+      const d = displayFromOptions(opts);
+      if (d) trackOutputWindow(win, d);
+    } catch (e) { log.warn('Output window tracking: ' + e.message); }
   });
   wc.on('will-navigate', (e, url) => {
     const d = policy.navigate(url);
@@ -156,7 +213,7 @@ function guardWebContents(wc) {
   });
 }
 
-const TITLE_H = 28;
+const TITLE_H = 32;
 let customBar = false;
 
 function createMain() {
@@ -183,7 +240,6 @@ function createMain() {
   mainWin.webContents.on('did-finish-load', () => {
     // give the app a moment to start (and the sign-in gate to appear) before handing it files
     setTimeout(() => { rendererReady = true; flushFiles(); }, 2500);
-    if (!updateChecked) { updateChecked = true; setTimeout(() => { checkForPageUpdate(false).catch(e => log.error(e)); }, 6000); }
   });
   mainWin.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
     if (!isMain || code === -3) return;
@@ -196,47 +252,6 @@ function createMain() {
   mainWin.webContents.on('render-process-gone', (_e, d) => log.error('Renderer gone: ' + d.reason));
   mainWin.on('closed', () => { ndi.stopAll(); mainWin = null; app.quit(); });
   mainWin.loadURL(policy.startUrl());
-}
-
-// ---------- automatic page updates ----------
-function applyUpdaterChoice() {
-  const cur = updater.refresh();
-  if (cur.file) appVendor['index.html'] = cur.file; else delete appVendor['index.html'];
-  return cur;
-}
-
-function setupUpdater() {
-  if (cfg.mode !== 'local' || !cfg.update.enabled) return;
-  try {
-    updater = createUpdater({
-      dir: app.getPath('userData'), url: cfg.update.url, log,
-      bundledFile: path.join(APP_DIR, 'index.html'),
-      fetchFn: (u, o) => net.fetch(u, o)
-    });
-    const cur = applyUpdaterChoice();
-    log.info('Page version in use: ' + cur.version.join('.') + (cur.fromCache ? ' (downloaded update)' : ' (built in)'));
-  } catch (e) { log.error(e); updater = null; }
-}
-
-// Looks for a newer page. The new page is used from the next start, unless the person chooses to reload now.
-async function checkForPageUpdate(manual) {
-  if (!updater) {
-    if (manual) dialog.showMessageBox(mainWin, { type: 'info', message: 'Automatic page updates are off', detail: 'They only work when "mode" is "local" and "update.enabled" is true in config.json.' });
-    return;
-  }
-  const r = await updater.check();
-  if (r.status === 'updated') {
-    if (manual) {
-      const pick = dialog.showMessageBoxSync(mainWin, { type: 'question', buttons: ['Reload now', 'Later'], defaultId: 1, cancelId: 1,
-        message: 'Version ' + r.version + ' was downloaded', detail: 'Reloading now closes anything you have open in the app (unsaved work is lost). "Later" uses it the next time the app starts.' });
-      if (pick === 0) { applyUpdaterChoice(); mainWin.webContents.reloadIgnoringCache(); }
-    }
-  } else if (manual) {
-    const msg = r.status === 'current' ? 'You already have the newest version (' + r.version + ').'
-      : r.status === 'invalid' ? 'The hosted page did not look right, so nothing was changed.'
-      : 'Could not reach the hosted page. Check the internet connection.';
-    dialog.showMessageBox(mainWin, { type: 'info', message: 'Page update', detail: msg });
-  }
 }
 
 function buildMenu() {
@@ -256,7 +271,6 @@ function buildMenu() {
     ] },
     { label: '&Help', submenu: [
       { label: 'Open the Disciples site', click: () => shell.openExternal(cfg.siteUrl) },
-      { label: 'Check for page update', click: () => checkForPageUpdate(true) },
       { label: 'About', click: showAbout }
     ] }
   ];
@@ -271,7 +285,6 @@ function aboutText() {
     'Settings file: ' + cfgResult.path,
     'Log file: ' + (log.path || '(none)'),
     'Mode: ' + cfg.mode + (cfg.mode === 'remote' ? ' (' + cfg.startUrl + ')' : ''),
-    'Page: ' + (updater ? updater.current().version.join('.') + (updater.current().fromCache ? ' (downloaded update)' : ' (built in)') : 'built in'),
     'NDI: ' + (cfg.ndi.enabled ? (ndiSender.available() ? 'on' : 'on, but the NDI add-on is missing') : 'off')
   ].join('\n');
 }
@@ -292,9 +305,22 @@ function setupIpc() {
     if (!o || !ok(o.color) || !ok(o.symbolColor)) return;
     try { mainWin.setTitleBarOverlay({ color: o.color, symbolColor: o.symbolColor, height: TITLE_H }); } catch (err) { log.warn('Title bar colors: ' + err.message); }
   });
+  ipcMain.handle('display:list', () => {
+    const primary = screen.getPrimaryDisplay().id;
+    return screen.getAllDisplays().map((d, i) => ({
+      id: d.id, name: d.label || ('Display ' + (i + 1)), primary: d.id === primary,
+      bounds: d.bounds, scaleFactor: d.scaleFactor
+    }));
+  });
+  // Called from the output window: send THIS window to a display and make it fullscreen there.
+  ipcMain.handle('display:send', (e, displayId, fullscreen) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const d = screen.getAllDisplays().find(x => x.id === displayId);
+    if (!win || !d) return false;
+    placeOnDisplay(win, d, fullscreen !== false);
+    return true;
+  });
   ipcMain.handle('app:openConfig', () => shell.openPath(cfgResult.path));
-  ipcMain.handle('app:checkUpdate', e => { if (mainWin && e.sender === mainWin.webContents) checkForPageUpdate(true).catch(err => log.error(err)); });
-  ipcMain.handle('app:about', e => { if (mainWin && e.sender === mainWin.webContents) showAbout(); });
   ipcMain.handle('app:openData', () => shell.openPath(app.getPath('userData')));
   ipcMain.handle('ndi:sync', async (_e, list) => {
     const cfgs = Array.isArray(list) ? list : [];
@@ -326,7 +352,6 @@ if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
     log.info('Starting Disciples PreCenter ' + app.getVersion() + ' (' + cfg.mode + ')');
     cfgResult.warnings.forEach(w => log.warn(w));
     setupProtocol();
-    setupUpdater();
     setupSession();
     setupIpc();
     app.on('web-contents-created', (_e, wc) => guardWebContents(wc));

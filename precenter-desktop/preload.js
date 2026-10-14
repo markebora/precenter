@@ -35,12 +35,14 @@ contextBridge.exposeInMainWorld('dscNative', {
     sync: cfgs => ipcRenderer.invoke('ndi:sync', cfgs),
     onStatus: cb => { ipcRenderer.on('ndi:status', (_e, s) => cb(s)); }
   },
+  displays: {
+    list: () => ipcRenderer.invoke('display:list'),
+    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false)
+  },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
     openConfig: () => ipcRenderer.invoke('app:openConfig'),
-    openData: () => ipcRenderer.invoke('app:openData'),
-    checkUpdate: () => ipcRenderer.invoke('app:checkUpdate'),
-    about: () => ipcRenderer.invoke('app:about')
+    openData: () => ipcRenderer.invoke('app:openData')
   }
 });
 
@@ -48,49 +50,49 @@ ipcRenderer.on('file:open', (_e, f) => {
   try { deliverFile(document, f); } catch (e) { console.error('Could not open file', e); }
 });
 
-// ---- Slim header: app name centered, Windows draws minimize / maximize / close at the right end ----
-// Layout (like ProPresenter): [ header: name in the middle + window buttons ] then the app's own menu row.
+// ---- Slim title strip (Windows draws minimize / maximize / close over its right end) ----
 const barArg = process.argv.find(a => a.startsWith('--dsc-titlebar='));
 if (barArg) {
-  const H = parseInt(barArg.split('=')[1], 10) || 28;
+  const H = parseInt(barArg.split('=')[1], 10) || 32;
   window.addEventListener('DOMContentLoaded', () => {
     const css = document.createElement('style');
     css.textContent =
-      '#dscTitle{position:fixed;top:0;left:0;right:0;height:' + H + 'px;z-index:2147483000;display:flex;align-items:center;justify-content:center;gap:7px;box-sizing:border-box;background:var(--panel);border-bottom:1px solid var(--line);color:var(--ink);-webkit-app-region:drag;-webkit-user-select:none;user-select:none;font:600 12px/1 Inter,system-ui,Segoe UI,sans-serif;letter-spacing:.3px}' +
-      '#dscTitle i{width:8px;height:8px;border-radius:50%;background:#E8B923;display:inline-block}' +
-      // the app menu row (File Edit View ...) moves down under the header; its own copy of the name is dropped
-      '#mbar{top:' + H + 'px!important}' +
-      '#mbar .brand{display:none}' +
-      'body.hasbars{padding-top:' + (26 + H) + 'px!important}' +
-      'body.hasbars #app{height:calc(100vh - ' + (50 + H) + 'px);height:calc(100dvh - ' + (50 + H) + 'px)}' +
-      'body.tlopen #app{height:calc(100vh - ' + (218 + H) + 'px)!important;height:calc(100dvh - ' + (218 + H) + 'px)!important}' +
-      // full screen (F11) has no window buttons, so give the space back
+      ':root{padding-top:' + H + 'px!important}' +
+      ':root.dsc-fs{padding-top:0!important}' +
+      '#dscTitle{position:fixed;top:0;left:0;right:0;height:' + H + 'px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;-webkit-app-region:drag;-webkit-user-select:none;user-select:none;font:600 12px/1 system-ui,Segoe UI,sans-serif;letter-spacing:.2px}' +
       ':root.dsc-fs #dscTitle{display:none}' +
-      ':root.dsc-fs #mbar{top:0!important}' +
-      ':root.dsc-fs #mbar .brand{display:inline}' +
-      ':root.dsc-fs body.hasbars{padding-top:26px!important}' +
+      '#dscTitle i{width:8px;height:8px;border-radius:50%;background:#E8B923;display:inline-block}' +
+      'body #app{height:calc(100vh - ' + H + 'px);height:calc(100dvh - ' + H + 'px)}' +
+      'body.hasbars #app{height:calc(100vh - ' + (H + 50) + 'px);height:calc(100dvh - ' + (H + 50) + 'px)}' +
+      'body.tlopen #app{height:calc(100vh - ' + (H + 218) + 'px)!important;height:calc(100dvh - ' + (H + 218) + 'px)!important}' +
+      ':root.dsc-fs body #app{height:100vh;height:100dvh}' +
       ':root.dsc-fs body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}' +
       ':root.dsc-fs body.tlopen #app{height:calc(100vh - 218px)!important;height:calc(100dvh - 218px)!important}';
     document.head.appendChild(css);
     const bar = document.createElement('div');
     bar.id = 'dscTitle';
     bar.innerHTML = '<i></i><span>Disciples PreCenter</span>';
-    document.body.insertBefore(bar, document.body.firstChild);
+    document.body.appendChild(bar);
 
-    // Paint the area behind Windows' buttons in the header color (light and dark theme).
-    const hex = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c); return m ? m.slice(1, 4).map(n => ('0' + (+n).toString(16)).slice(-2)).join('') : '151518'; };
+    // Match the strip to the page background (light / dark) and tell Windows what color its buttons sit on.
+    const hex = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c); return m ? m.slice(1, 4).map(n => ('0' + (+n).toString(16)).slice(-2)).join('') : '0e0f13'; };
     let last = '';
     function sync() {
-      const h = hex(getComputedStyle(bar).backgroundColor);
+      let bg = getComputedStyle(document.body).backgroundColor;
+      if (!bg || /rgba\(.*,\s*0\)/.test(bg) || bg === 'transparent') bg = getComputedStyle(document.documentElement).backgroundColor;
+      const h = hex(bg);
       const lum = (parseInt(h.slice(0, 2), 16) * 299 + parseInt(h.slice(2, 4), 16) * 587 + parseInt(h.slice(4, 6), 16) * 114) / 1000;
       const ink = lum > 140 ? '#1a1a1d' : '#f7f7f7';
-      if (h + ink === last) return;
-      last = h + ink;
+      const key = h + ink;
+      if (key === last) return;
+      last = key;
+      bar.style.background = '#' + h;
+      bar.style.color = ink;
       ipcRenderer.send('win:overlay', { color: '#' + h, symbolColor: ink });
     }
     sync();
     new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
-    new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', sync);
     ipcRenderer.on('win:fullscreen', (_e, on) => document.documentElement.classList.toggle('dsc-fs', !!on));
   });
