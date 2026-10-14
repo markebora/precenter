@@ -110,7 +110,14 @@ body.out .stage{width:100vw;height:100vh;aspect-ratio:auto}
 .tray .t.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--glow)}
 .slide.ctx{border-color:var(--acc)}
 #sed{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column}
+/* Desktop app: its slim header (28px, #dscTitle) sits over the top of the window, so push full-screen panels below it */
+:root:not(.dsc-fs) body:has(#dscTitle) #sed{top:28px}
 .sedtop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+/* Editor header: title on its own line, then all the buttons in one tidy line under it (Apply / Reset / Cancel / Done stay together at the right end) */
+.sedtop{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"t t" "a b";align-items:center;gap:6px 12px}
+.sedtop>b{grid-area:t}
+.sedtop>span:nth-child(2){grid-area:a;min-width:0}
+.sedtop>span:nth-child(3){grid-area:b;flex-wrap:nowrap}
 #sedFilm{width:132px;flex:none;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:6px}
 #sedFilm .fs{cursor:pointer;border:2px solid transparent;border-radius:4px;font-size:10px}
 #sedFilm .fs.cur{border-color:var(--acc)}
@@ -4214,7 +4221,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.0',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.2',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
