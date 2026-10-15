@@ -5,8 +5,8 @@
 
   // "local"  = run the copy of PreCenter that is inside this app (works offline).
   // "remote" = load the address in "startUrl" instead (for example your hosted copy).
-  "mode": "local",
-  "startUrl": "",
+  "mode": "remote",
+  "startUrl": "startUrl": "https://precenter-bay.vercel.app//",
 
   // Automatic page updates (only used while "mode" is "local"). On each start the app looks at your hosted
   // copy; if it has a newer version it is downloaded and used from the next start. Offline, or if anything
