@@ -4224,7 +4224,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.8',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.10',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -4771,13 +4771,15 @@ const MENUS=window.dscMENUS={
  File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
- Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
+ Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
- Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
+ Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
 };
 /* Desktop app only: the Windows menu is hidden, so its few extra items live here in Help (older desktop builds show only what they support) */
+try{const _A=window.dscNative&&window.dscNative.app;if(_A&&_A.info){_A.info().then(i=>{window.__dscNdiOn=!!(i&&i.ndiEnabled)}).catch(()=>{});if(window.dscNative.ndi&&window.dscNative.ndi.onStatus){}}}catch(e){}
 window.dscDesk=()=>{const A=window.dscNative&&window.dscNative.app;if(!A)return[];const o=[{sep:1}];
+if(A.setNdi){const on=!!window.__dscNdiOn;o.push({t:(on?'\u2713 ':'')+'NDI output '+(on?'on (click to turn off)':'off (click to turn on)'),fn:()=>A.setNdi(!on).then(r=>{window.__dscNdiOn=!!(r&&r.enabled);try{toast(r&&r.error?'Could not change NDI: '+r.error:(window.__dscNdiOn?(r.available?'NDI is on. Set a screen output to NDI under Screens.':'NDI is on, but the NDI add-on is missing from this build.'):'NDI is off.'))}catch(e){}}).catch(e=>{try{toast('Could not change NDI: '+(e&&e.message||e))}catch(x){}})})}
 if(A.openConfig)o.push({t:'Open settings file (config.json)',fn:()=>A.openConfig()});
 if(A.openData)o.push({t:'Show data folder',fn:()=>A.openData()});
 if(A.checkUpdate)o.push({t:'Check for page update',fn:()=>A.checkUpdate()});
@@ -9343,6 +9345,52 @@ function draw(){
   const r=document.createElement('button');r.textContent='All follow live';r.onclick=()=>release();bar.appendChild(r);
 }
 window.dscPins={pin,release,step,list:()=>JSON.parse(JSON.stringify(pins))};
+})();
+</script>
+<script>
+/* ---- NDI setup guide (Help and Screens menus) ---- */
+(function(){
+if(/^#(output|stage|layout)/.test(location.hash))return;
+const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const A=()=>window.dscNative&&window.dscNative.app;
+window.dscNdiGuide=async function(){
+  const d=document.createElement('div');d.className='qe';
+  d.innerHTML='<div class="qb" role="dialog" aria-label="NDI setup guide" style="width:min(720px,96vw);max-height:92vh;overflow:auto"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><b>NDI setup guide</b><button class="x">Close</button></div><div id="ngBody"></div></div>';
+  document.body.appendChild(d);
+  const kd=e=>{if(e.key==='Escape'&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){e.stopPropagation();close()}};
+  const close=()=>{document.removeEventListener('keydown',kd,true);d.remove()};
+  document.addEventListener('keydown',kd,true);d.querySelector('.x').onclick=close;d.onmousedown=e=>{if(e.target===d)close()};
+  const body=d.querySelector('#ngBody');
+  async function draw(){
+    const a=A();let info=null;
+    if(a&&a.info){try{info=await a.info()}catch(e){}}
+    const desk=!!a,on=!!(info&&info.ndiEnabled),have=!!(info&&info.ndiAvailable);
+    const row=(ok,txt,extra)=>'<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0"><span style="font-weight:700;color:'+(ok?'#4caf50':'#e5484d')+';min-width:16px">'+(ok?'✓':'✗')+'</span><div style="flex:1">'+txt+(extra||'')+'</div></div>';
+    const step=(n,t,p)=>'<div style="display:flex;gap:10px;margin:10px 0"><div style="flex:0 0 26px;height:26px;border-radius:50%;background:#e8b923;color:#111;font-weight:700;display:grid;place-items:center">'+n+'</div><div style="flex:1"><div style="font-weight:700;margin-bottom:2px">'+t+'</div><div class="hint" style="margin:0;line-height:1.55">'+p+'</div></div></div>';
+    body.innerHTML=
+      '<div class="hint" style="margin:0 0 10px;line-height:1.55">NDI sends your <b>Audience</b> or <b>Stage</b> picture over your network to another program, such as OBS or vMix, with no video cable. It only works in the <b>desktop app</b>.</div>'
+      +'<div style="border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:6px"><b style="font-size:12px;letter-spacing:.5px">YOUR STATUS</b>'
+      +row(desk,'Running in the desktop app'+(desk?'':' <span class="hint" style="margin:0">(this is the web version, so NDI is not available here)</span>'))
+      +(desk?row(on,'NDI is turned '+(on?'on':'off'),' <button id="ngTog" style="margin-left:6px">'+(on?'Turn off':'Turn on')+'</button>'):'')
+      +(desk?row(have,have?'The NDI add-on is included in this build':'The NDI add-on is <b>not</b> included in this build','<div class="hint" style="margin:2px 0 0">'+(have?'':'Nothing can be sent until the add-on is built in. Whoever builds the app needs to follow README.md, “Turning on NDI”.')+'</div>'):'')
+      +'</div>'
+      +step(1,'Install NDI Tools on this computer','Free from NDI. It adds the NDI runtime and NDI Studio Monitor, which you will use to check the picture. <div style="margin-top:6px"><button id="ngSite">Open ndi.video</button></div>')
+      +step(2,'Turn NDI on','Use the button in the status box above, or <b>File → NDI video output</b>. You do not need to edit any file.')
+      +step(3,'Set a screen to NDI','Open <b>Screens…</b> (menu Screens → Screen configuration). Add or pick an Audience or Stage screen and set <b>Output</b> to <b>NDI</b>. Choose a resolution and frame rate (1080p 30 is a safe start) and give it a name. Each screen becomes its own NDI source. The <b>Alpha Key</b> tab sends a see-through version for overlays.')
+      +step(4,'Check that it is working','Open <b>NDI Studio Monitor</b> from NDI Tools. Your source appears in its list, named after this computer and the screen name. If you can see your slides there, NDI is working.')
+      +step(5,'Use it in your video software','<b>OBS:</b> install the free DistroAV plugin (it used to be called obs-ndi), then Add source → NDI Source and pick the screen. <b>vMix:</b> Add Input → NDI / Desktop Capture, then pick the source. Other programs that read NDI work the same way.')
+      +'<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px"><b style="font-size:12px;letter-spacing:.5px">IF IT DOES NOT WORK</b>'
+      +'<ul class="hint" style="margin:6px 0 0 18px;padding:0;line-height:1.6">'
+      +'<li><b>“NDI is turned off”</b>: do step 2.</li>'
+      +'<li><b>“The NDI add-on is not installed”</b>: this build does not include it yet (see the status box).</li>'
+      +'<li><b>The source does not appear</b>: both computers must be on the same network. When Windows asks, allow Disciples PreCenter through the firewall on <b>Private</b> networks. Make sure NDI Tools is installed on the receiving computer too.</li>'
+      +'<li><b>Choppy or delayed picture</b>: use a cable instead of Wi‑Fi, and lower the screen to 1080p 30.</li>'
+      +'<li><b>No sound</b>: NDI audio is not sent by this app.</li></ul></div>';
+    const t=body.querySelector('#ngTog');if(t)t.onclick=async()=>{t.disabled=true;try{const r=await a.setNdi(!on);if(r&&r.error)window.toast&&toast('Could not change NDI: '+r.error);window.__dscNdiOn=!!(r&&r.enabled)}catch(e){window.toast&&toast('Could not change NDI: '+(e&&e.message||e))}draw()};
+    const s=body.querySelector('#ngSite');if(s)s.onclick=()=>window.open('https://ndi.video/tools/','_blank','noopener');
+  }
+  draw();
+};
 })();
 </script>
 </body>
