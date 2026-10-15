@@ -206,7 +206,7 @@ function guardWebContents(wc) {
       if (d) {
         trackOutputWindow(win, d);
         // Output / stage windows sent to a chosen screen go fullscreen there by themselves.
-        const isOut = /#(output|stage)/.test((details && details.url) || '');
+        const isOut = /#(output|stage|layout)/.test((details && details.url) || '');
         const w = opts.width || 0, h = opts.height || 0, wa = d.workArea;
         const fillsScreen = Math.abs(w - wa.width) <= 40 && Math.abs(h - wa.height) <= 40;
         const notMain = d.id !== screen.getPrimaryDisplay().id;
