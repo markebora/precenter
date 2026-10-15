@@ -1030,7 +1030,7 @@ if(/^#stage/.test(location.hash)){
   {const h=document.createElement('div');h.id='fsHint';h.textContent='Click once to go fullscreen';h.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#e8c766;font:13px system-ui,sans-serif;padding:6px 14px;border-radius:14px;z-index:99;pointer-events:none;transition:opacity .4s';document.body.appendChild(h);
    const hide=()=>{h.style.opacity='0';setTimeout(()=>h.remove(),500)};o.addEventListener('click',hide,{once:true});setTimeout(hide,7000)}
 }
-if(/^#(output|stage)/.test(location.hash)){throw new Error('Output/stage window: main app not started')}
+if(/^#(output|stage|layout)/.test(location.hash)){throw new Error('Output/stage window: main app not started')}
 
 /* ---------- state ---------- */
 const sample=`Verse 1
@@ -4221,7 +4221,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.4',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.5',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -4561,7 +4561,7 @@ document.querySelectorAll('#ptabs button').forEach(b=>b.onclick=()=>{
 </div></div></div>
 <script>
 (()=>{
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const KEY='lp-screens',RES=['960x600','1280x720','1920x1080','3840x2160'],MODES=['720p 30','1080p 30','1080p 60','2160p 30'];
 let D;try{D=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!D||!D.length)D=[{k:'a',n:'Main',r:'1920x1080',o:'Window',tg:'Full',nm:'Disciples PreCenter - Main',md:'1080p 30',col:'#000000',cp:[0,0,0,0,0,0,0,0],ak:false},{k:'s',n:'Stage Display 1',r:'1280x720',o:'Window',tg:'Full',nm:'Disciples PreCenter - Stage',md:'720p 30',col:'#000000',cp:[0,0,0,0,0,0,0,0],ak:false}];
@@ -4656,7 +4656,7 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&
 <script>
 /* ---- NDI bridge: inert in a browser, active when the Electron shell exposes window.dscNative.ndi ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const N=window.dscNative&&window.dscNative.ndi;
 const read=()=>{try{return JSON.parse(localStorage.getItem('lp-screens'))||[]}catch(e){return[]}};
 function configs(){
@@ -4754,7 +4754,7 @@ document.addEventListener('keydown',e=>{
 <script>
 /* ---- menu bar (File, Edit, View, Screens, Services, Window, Help) and status strip ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const click=id=>()=>{const b=document.getElementById(id);if(b)b.click()};
 const info=(title,rows)=>{
   const w=document.createElement('div');w.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center';
@@ -4768,7 +4768,7 @@ const MENUS=window.dscMENUS={
  File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
- Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
+ Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
@@ -4822,7 +4822,7 @@ upd();setInterval(upd,500);
 <script>
 /* ---- playlist panel: numbers, slide counts, live and next markers, Live / Next strip ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const order=()=>{const o=[];S.secs.forEach(sec=>S.songs.filter(x=>secOf(x)===sec).forEach(x=>o.push(x)));return o};
 const count=it=>{try{return expand(it).length}catch(e){return 0}};
 const mk=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
@@ -4860,7 +4860,7 @@ setInterval(strip,500);
 <script>
 /* ---- Clear buttons (F1-F5) and test patterns ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const row=document.getElementById('clrRow');if(!row)return;
 const NAMES={bars:'color bars',grid:'grid',id:'identify',white:'white'};
 window.dscTP=k=>{window._tp=k||null;bc.postMessage({tp:k||null});toast(k?'Test pattern on: '+NAMES[k]+'. Turn it off before service.':'Test pattern off.')};
@@ -4904,7 +4904,7 @@ upd();setInterval(upd,500);
 <script>
 /* ---- Timeline: timed slides plus action cues for the selected item ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const st=document.createElement('style');st.textContent=`
 #tlDock{position:fixed;left:0;right:0;bottom:24px;height:168px;z-index:140;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;font-size:11.5px;box-shadow:0 -4px 16px rgba(0,0,0,.25)}
 #tlDock[hidden]{display:none}
@@ -5003,7 +5003,7 @@ window.dscTL={toggle,playing:()=>playing,play:()=>{if(dock.hidden)toggle();play(
 <script>
 /* ---- library: sort a section, export / import single items or whole sections ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const EXT='.dscitems',safe=s=>((s||'items')+'').replace(/[\\\/:*?"<>|]+/g,'-').trim()||'items';
 async function saveBlob(blob,fn){
   if(window.showSaveFilePicker){try{const h=await showSaveFilePicker({suggestedName:fn,types:[{description:'PreCenter items',accept:{'application/json':[EXT,'.json']}}]});const w=await h.createWritable();await w.write(blob);await w.close();toast('Saved '+h.name);return}catch(e){if(e&&e.name==='AbortError')return}}
@@ -5086,7 +5086,7 @@ const _d3=drawList;drawList=function(){S.songs.forEach(it=>{const c=secOf(it);if
 <script>
 /* ---- one library of songs + a separate playlist for each service ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const mk=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
 let _n=0;const nid=()=>Date.now()*1000+(++_n%1000);
 const pid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -5461,7 +5461,7 @@ drawList();
 <script>
 /* ---- arrangements (alternate Orders per song), collapse all, remove from playlist ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const A=s=>s.arrs||(s.arrs=[]);
 function applyArr(s,i){
   const a=A(s)[i];s.ai=i;s.order=a?a.o:'';
@@ -5511,7 +5511,7 @@ if(m){const b=document.createElement('button');b.id='colAll';b.textContent='\u21
 <script>
 /* ---- Go to slide, slide actions (macro on a slide), Preview before live ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const row=document.getElementById('clrRow'),grid=document.getElementById('grid');if(!row||!grid)return;
 const typing=e=>/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable||!document.getElementById('sed').hidden||document.querySelector('.qe:not([hidden])');
 /* slide actions */
@@ -5573,7 +5573,7 @@ function annDraw(stage,p){
 }
 const _paint=paint;paint=function(stage,p){if(p&&p.ctx){stage._ctx=p.ctx;window._lastCtx=p.ctx}const r=_paint(stage,p);try{annDraw(stage,p)}catch(e){}return r};
 const _al=applyLook;applyLook=function(p,k){const q=_al(p,k);if(q&&q.ann&&(k!=='a'||(p.look&&p.look.a&&p.look.a.ann===0)))return Object.assign({},q,{ann:null});return q};
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 /* ---- main window only ---- */
 const AN=()=>S.ann||(S.ann={items:[],cur:null,on:false,mode:'bar',pos:'bottom',size:5,bg:'#000000',op:80,fg:'#ffffff',speed:9,rot:false,sec:8,since:0});
 AN().on=false;
@@ -5627,7 +5627,7 @@ window.dscAnn={on:()=>!!AN().on,off,open:()=>{setMode('show');showTab();draw()},
 <script>
 /* ---- slide action on item select; master slide for an item ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 let lk='',lt=0;
 let fires=[];
 window.dscSlideAct=function(){
@@ -5689,7 +5689,7 @@ if(b)b.onclick=e=>{
 })();
 /* ---- copy this slide's design to other slides ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const b=document.querySelector('#sed [data-a=copyDesign]');if(!b)return;
 b.onclick=e=>{
   e.stopPropagation();if(!E)return;
@@ -5710,7 +5710,7 @@ b.onclick=e=>{
 })();
 /* ---- slide editor: Ctrl+X cut, Space-drag pan, collapsible slide groups ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 document.addEventListener('keydown',e=>{
   if(!E)return;const tg=e.target.tagName;if(/INPUT|TEXTAREA|SELECT/.test(tg)||(e.target.isContentEditable))return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='x'){
@@ -5759,7 +5759,7 @@ sedFilm=function(){
 })();
 /* ---- Insert Object: shapes, video, live video input, web page, text tokens (renders in every window) ---- */
 (function(){
-const isOut=/^#(output|stage)/.test(location.hash);
+const isOut=/^#(output|stage|layout)/.test(location.hash);
 const mediaUrl=n=>{try{return window.__libO?window.__libO[n]:lib[n]}catch(e){return ''}};
 const SHN={rect:'Rectangle',rrect:'Rounded rectangle',ellipse:'Ellipse',triangle:'Triangle',rtriangle:'Right triangle',rhombus:'Rhombus',polygon:'Polygon',star:'Star',custom:'Custom shape',darrow:'Double arrow',arrow:'Arrow'};
 const SHP={triangle:'50,0 100,100 0,100',rtriangle:'0,0 0,100 100,100',rhombus:'50,0 100,50 50,100 0,50',arrow:'0,32 58,32 58,8 100,50 58,92 58,68 0,68',darrow:'0,50 24,14 24,34 76,34 76,14 100,50 76,86 76,66 24,66 24,86'};
@@ -5990,7 +5990,7 @@ sedPanel=function(){
 <script>
 /* ---- bottom panels: one default height (350px, or 38% of a short window), drag the top edge to resize, double-click it to reset; right-panel tabs as icons ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const bot=document.getElementById('bot'),root=document.documentElement;
 document.querySelectorAll('#ptabs button').forEach(b=>{const s=b.querySelector('span');if(s&&!b.getAttribute('aria-label'))b.setAttribute('aria-label',s.textContent);if(s&&!b.title)b.title=s.textContent});
 if(!bot)return;
@@ -6066,7 +6066,7 @@ window.dscVisible=function(o,s,i,ex){
   }
   return true;
 };
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 /* ---- main window only ---- */
 const SR=()=>S.srcs||(S.srcs={files:{},rss:{}});
 const rssCache={};
@@ -6213,7 +6213,7 @@ sedRender=function(){_sr2();try{
 })();
 /* ---- Actions: video input, slide destination, web requests, MIDI, OSC, audio input ---- */
 (function(){
-const isOut=/^#(output|stage)/.test(location.hash);
+const isOut=/^#(output|stage|layout)/.test(location.hash);
 /* live video input layer: drawn under the text in every window */
 const _pt=paint;
 paint=function(stage,p){
@@ -6479,7 +6479,7 @@ setTimeout(()=>{try{
 })();
 /* ---- Media bin, media cues and cue inspector (video, images, audio) ---- */
 (function(){
-const isOutWin=/^#output/.test(location.hash),isOut=/^#(output|stage)/.test(location.hash);
+const isOutWin=/^#output/.test(location.hash),isOut=/^#(output|stage|layout)/.test(location.hash);
 const mediaUrl=n=>{try{return window.__libO?window.__libO[n]:lib[n]}catch(e){return ''}};
 const clampN=(v,d,a,b)=>{v=parseFloat(v);if(isNaN(v))v=d;return Math.max(a,Math.min(b,v))};
 /* --- playback behaviour for one video/audio element (same code in every window) --- */
@@ -6800,7 +6800,7 @@ drawTray();
 <script>
 /* ---- Send to display: detect HDMI / TV screens and put the audience and stage windows on the one you choose ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const DD=window.dscDisp={sd:null,list:[],err:'',
   supported:!!window.getScreenDetails,
@@ -6969,7 +6969,7 @@ try{if(typeof bc!=='undefined')bc.addEventListener('message',e=>{const m=e.data;
 <script>
 /* ---- timers: types, pause, overrun, colour triggers, formats, several timers ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const TR={};let PR=null;
 const TYPES=[['down','Countdown (duration)'],['to','Countdown to a time of day'],['up','Elapsed time (count up)']];
 const FMTS=[['auto','Automatic (m:ss, h:mm:ss)'],['m:ss','m:ss'],['mm:ss','mm:ss'],['h:mm:ss','h:mm:ss'],['hh:mm:ss','hh:mm:ss'],['mm:ss.ms','mm:ss.mmm (milliseconds)'],['hh:mm:ss.ms','hh:mm:ss.mmm (milliseconds)'],['ss','Seconds only']];
@@ -7152,7 +7152,7 @@ setInterval(()=>{
 <script>
 /* ---- messages: saved messages, fill-ins, appearance; props: appearance + collections; macros: test step + shortcuts ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KNOWN=['clock','clock12','date','timer','song','title'];
 const fieldsOf=t=>{const o=[],seen={};String(t||'').replace(/\{([^{}:]+)(?::[^{}]*)?\}/g,(m,k)=>{k=k.trim();const l=k.toLowerCase();if(KNOWN.indexOf(l)<0&&!seen[l]){seen[l]=1;o.push(k)}return m});return o};
@@ -7404,7 +7404,7 @@ try{bc.addEventListener('message',e=>{const m=e.data;if(!m)return;
 <script>
 /* ---- screens: grid / edge blend, masks, identify; payload carries each audience screen's setup ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const aud=()=>(window.lpScr?lpScr.get().filter(d=>d.k==='a'):[]);
 const ar=d=>{const m=/^(\d+)x(\d+)$/.exec(d.r||'');return m?(+m[1])/(+m[2]):0};
 const _pl=payload;
@@ -7569,7 +7569,7 @@ if(isStg){
 <script>
 /* ---- stage layouts: editor, picker in Show Controls, data sent to stage windows ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const BUILTIN=[['both','Live + Next'],['live','Live only'],['next','Next slide focus'],['notes','Live + Next + Notes'],['clock','Clock, timer + messages']];
 S.stLayouts=S.stLayouts||[];
@@ -7759,7 +7759,7 @@ dscTestPattern=function(k,label){
 <script>
 /* ---- test patterns: choose which screen gets which pattern ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const PAT=[['bars','Colour bars'],['grid','Grid and centre'],['geo','Geometry: circle, aspect boxes'],['safe','Safe areas and framing'],['id','Identify screen'],['ramp','Grey ramp and colours'],['checker','Checkerboard'],['white','White'],['black','Black']];
 const TPM={};
 function resend(){
@@ -7800,7 +7800,7 @@ if(sb)sb.onclick=e=>{e.stopPropagation();const d=lpScr.get()[lpScr.sel()],A=lpSc
 <script>
 /* ---- Files: import many formats, export, print, bring in older data ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const xesc=x=>String(x==null?'':x).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ext=n=>((/\.([^.\/\\]+)$/.exec(n)||[0,''])[1]).toLowerCase();
@@ -8096,7 +8096,7 @@ document.addEventListener('keydown',e=>{
 <script>
 /* ---- Additional features: calendar, communications, key mappings, timecode, recording, audio routing, control API ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const mk=(tag,props,kids)=>{const e=document.createElement(tag);Object.assign(e,props||{});(kids||[]).forEach(k=>e.append(k));return e};
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -8645,7 +8645,7 @@ const _pt=paint;paint=function(stage,p){if(p&&p.vo!==undefined&&p.vo!==dev){dev=
 <script>
 /* ---- preferences: effects ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const P=()=>{try{return JSON.parse(localStorage.getItem('lp-prefs')||'{}')}catch(e){return{}}};
 const css=document.createElement('style');document.head.appendChild(css);
 function apply(){const p=P();css.textContent=p.reduceMotion?'#app *,.qe *,.cm *{animation:none!important;transition:none!important}':''}
@@ -8685,7 +8685,7 @@ let told=false;setInterval(async()=>{if(told||P().updCheck===false)return;const 
 <script>
 /* ---- Help: a search bar for every function and button, and a manual ---- */
 (function(){
-if(/^#(output|stage)/.test(location.hash))return;
+if(/^#(output|stage|layout)/.test(location.hash))return;
 const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=s=>document.querySelector(s);
 /* [title, category, where, what it does, extra search words, action]
@@ -8924,6 +8924,237 @@ window.dscManual=function(q0){
   }
   Q.oninput=draw;Q.value=q0||'';draw();setTimeout(()=>Q.focus(),50);
 };
+})();
+</script>
+<script>
+/* ---- Screen layouts: put several outputs (audience, stage, pictures, text, clock) inside ONE display, placed freely ---- */
+(function(){
+const KEY='dsc-screen-layouts',W=1920,H=1080;
+const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>'l'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const load=()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.list))return s}catch(e){}return{list:[],cur:''}};
+const base=()=>location.href.split('#')[0];
+const mkItem=(t,n,x,y,w,h,extra)=>Object.assign({id:uid(),t,n:n||0,x,y,w,h,op:100,rad:0,color:t==='color'?'#1a2a5a':'#ffffff',text:'Text',size:96,al:'center',fit:'contain',src:''},extra||{});
+
+/* ---- draws one item. live = real output pages inside; otherwise labelled placeholders for the editor ---- */
+function itemEl(it,live,timers){
+  const d=document.createElement('div');
+  d.style.cssText='position:absolute;left:'+it.x+'px;top:'+it.y+'px;width:'+it.w+'px;height:'+it.h+'px;overflow:hidden;box-sizing:border-box;opacity:'+((it.op==null?100:it.op)/100)+';border-radius:'+(it.rad||0)+'px';
+  if(it.t==='a'||it.t==='s'){
+    if(live){
+      const f=document.createElement('iframe');f.style.cssText='border:0;width:100%;height:100%;background:#000;pointer-events:none;display:block';
+      f.src=base()+(it.t==='a'?'#output'+(it.n?'&n='+it.n:''):'#stage'+(it.n||0));
+      f.onload=()=>{try{const s=f.contentDocument.createElement('style');s.textContent='#fsHint{display:none!important}';f.contentDocument.head.appendChild(s)}catch(e){}};
+      d.appendChild(f);
+    }else{
+      d.style.background=it.t==='a'?'linear-gradient(135deg,#1c2f66,#0b1020)':'linear-gradient(135deg,#3a2a0a,#14100a)';
+      d.style.outline='3px solid '+(it.t==='a'?'#4a6bd6':'#e8b923');d.style.outlineOffset='-3px';
+      d.innerHTML='<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;font:700 70px/1.1 system-ui,sans-serif">'+(it.t==='a'?'AUDIENCE ':'STAGE ')+((it.n||0)+1)+'<div style="font:400 36px system-ui;opacity:.7;margin-top:8px">live output</div></div>';
+    }
+  }else if(it.t==='color'){d.style.background=it.color}
+  else if(it.t==='text'){d.style.cssText+=';display:flex;align-items:center;justify-content:'+(it.al==='left'?'flex-start':it.al==='right'?'flex-end':'center')+';text-align:'+it.al+';color:'+it.color+';font:700 '+it.size+'px/1.15 Poppins,system-ui,sans-serif;white-space:pre-wrap;padding:0 20px';d.textContent=it.text}
+  else if(it.t==='clock'){
+    d.style.cssText+=';display:flex;align-items:center;justify-content:center;color:'+it.color+';font:700 '+it.size+'px/1 Poppins,system-ui,sans-serif';
+    const tick=()=>{d.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};tick();
+    if(live&&timers)timers.push(setInterval(tick,1000));
+  }
+  else if(it.t==='image'){
+    if(it.src){const im=document.createElement('img');im.src=it.src;im.style.cssText='width:100%;height:100%;object-fit:'+it.fit+';display:block;pointer-events:none';d.appendChild(im)}
+    else{d.style.background='#222';d.innerHTML='<div style="position:absolute;inset:0;display:grid;place-items:center;color:#aaa;font:600 50px system-ui">Choose a picture</div>'}
+  }
+  return d;
+}
+
+/* =========================  THE LAYOUT WINDOW  ========================= */
+if(/^#layout/.test(location.hash)){
+  const id=(/[&?]id=([^&]+)/.exec(location.hash)||[0,''])[1];
+  document.title='Screen layout';
+  document.body.className='';document.body.style.cssText='margin:0;padding:0;background:#000;overflow:hidden;width:100vw;height:100vh';
+  document.documentElement.style.cssText='background:#000;overflow:hidden';
+  document.body.innerHTML='<div id="lyHost" style="position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;transform-origin:0 0;overflow:hidden"></div>';
+  const host=document.getElementById('lyHost');let timers=[];
+  const fit=()=>{const k=Math.min(innerWidth/W,innerHeight/H);host.style.transform='translate('+Math.round((innerWidth-W*k)/2)+'px,'+Math.round((innerHeight-H*k)/2)+'px) scale('+k+')'};
+  let sig='';
+  const draw=()=>{
+    const L=(load().list.find(x=>x.id===id))||null;
+    const s=JSON.stringify(L);if(s===sig)return;sig=s;
+    timers.forEach(clearInterval);timers=[];host.textContent='';
+    if(!L){host.style.background='#000';return}
+    host.style.background=L.bg||'#000';document.title='Screen layout: '+(L.name||'');
+    L.items.forEach(it=>host.appendChild(itemEl(it,true,timers)));
+  };
+  draw();fit();addEventListener('resize',fit);
+  addEventListener('storage',e=>{if(e.key===KEY)draw()});
+  document.addEventListener('click',()=>{try{document.documentElement.requestFullscreen()}catch(e){}});
+  const h=document.createElement('div');h.textContent='Click once to go fullscreen';h.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#e8c766;font:13px system-ui,sans-serif;padding:6px 14px;border-radius:14px;z-index:99;pointer-events:none;transition:opacity .4s';document.body.appendChild(h);
+  const hide=()=>{h.style.opacity='0';setTimeout(()=>h.remove(),500)};document.addEventListener('click',hide,{once:true});setTimeout(hide,7000);
+  return;
+}
+if(/^#(output|stage)/.test(location.hash))return;
+
+/* =========================  THE EDITOR  ========================= */
+const wins={};
+const counts=()=>{let a=1,s=1;try{const D=lpScr.get();a=Math.max(1,D.filter(d=>d.k==='a').length);s=Math.max(1,D.filter(d=>d.k==='s').length)}catch(e){}return{a,s}};
+const PRESETS={
+  side:['Audience and Stage side by side',()=>[mkItem('a',0,0,270,960,540),mkItem('s',0,960,270,960,540)]],
+  full:['Audience full screen',()=>[mkItem('a',0,0,0,W,H)]],
+  corner:['Stage full, small audience in a corner',()=>[mkItem('s',0,0,0,W,H),mkItem('a',0,1360,40,520,293,{rad:12})]],
+  grid:['2 x 2 grid',()=>[mkItem('a',0,0,0,960,540),mkItem('s',0,960,0,960,540),mkItem('clock',0,0,540,960,540,{size:260}),mkItem('color',0,960,540,960,540)]]
+};
+window.dscLayouts=function(){
+  let st=load();
+  const newLayout=(key,name)=>{const L={id:uid(),name:name||('Layout '+(st.list.length+1)),disp:'auto',bg:'#000000',items:PRESETS[key||'side'][1]()};st.list.push(L);st.cur=L.id;save();return L};
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){window.toast&&toast('Could not save the layout (a picture may be too large).')}};
+  if(!st.list.length)newLayout('side','Layout 1');
+  const curL=()=>st.list.find(x=>x.id===st.cur)||st.list[0];
+  let sel=null,snapOn=true;
+  const d=document.createElement('div');d.className='qe';
+  d.innerHTML='<div class="qb" role="dialog" aria-label="Screen layouts" style="width:min(1180px,97vw);max-height:94vh;overflow:auto"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><b>Screen layouts</b><button class="x">Close</button></div><div id="lyBody"></div></div>';
+  document.body.appendChild(d);
+  const body=d.querySelector('#lyBody');
+  const close=()=>{document.removeEventListener('keydown',kd,true);d.remove()};
+  const kd=e=>{if(e.key==='Escape'&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){e.stopPropagation();close()}
+    else if(sel&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){const L=curL(),it=L.items.find(x=>x.id===sel);if(!it)return;const m=e.shiftKey?50:5;
+      if(e.key==='ArrowLeft')it.x-=m;else if(e.key==='ArrowRight')it.x+=m;else if(e.key==='ArrowUp')it.y-=m;else if(e.key==='ArrowDown')it.y+=m;
+      else if(e.key==='Delete'||e.key==='Backspace'){L.items=L.items.filter(x=>x!==it);sel=null}else return;
+      e.preventDefault();e.stopPropagation();save();paint()}};
+  document.addEventListener('keydown',kd,true);
+  d.querySelector('.x').onclick=close;d.onmousedown=e=>{if(e.target===d)close()};
+
+  const dispOpts=L=>{const DD=window.dscDisp,list=DD?DD.list:[];let o='<option value="auto"'+(L.disp==='auto'?' selected':'')+'>Automatic: first TV / external display</option>';
+    list.forEach(x=>{const v=x.i+'|'+x.label;o+='<option value="'+esc(v)+'"'+(v===L.disp?' selected':'')+'>Display '+(x.i+1)+': '+esc(x.label)+(x.primary?' (main)':'')+' · '+x.w+'×'+x.h+'</option>'});
+    if(L.disp!=='auto'&&!list.some(x=>(x.i+'|'+x.label)===L.disp)){const m=/^(\d+)\|(.*)$/.exec(L.disp);o+='<option value="'+esc(L.disp)+'" selected>Display '+(m?(+m[1]+1):'?')+': '+esc(m?m[2]:L.disp)+' (not connected)</option>'}return o};
+  const srcOpts=it=>{const c=counts();let o='';
+    for(let i=0;i<c.a;i++)o+='<option value="a'+i+'"'+(it.t==='a'&&it.n===i?' selected':'')+'>Audience '+(i+1)+'</option>';
+    for(let i=0;i<c.s;i++)o+='<option value="s'+i+'"'+(it.t==='s'&&it.n===i?' selected':'')+'>Stage '+(i+1)+'</option>';
+    [['color','Color block'],['text','Text'],['image','Picture'],['clock','Clock']].forEach(([k,l])=>{o+='<option value="'+k+'"'+(it.t===k?' selected':'')+'>'+l+'</option>'});return o};
+
+  function paint(){
+    const L=curL(),it=L.items.find(x=>x.id===sel)||null;if(!it)sel=null;
+    const DD=window.dscDisp;
+    body.innerHTML=
+     '<div class="row" style="gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+      +'<select id="lySel" style="min-width:150px">'+st.list.map(x=>'<option value="'+x.id+'"'+(x.id===L.id?' selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select>'
+      +'<button id="lyNew">New</button><button id="lyRen">Rename</button><button id="lyDup">Duplicate</button><button id="lyDel">Delete</button>'
+      +'<select id="lyPre" title="Start from a ready-made arrangement"><option value="">Apply arrangement…</option>'+Object.keys(PRESETS).map(k=>'<option value="'+k+'">'+PRESETS[k][0]+'</option>').join('')+'</select>'
+      +'<label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="lySnap"'+(snapOn?' checked':'')+'> Snap</label></div>'
+     +'<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">'
+      +'<div style="flex:1 1 640px;min-width:300px"><div id="lyWrap" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:6px;overflow:hidden;touch-action:none"><div id="lyCv" style="position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;transform-origin:0 0"></div></div>'
+        +'<div class="hint" style="margin:6px 0 0">Drag a box to move it, drag its corner to resize. Arrow keys nudge, Delete removes. Boxes show live Audience / Stage views on the real screen.</div>'
+        +'<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center"><span style="font-size:12px">Add:</span>'
+        +'<button data-add="a">Audience</button><button data-add="s">Stage</button><button data-add="image">Picture</button><button data-add="text">Text</button><button data-add="clock">Clock</button><button data-add="color">Color block</button></div></div>'
+      +'<div style="flex:0 0 300px;max-width:100%">'
+        +'<label style="display:block;font-size:12px">Send to display<select id="lyDisp" style="width:100%">'+dispOpts(L)+'</select></label>'
+        +'<div class="row" style="gap:6px;margin:6px 0;flex-wrap:wrap"><button id="lyDet">'+(DD&&DD.sd?'Refresh displays':'Detect displays')+'</button><button id="lyId"'+(DD&&DD.list.length?'':' disabled')+'>Identify</button></div>'
+        +'<div class="row" style="gap:6px;margin-bottom:6px"><button id="lyGo" class="pri">Send to display</button><button id="lyStop">Stop</button></div>'
+        +'<div class="hint" id="lyNote" style="margin:0 0 10px">'+esc(DD?(DD.err||(DD.sd?(DD.list.length>1?'':'Only one display found. Set Windows to Extend (not Mirror).'):'Press Detect displays to see your screens.')):'')+'</div>'
+        +'<div style="border-top:1px solid var(--line);padding-top:8px" id="lyProps">'+(it?props(it):'<div class="hint" style="margin:0">Select a box to edit it.</div>')+'</div>'
+      +'</div></div>';
+    fitCv();drawCv();wire(L,it);
+  }
+  function props(it){
+    const n=(k,l)=>'<label style="font-size:11px;flex:1;min-width:60px">'+l+'<input type="number" data-k="'+k+'" value="'+Math.round(it[k])+'" style="width:100%"></label>';
+    let o='<label style="display:block;font-size:12px;margin-bottom:6px">Shows<select id="lyType" style="width:100%">'+srcOpts(it)+'</select></label>'
+      +'<div class="row" style="gap:6px;margin-bottom:6px">'+n('x','X')+n('y','Y')+'</div><div class="row" style="gap:6px;margin-bottom:6px">'+n('w','Width')+n('h','Height')+'</div>'
+      +'<div class="row" style="gap:6px;margin-bottom:6px">'+n('op','Opacity %')+n('rad','Corner')+'</div>';
+    if(it.t==='color'||it.t==='text'||it.t==='clock')o+='<label style="font-size:12px;display:block;margin-bottom:6px">Color <input type="color" data-k="color" value="'+esc(it.color)+'"></label>';
+    if(it.t==='text')o+='<label style="font-size:12px;display:block;margin-bottom:6px">Text<textarea data-k="text" rows="3" style="width:100%">'+esc(it.text)+'</textarea></label><div class="row" style="gap:6px;margin-bottom:6px">'+n('size','Size')+'<label style="font-size:11px;flex:1">Align<select data-k="al" style="width:100%"><option'+(it.al==='left'?' selected':'')+'>left</option><option'+(it.al==='center'?' selected':'')+'>center</option><option'+(it.al==='right'?' selected':'')+'>right</option></select></label></div>';
+    if(it.t==='clock')o+='<div class="row" style="gap:6px;margin-bottom:6px">'+n('size','Size')+'</div>';
+    if(it.t==='image')o+='<div class="row" style="gap:6px;margin-bottom:6px;align-items:end"><button id="lyPic">Choose picture…</button><label style="font-size:11px;flex:1">Fit<select data-k="fit" style="width:100%"><option value="contain"'+(it.fit==='contain'?' selected':'')+'>Whole picture</option><option value="cover"'+(it.fit==='cover'?' selected':'')+'>Fill box</option></select></label></div>';
+    o+='<div class="row" style="gap:6px;flex-wrap:wrap"><button id="lyFill">Fill screen</button><button id="lyRatio">Make 16:9</button><button id="lyFront">Bring to front</button><button id="lyBack">Send back</button><button id="lyCopy">Duplicate</button><button id="lyRm">Delete</button></div>';
+    return o;
+  }
+  function fitCv(){const w=body.querySelector('#lyWrap'),cv=body.querySelector('#lyCv');if(!w)return;const k=w.clientWidth/W;cv.style.transform='scale('+k+')';cv._k=k}
+  function drawCv(){
+    const L=curL(),cv=body.querySelector('#lyCv'),k=cv._k||.3;cv.textContent='';cv.style.background=L.bg||'#000';
+    L.items.forEach(it=>{
+      const e=itemEl(it,false);e.dataset.id=it.id;e.style.cursor='move';if(it.id===sel){e.style.outline='4px solid #e8b923';e.style.outlineOffset='-4px'}
+      cv.appendChild(e);
+      if(it.id===sel){const hs=Math.round(26/k);[['nw',0,0],['ne',1,0],['sw',0,1],['se',1,1]].forEach(([c,ax,ay])=>{
+        const g=document.createElement('div');g.dataset.h=c;g.style.cssText='position:absolute;width:'+hs+'px;height:'+hs+'px;background:#e8b923;border:2px solid #000;box-sizing:border-box;'+(ax?'right':'left')+':0;'+(ay?'bottom':'top')+':0;cursor:'+(c==='nw'||c==='se'?'nwse':'nesw')+'-resize';e.appendChild(g)})}
+    });
+  }
+  const SN=12;
+  function snapV(v,tg){if(!snapOn)return v;let b=v,bd=SN/(body.querySelector('#lyCv')._k||.3)/3;tg.forEach(t=>{const dd=Math.abs(v-t);if(dd<bd){bd=dd;b=t}});return Math.round(b)}
+  function wire(L,it){
+    const q=s=>body.querySelector(s);
+    q('#lySel').onchange=e=>{st.cur=e.target.value;sel=null;save();paint()};
+    q('#lyNew').onclick=()=>{newLayout('side');sel=null;paint()};
+    q('#lyRen').onclick=()=>{const v=prompt('Layout name',L.name);if(v&&v.trim()){L.name=v.trim();save();paint()}};
+    q('#lyDup').onclick=()=>{const c=JSON.parse(JSON.stringify(L));c.id=uid();c.name=L.name+' copy';c.items.forEach(x=>x.id=uid());st.list.push(c);st.cur=c.id;sel=null;save();paint()};
+    q('#lyDel').onclick=()=>{if(!confirm('Delete layout “'+L.name+'”?'))return;closeWin(L.id);st.list=st.list.filter(x=>x!==L);if(!st.list.length)newLayout('side','Layout 1');st.cur=st.list[0].id;sel=null;save();paint()};
+    q('#lyPre').onchange=e=>{const k=e.target.value;if(!k)return;L.items=PRESETS[k][1]();sel=null;save();paint()};
+    q('#lySnap').onchange=e=>{snapOn=e.target.checked};
+    q('#lyDisp').onchange=e=>{L.disp=e.target.value;save()};
+    q('#lyDet').onclick=async()=>{if(window.dscDisp)await dscDisp.detect();paint()};
+    q('#lyId').onclick=()=>window.dscDisp&&dscDisp.identify();
+    q('#lyGo').onclick=()=>openLayout(L);
+    q('#lyStop').onclick=()=>closeWin(L.id);
+    body.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{
+      const t=b.dataset.add,m=mkItem(t,0,t==='clock'?660:560,t==='text'?440:t==='clock'?400:270,t==='clock'?600:800,t==='text'?200:t==='clock'?280:450,t==='clock'?{size:200}:{});
+      if(t==='color'){m.w=600;m.h=300}
+      L.items.push(m);sel=m.id;save();paint();if(t==='image')setTimeout(()=>{const p=body.querySelector('#lyPic');if(p)p.click()},0)});
+    /* box dragging and resizing */
+    const cv=q('#lyCv');
+    cv.onpointerdown=e=>{
+      const box=e.target.closest('[data-id]');if(!box){sel=null;paint();return}
+      const id=box.dataset.id,m=L.items.find(x=>x.id===id);if(!m)return;
+      const hnd=e.target.dataset.h||'',k=cv._k||.3,sx=e.clientX,sy=e.clientY,o={x:m.x,y:m.y,w:m.w,h:m.h};
+      if(sel!==id){sel=id;drawCv();const pr=q('#lyProps');if(pr){pr.innerHTML=props(m);wireProps(m)}}
+      const live=cv.querySelector('[data-id="'+id+'"]');
+      const mv=ev=>{
+        const dx=(ev.clientX-sx)/k,dy=(ev.clientY-sy)/k;
+        const xs=[0,W/2,W],ys=[0,H/2,H];L.items.forEach(z=>{if(z!==m){xs.push(z.x,z.x+z.w);ys.push(z.y,z.y+z.h)}});
+        if(!hnd){let nx=o.x+dx,ny=o.y+dy;const a=snapV(nx,xs),b=snapV(nx+o.w,xs),c=snapV(ny,ys),dd=snapV(ny+o.h,ys);
+          nx=a!==Math.round(nx)?a:(b!==Math.round(nx+o.w)?b-o.w:Math.round(nx));ny=c!==Math.round(ny)?c:(dd!==Math.round(ny+o.h)?dd-o.h:Math.round(ny));m.x=nx;m.y=ny}
+        else{let x1=o.x,y1=o.y,x2=o.x+o.w,y2=o.y+o.h;
+          if(hnd.includes('w'))x1=snapV(o.x+dx,xs);else x2=snapV(o.x+o.w+dx,xs);
+          if(hnd.includes('n'))y1=snapV(o.y+dy,ys);else y2=snapV(o.y+o.h+dy,ys);
+          if(x2-x1<40){if(hnd.includes('w'))x1=x2-40;else x2=x1+40}if(y2-y1<40){if(hnd.includes('n'))y1=y2-40;else y2=y1+40}
+          m.x=Math.round(x1);m.y=Math.round(y1);m.w=Math.round(x2-x1);m.h=Math.round(y2-y1)}
+        live.style.left=m.x+'px';live.style.top=m.y+'px';live.style.width=m.w+'px';live.style.height=m.h+'px';
+      };
+      const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);save();paint()};
+      addEventListener('pointermove',mv);addEventListener('pointerup',up);e.preventDefault();
+    };
+    if(it)wireProps(it);
+  }
+  function wireProps(it){
+    const L=curL(),q=s=>body.querySelector(s);
+    const upd=()=>{save();drawCv()};
+    q('#lyType').onchange=e=>{const v=e.target.value;if(/^[as]\d+$/.test(v)){it.t=v[0];it.n=+v.slice(1)}else it.t=v;save();paint()};
+    body.querySelectorAll('#lyProps [data-k]').forEach(i=>{
+      const k=i.dataset.k,num=i.type==='number';
+      i.oninput=()=>{it[k]=num?(+i.value||0):i.value;if(k==='w'||k==='h')it[k]=Math.max(10,it[k]);upd()};
+      if(i.tagName==='SELECT')i.onchange=i.oninput;
+    });
+    const pic=q('#lyPic');if(pic)pic.onclick=()=>{const f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=()=>{const file=f.files[0];if(!file)return;
+      const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        it.src=c.toDataURL(/png|gif|webp/.test(file.type)?'image/png':'image/jpeg',.88);
+        if(it.w===800&&it.h===450){const r=im.width/im.height;it.h=Math.round(it.w/r);if(it.h>H){it.h=H;it.w=Math.round(H*r)}}
+        URL.revokeObjectURL(u);save();paint()};im.src=u};f.click()};
+    q('#lyFill').onclick=()=>{it.x=0;it.y=0;it.w=W;it.h=H;save();paint()};
+    q('#lyRatio').onclick=()=>{it.h=Math.round(it.w*9/16);save();paint()};
+    q('#lyFront').onclick=()=>{L.items=L.items.filter(x=>x!==it);L.items.push(it);save();paint()};
+    q('#lyBack').onclick=()=>{L.items=L.items.filter(x=>x!==it);L.items.unshift(it);save();paint()};
+    q('#lyCopy').onclick=()=>{const c=JSON.parse(JSON.stringify(it));c.id=uid();c.x+=40;c.y+=40;L.items.push(c);sel=c.id;save();paint()};
+    q('#lyRm').onclick=()=>{L.items=L.items.filter(x=>x!==it);sel=null;save();paint()};
+  }
+  addEventListener('resize',()=>{if(d.isConnected){fitCv();drawCv()}});
+  paint();
+  if(window.dscDisp&&dscDisp.supported&&!dscDisp.sd){navigator.permissions&&navigator.permissions.query({name:'window-management'}).then(p=>{if(p.state==='granted')dscDisp.detect().then(()=>{if(d.isConnected)paint()})}).catch(()=>{})}
+};
+
+function closeWin(id){const w=wins[id];try{if(w&&!w.closed)w.close()}catch(e){}delete wins[id]}
+async function openLayout(L){
+  let f='popup,width=1280,height=720',s=null;const DD=window.dscDisp;
+  try{if(DD&&DD.supported){if(!DD.sd)await DD.detect();else DD.refresh();s=DD.find(L.disp);if(s)f='popup,left='+s.l+',top='+s.t+',width='+s.w+',height='+s.h}}catch(e){}
+  const old=wins[L.id];
+  const w=window.open(base()+'#layout&id='+L.id,'lp-layout-'+L.id,f);
+  if(!w){window.toast&&toast('The browser blocked the popup. Allow popups for this page and try again.');return}
+  wins[L.id]=w;if(s&&DD)DD.place(w,s);
+  window.toast&&toast(s?'Layout sent to '+s.name+'.':'No other display found, so the layout opened in a normal window.');
+}
 })();
 </script>
 </body>
