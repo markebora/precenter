@@ -702,6 +702,9 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
 const G={Gold:'linear-gradient(160deg,#0a0a0b,#3b2d07)',Spotlight:'radial-gradient(ellipse at 50% 38%,#4a380a 0%,#0a0a0b 72%)',Rays:'repeating-conic-gradient(from 0deg at 50% 115%,#241a06 0 5deg,#0a0a0b 5deg 10deg)',Aurora:'linear-gradient(120deg,#0b1d3a,#3b2d07,#1d0f3a,#0b3a2d,#0b1d3a)',Onyx:'linear-gradient(160deg,#000,#1d1d21)',Midnight:'linear-gradient(160deg,#0b1d3a,#1d0f3a)',Ember:'linear-gradient(160deg,#3a0f0b,#7a3a0b)',Forest:'linear-gradient(160deg,#06251c,#0d3f2f)',Dusk:'linear-gradient(160deg,#241b3d,#8a4b5f)'};
 
 const bc=new BroadcastChannel('lyrics-presenter');
+{const hh=location.hash,mkk=/^#output/.test(hh)?'a'+((+((/[&?]n=(\d+)/.exec(hh)||[0,0])[1]))||0):/^#stage/.test(hh)?'s'+(parseInt(hh.slice(6))||0):'';
+  /* a screen that was sent its own slide ignores the live slide, and ignores slides meant for other screens */
+  if(mkk)bc.addEventListener('message',e=>{const m=e.data;if(!m||typeof m!=='object')return;if(m.tgt){if(m.tgt!==mkk)e.stopImmediatePropagation()}else if(m.d&&m.pk&&m.pk.indexOf(mkk)>=0)e.stopImmediatePropagation()})}
 const $=s=>document.querySelector(s);
 
 const GF={'Poppins':'400;700','Inter':'400;700','Montserrat':'400;700','Roboto':'400;700','Open Sans':'400;700','Lato':'400;700','Raleway':'400;700','Nunito':'400;700','Playfair Display':'400;700','Merriweather':'400;700','Lora':'400;700','Source Sans 3':'400;700','PT Sans':'400;700','Work Sans':'400;700','Rubik':'400;700','Barlow':'400;700','Barlow Condensed':'400;700','Josefin Sans':'400;700','Quicksand':'400;700','DM Sans':'400;700','Cabin':'400;700','Titillium Web':'400;700','Mulish':'400;700','Karla':'400;700','Libre Baskerville':'400;700','Cormorant Garamond':'400;700','EB Garamond':'400;700','Crimson Text':'400;700','Oswald':'400;700','Kanit':'400;700','Prompt':'400;700','Exo 2':'400;700','Manrope':'400;700','Outfit':'400;700','Plus Jakarta Sans':'400;700','Sora':'400;700','Lexend':'400;700','Urbanist':'400;700','Figtree':'400;700','Archivo':'400;700','Archivo Narrow':'400;700','Bitter':'400;700','Arvo':'400;700','Zilla Slab':'400;700','Space Grotesk':'400;700','Spectral':'400;700','Cinzel':'400;700','Teko':'400;700','Big Shoulders Display':'400;700','League Spartan':'400;700','Epilogue':'400;700','Syne':'400;700','Unbounded':'400;700','Dancing Script':'400;700','Caveat':'400;700','Syncopate':'400;700','Orbitron':'400;700','Bebas Neue':'400','Anton':'400','Archivo Black':'400','Fjalla One':'400','Abril Fatface':'400','Alfa Slab One':'400','Bangers':'400','Pacifico':'400','Lobster':'400','Great Vibes':'400','Permanent Marker':'400','Righteous':'400','Russo One':'400','Bungee':'400','Staatliches':'400','Krona One':'400','Michroma':'400','Black Ops One':'400','Oleo Script':'400','Satisfy':'400','Sacramento':'400','Yellowtail':'400','Shadows Into Light':'400','Amatic SC':'400','Patua One':'400','Passion One':'400','Press Start 2P':'400'};
@@ -4221,7 +4224,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.5',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.8',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -4795,14 +4798,14 @@ const sp=(txt,cls,dot)=>{const e=document.createElement('span');if(cls)e.classNa
 function upd(){
   try{
     const nd=window.dscNdiOn,a=!!(outWin&&!outWin.closed)||!!(nd&&nd('a')),s=stgWins.some(w=>w&&!w.closed)||!!(nd&&nd('s'));
-    const nc=window.dscNdiConfigs?dscNdiConfigs().length:0,sg=cur(),ex=expand(sg),x=ex[idx]||{};
+    const nc=window.dscNdiConfigs?dscNdiConfigs().length:0,lvS=window.dscLiveSel?dscLiveSel():S.sel,lvI=window.dscLiveIdx?dscLiveIdx():idx,sg=S.songs.find(z=>z.id===lvS)||cur(),ex=expand(sg),x=ex[lvI]||{};
     sb.textContent='';const now=Date.now(),kk=S.sel+':'+idx;if(kk!==lk){lk=kk;ls=now}if(S.sel!==lik){lik=S.sel;lis=now}
     air.className='air '+(window._tp?'blk':!a?'':black?'blk':'on');air.textContent=window._tp?'TEST PATTERN':!a?'OFF AIR':black?'BLACK':'LIVE';
     sb.appendChild(sp('Audience '+(a?'on':'off'),a?'on':'',1));
     sb.appendChild(sp('Stage '+(s?'on':'off'),s?'on':'',1));
     sb.appendChild(sp(window.dscNative?('NDI '+(nc?nc+' output'+(nc>1?'s':''):'off')):(nc?'NDI needs desktop app':'NDI off'),window.dscNative&&nc?'on':'',1));
     if(black)sb.appendChild(sp('BLACK SCREEN','bad'));
-    sb.appendChild(sp((sg.title||'Untitled')+' \u00b7 '+(idx+1)+'/'+ex.length+(x.label?' '+x.label:''),'live',1));
+    sb.appendChild(sp((sg.title||'Untitled')+' \u00b7 '+(lvI+1)+'/'+ex.length+(x.label?' '+x.label:''),'live',1));
     if(a)sb.appendChild(sp('Slide '+fmt(now-ls)+'  \u00b7  Item '+fmt(now-lis)));
     if(typeof aud!=='undefined'&&aud.cur>=0&&aud.el&&!aud.el.paused)sb.appendChild(sp('\u266a '+((aud.list[aud.cur]||{}).name||'Audio'),'on',1));
     if(msgOn)sb.appendChild(sp('Message showing','on',1));
@@ -4830,20 +4833,20 @@ function strip(){
   const L=document.getElementById('list');if(!L)return;
   let el=document.getElementById('plNow');if(!el){el=mk('div');el.id='plNow';L.parentNode.insertBefore(el,L)}
   if(el.querySelector('select:focus'))return;
-  const o=order(),k=o.findIndex(x=>x.id===S.sel),it=o[k]||o[0],nx=k>=0?o[k+1]:null;
+  const LSL=window.dscLiveSel?dscLiveSel():S.sel,o=order(),k=o.findIndex(x=>x.id===LSL),it=o[k]||o[0],nx=k>=0?o[k+1]:null;
   if(!it){el.textContent='';return}
   el.textContent='';
   const a=mk('div','pr lv');a.appendChild(mk('i','ld'));a.appendChild(mk('b',null,'LIVE'));a.appendChild(mk('span','tt',it.title||'Untitled'));
-  a.appendChild(mk('small',null,(idx+1)+'/'+count(it)));if(it.arrs&&it.arrs.length&&window.dscArrSelect)a.appendChild(dscArrSelect(it));el.appendChild(a);
+  a.appendChild(mk('small',null,((window.dscLiveIdx?dscLiveIdx():idx)+1)+'/'+count(it)));if(it.arrs&&it.arrs.length&&window.dscArrSelect)a.appendChild(dscArrSelect(it));el.appendChild(a);
   const n=mk('div','pr nxr');n.appendChild(mk('b',null,'NEXT'));n.appendChild(mk('span','tt',nx?(nx.title||'Untitled'):'End of the list'));
-  if(nx){const g=mk('button',null,'Go \u25b8');g.title='Make the next item live';g.onclick=()=>{S.sel=nx.id;idx=0;save();drawAll();try{dscSlideAct()}catch(e){}};n.appendChild(g)}
+  if(nx){const g=mk('button',null,'Go \u25b8');g.title='Make the next item live';g.onclick=()=>(window.dscTake||(f=>f()))(()=>{S.sel=nx.id;idx=0;save();drawAll();try{dscSlideAct()}catch(e){}});n.appendChild(g)}
   el.appendChild(n);
 }
 function decorate(){
-  const o=order(),k=o.findIndex(x=>x.id===S.sel),nxId=k>=0&&o[k+1]?o[k+1].id:null;
+  const LSL=window.dscLiveSel?dscLiveSel():S.sel,o=order(),k=o.findIndex(x=>x.id===LSL),nxId=k>=0&&o[k+1]?o[k+1].id:null;
   document.querySelectorAll('#list .song[data-id]').forEach(r=>{
     const id=+r.dataset.id||r.dataset.id,pos=o.findIndex(x=>String(x.id)===String(r.dataset.id)),it=o[pos];if(!it)return;
-    const live=String(it.id)===String(S.sel);
+    const live=String(it.id)===String(LSL);
     r.classList.toggle('liveRow',live);
     r.insertBefore(mk('i','pn',pos+1),r.firstChild);
     if(live)r.insertBefore(mk('i','ld'),r.children[1]);
@@ -9155,6 +9158,191 @@ async function openLayout(L){
   wins[L.id]=w;if(s&&DD)DD.place(w,s);
   window.toast&&toast(s?'Layout sent to '+s.name+'.':'No other display found, so the layout opened in a normal window.');
 }
+})();
+</script>
+<script>
+/* ---- Send to live: clicking an item or slide only PREVIEWS it. The screens keep showing the live slide until you send. ---- */
+(function(){
+if(/^#(output|stage|layout)/.test(location.hash))return;
+const LS='lp-sendlive';
+let on=true;try{on=localStorage.getItem(LS)!=='0'}catch(e){}
+let liveRef=null,taking=0,lastSig='',lf={black:false,clear:false,noMedia:false};
+/* retire the older in-grid "Preview first" box: this replaces it */
+if(window.dscHold){const t=window.toast;try{window.toast=function(){};window.dscHold(false)}catch(e){}finally{window.toast=t}}
+const exists=id=>S.songs.some(s=>s.id===id);
+const same=()=>liveRef&&liveRef.sel===S.sel&&liveRef.idx===idx;
+const snap=()=>{lf={black,clear,noMedia}};
+const typing=e=>{const t=e.target;return !!t&&(/INPUT|TEXTAREA|SELECT/.test(t.tagName)||t.isContentEditable)};
+const take=fn=>{taking++;try{return fn()}finally{taking--}};
+window.dscTake=take;
+window.dscLiveSel=()=>on&&liveRef&&exists(liveRef.sel)?liveRef.sel:S.sel;
+window.dscLiveIdx=()=>on&&liveRef&&exists(liveRef.sel)?liveRef.idx:idx;
+
+const _push=push;
+push=function(){
+  if(!on){liveRef=null;return _push.apply(this,arguments)}
+  if(!liveRef||!exists(liveRef.sel))liveRef={sel:S.sel,idx};
+  const sig=S.sel+':'+idx;
+  if(taking||same()){const moved=!same();liveRef={sel:S.sel,idx};lastSig=sig;const r=_push.apply(this,arguments);snap();ui(moved);return r}
+  /* preview only: update the operator's screen, but keep the outputs on the live slide */
+  const real=bc.postMessage;
+  bc.postMessage=function(m){if(m&&m.d)return;return real.apply(this,arguments)};
+  let r;try{r=_push.apply(this,arguments)}finally{bc.postMessage=real}
+  if(sig!==lastSig){black=lf.black;clear=lf.clear;noMedia=lf.noMedia;try{$('#bBlack').classList.toggle('on',black)}catch(e){}}else snap();
+  lastSig=sig;
+  const ss=S.sel,si=idx;S.sel=liveRef.sel;idx=liveRef.idx;
+  try{real.call(bc,payload())}catch(e){}finally{S.sel=ss;idx=si}
+  ui(false);return r;
+};
+/* things that mean "take it live" */
+['advance','goSong'].forEach(n=>{const f=window[n];if(typeof f==='function')window[n]=function(){return take(()=>f.apply(this,arguments))}});
+if(typeof runCmd==='function'){const _rc=runCmd;runCmd=function(){return take(()=>_rc.apply(this,arguments))};if(window.dscAPI)window.dscAPI.run=runCmd}
+if(typeof runStep==='function'){const _rs=runStep,NAV={next:1,prev:1,gotoSlide:1,gotoItem:1};runStep=function(st){return st&&NAV[st.a]?take(()=>_rs.apply(this,arguments)):_rs.apply(this,arguments)}}
+/* slide actions (macros, media) belong to the live slide, so a preview does not fire them */
+{const _sa=window.dscSlideAct;if(_sa)window.dscSlideAct=function(){if(on&&liveRef&&!same()&&!taking)return;return _sa.apply(this,arguments)}}
+
+function sendNow(){
+  if(!on||same())return;
+  liveRef={sel:S.sel,idx};
+  take(()=>{try{if(cur().type==='countdown'&&window.startCd)startCd(cur())}catch(e){}push()});
+  try{dscSlideAct()}catch(e){}
+}
+function backToLive(){
+  if(!liveRef||!exists(liveRef.sel))return;
+  S.sel=liveRef.sel;idx=liveRef.idx;try{save()}catch(e){}drawAll();
+}
+document.addEventListener('keydown',e=>{
+  if(typing(e)||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='Enter'&&on&&liveRef&&!same()&&!document.querySelector('.qe:not([hidden])')){e.preventDefault();e.stopPropagation();sendNow();return}
+  taking++;setTimeout(()=>{taking--},0);
+},true);
+
+/* the bar above the slides */
+const css=document.createElement('style');
+css.textContent='#liveBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;padding:6px 10px;border-radius:8px;background:#16294f;border:1px solid #3b6fd4;color:#dbe7ff;font-size:12.5px}'
+ +'#liveBar b{color:#7fb0ff;letter-spacing:.5px}#liveBar .lv{opacity:.85}#liveBar button{padding:3px 10px}#liveBar .sp{flex:1}'
+ +'body.pvonly .slide.cur{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.28),var(--sh)}'
+ +'body.pvonly .slide.cur:not(.tv) .stage::after{content:"PREVIEW";background:rgba(20,50,110,.85)}'
+ +'body.pvonly .slide.cur:not(.tv) .stage::before{background:#3b82f6;animation:none}'
+ +'body.pvonly .slide.cur .lab{background:#3b82f6}';
+document.head.appendChild(css);
+const grid=document.getElementById('grid'),bar=document.createElement('div');bar.id='liveBar';bar.hidden=true;
+if(grid&&grid.parentNode)grid.parentNode.insertBefore(bar,grid);
+let shownSig='';
+function ui(liveChanged){
+  const hb=document.querySelector('#clrRow button.hold');
+  if(hb){hb.classList.toggle('on',on);hb.textContent='Preview first';hb.title=on?'On: clicking an item or slide only previews it. Press Enter or Send to live to put it on the screens. Arrow keys and the Next buttons still go live.':'Off: clicking a slide sends it live straight away.'}
+  const pv=on&&liveRef&&!same();
+  document.body.classList.toggle('pvonly',!!pv);
+  if(!pv){bar.hidden=true;bar.textContent=''}
+  else{
+    const L=S.songs.find(x=>x.id===liveRef.sel)||{},C=cur()||{};
+    const sig=S.sel+':'+idx+'|'+liveRef.sel+':'+liveRef.idx;
+    if(sig!==shownSig||bar.hidden){shownSig=sig;bar.textContent='';
+      const mk=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+      bar.append(mk('b',null,'PREVIEW ONLY'),mk('span',null,'“'+(C.title||'Untitled')+'” slide '+(idx+1)+' is not on the screens.'),mk('span','lv','Live: “'+(L.title||'Untitled')+'” slide '+(liveRef.idx+1)),mk('span','sp'));
+      const s=mk('button','pri','Send to live ▸ (Enter)');s.onclick=sendNow;const b=mk('button',null,'Back to live');b.onclick=backToLive;bar.append(s,b);
+    }
+    bar.hidden=false;
+  }
+  if(liveChanged){try{drawList()}catch(e){}}
+}
+window.dscSendLive=sendNow;
+window.dscHold=v=>{
+  on=v==null?!on:!!v;try{localStorage.setItem(LS,on?'1':'0')}catch(e){}
+  if(on)liveRef={sel:S.sel,idx};else liveRef=null;
+  push();ui(true);
+  window.toast&&toast(on?'Preview first is on. Clicking only previews. Press Enter or Send to live to show it. Arrow keys still go live.':'Preview first is off. Clicking a slide sends it live.');
+};
+if(on)liveRef={sel:S.sel,idx};
+ui(false);
+})();
+</script>
+<script>
+/* ---- Send a slide to ONE screen: right-click a slide or item, choose Send to screen. That screen then keeps its own slide while the others follow live. ---- */
+(function(){
+if(/^#(output|stage|layout)/.test(location.hash))return;
+const pins={};
+const screens=()=>{const out=[];let a=0,s=0;try{lpScr.get().forEach(d=>{
+  if(d.k==='a'){out.push({key:'a'+a,name:'Audience: '+(d.n||('Audience '+(a+1))),on:d.on!==false});a++}
+  else if(d.k==='s'){out.push({key:'s'+s,name:'Stage: '+(d.n||('Stage '+(s+1))),on:d.on!==false});s++}})}catch(e){}return out};
+const label=k=>(screens().find(x=>x.key===k)||{name:k}).name;
+const item=id=>S.songs.find(x=>x.id===id);
+const tell=m=>{try{toast(m)}catch(e){}};
+
+/* every live message tells the screens which of them are pinned, so those ignore it */
+{const _pl=payload;payload=function(){const p=_pl.apply(this,arguments);p.pk=Object.keys(pins);return p}}
+
+function sendPins(){
+  Object.keys(pins).forEach(k=>{
+    const pn=pins[k];if(!item(pn.sel)){delete pins[k];return}
+    const ss=S.sel,si=idx;S.sel=pn.sel;idx=Math.min(pn.idx,Math.max(0,expand(item(pn.sel)).length-1));
+    try{
+      const p=payload();p.tgt=k;
+      const ln=p.d&&p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
+      bc.postMessage(p);
+    }catch(e){}finally{S.sel=ss;idx=si}
+  });
+}
+const _push=push;
+push=function(){const r=_push.apply(this,arguments);try{sendPins()}catch(e){}return r};
+
+function pin(k,sel,i){pins[k]={sel,idx:i||0};push();draw();const it=item(sel);tell('Sent “'+(it&&it.title||'slide')+'” slide '+((i||0)+1)+' to '+label(k)+'. Other screens keep following live.')}
+function release(k){if(k)delete pins[k];else Object.keys(pins).forEach(x=>delete pins[x]);push();draw();tell(k?label(k)+' follows live again.':'All screens follow live again.')}
+
+const sub=(sel,i)=>{
+  const sc=screens();
+  const rows=sc.map(x=>{const p=pins[x.key],here=p&&p.sel===sel&&p.idx===(i||0);
+    return{t:(here?'✓ ':'')+x.name+(x.on?'':' (off)')+(p&&!here?'  ← '+((item(p.sel)||{}).title||'')+' · '+(p.idx+1):''),fn:()=>pin(x.key,sel,i)}});
+  if(!rows.length)rows.push({t:'No screens set up (see Screens…)',off:true,fn:()=>{}});
+  rows.push({sep:1});
+  Object.keys(pins).forEach(k=>rows.push({t:'Follow live again: '+label(k),fn:()=>release(k)}));
+  rows.push({t:'Follow live on all screens',off:!Object.keys(pins).length,fn:()=>release()});
+  return rows;
+};
+
+/* right-click on a slide */
+let ctxSlide=null;
+{const _oc=openCm;openCm=function(e,i){ctxSlide=i;try{return _oc.apply(this,arguments)}finally{ctxSlide=null}}}
+{const _me=menuEl;menuEl=function(items){
+  if(ctxSlide!=null&&items&&items[0]&&items[0].t==='Show slide'){items=items.slice();items.splice(1,0,{t:'Send to screen',sub:sub(S.sel,ctxSlide)})}
+  return _me.call(this,items)}}
+/* right-click on an item in the playlist */
+let ctxId=null;
+document.getElementById('list').addEventListener('contextmenu',e=>{const r=e.target.closest&&e.target.closest('.song[data-id]');if(r){const it=S.songs.find(x=>String(x.id)===r.dataset.id);ctxId=it?it.id:null;setTimeout(()=>{ctxId=null},0)}},true);
+{const _sm=showMenu;showMenu=function(x,y,items){
+  if(ctxId!=null&&items&&items.some(z=>z&&z.t==='Remove from playlist…')){const id=ctxId;ctxId=null;items=items.slice();items.splice(1,0,{t:'Send to screen',sub:sub(id,0)})}
+  return _sm.call(this,x,y,items)}}
+
+/* a small bar that shows which screens are pinned */
+const css=document.createElement('style');
+css.textContent='#pinBar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px;padding:5px 10px;border-radius:8px;background:#2a2108;border:1px solid #8a6d12;color:#f1e0a8;font-size:12px}#pinBar b{color:#e8b923}#pinBar .ch{display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 8px;border-radius:999px;background:rgba(232,185,35,.15)}#pinBar .ch button{padding:0 6px;line-height:1.4}';
+document.head.appendChild(css);
+const grid=document.getElementById('grid'),bar=document.createElement('div');bar.id='pinBar';bar.hidden=true;
+if(grid&&grid.parentNode)grid.parentNode.insertBefore(bar,grid);
+/* move one screen to its previous / next slide (into the next item at the end) */
+function step(k,d){
+  const p=pins[k];if(!p)return;
+  let it=item(p.sel),i=p.idx+d,n=it?expand(it).length:0;
+  if(it&&i>=n||i<0){
+    let L=[];try{L=flatItems()}catch(e){L=S.songs}
+    const at=L.findIndex(x=>x.id===p.sel),nx=L[at+(d>0?1:-1)];
+    if(!nx){tell(d>0?'That was the last item.':'That was the first item.');return}
+    it=nx;const m=expand(nx).length;i=d>0?0:Math.max(0,m-1);p.sel=nx.id;
+  }
+  p.idx=Math.max(0,i);push();draw();
+}
+function draw(){
+  const ks=Object.keys(pins);bar.textContent='';bar.hidden=!ks.length;if(!ks.length)return;
+  const b=document.createElement('b');b.textContent='SCREENS WITH THEIR OWN SLIDE';bar.appendChild(b);
+  const mkb=(t,ti,fn)=>{const x=document.createElement('button');x.textContent=t;x.title=ti;x.onclick=fn;return x};
+  ks.forEach(k=>{const p=pins[k],it=item(p.sel)||{},c=document.createElement('span');c.className='ch';
+    const tx=document.createElement('span');tx.textContent=label(k)+' \u2192 '+(it.title||'')+' \u00b7 '+(p.idx+1)+'/'+(it.id!=null?expand(it).length:0);
+    c.append(mkb('\u25c0','Previous slide on this screen',()=>step(k,-1)),tx,mkb('\u25b6','Next slide on this screen',()=>step(k,1)),mkb('\u00d7','Follow live again',()=>release(k)));
+    bar.appendChild(c)});
+  const r=document.createElement('button');r.textContent='All follow live';r.onclick=()=>release();bar.appendChild(r);
+}
+window.dscPins={pin,release,step,list:()=>JSON.parse(JSON.stringify(pins))};
 })();
 </script>
 </body>
