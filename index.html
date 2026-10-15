@@ -4224,7 +4224,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.8',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.9',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -4777,7 +4777,9 @@ const MENUS=window.dscMENUS={
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
 };
 /* Desktop app only: the Windows menu is hidden, so its few extra items live here in Help (older desktop builds show only what they support) */
+try{const _A=window.dscNative&&window.dscNative.app;if(_A&&_A.info){_A.info().then(i=>{window.__dscNdiOn=!!(i&&i.ndiEnabled)}).catch(()=>{});if(window.dscNative.ndi&&window.dscNative.ndi.onStatus){}}}catch(e){}
 window.dscDesk=()=>{const A=window.dscNative&&window.dscNative.app;if(!A)return[];const o=[{sep:1}];
+if(A.setNdi){const on=!!window.__dscNdiOn;o.push({t:(on?'\u2713 ':'')+'NDI output '+(on?'on (click to turn off)':'off (click to turn on)'),fn:()=>A.setNdi(!on).then(r=>{window.__dscNdiOn=!!(r&&r.enabled);try{toast(r&&r.error?'Could not change NDI: '+r.error:(window.__dscNdiOn?(r.available?'NDI is on. Set a screen output to NDI under Screens.':'NDI is on, but the NDI add-on is missing from this build.'):'NDI is off.'))}catch(e){}}).catch(e=>{try{toast('Could not change NDI: '+(e&&e.message||e))}catch(x){}})})}
 if(A.openConfig)o.push({t:'Open settings file (config.json)',fn:()=>A.openConfig()});
 if(A.openData)o.push({t:'Show data folder',fn:()=>A.openData()});
 if(A.checkUpdate)o.push({t:'Check for page update',fn:()=>A.checkUpdate()});
