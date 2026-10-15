@@ -2,12 +2,12 @@
   // Disciples PreCenter settings. Edit this file, save it, then restart the app.
   // Lines that start with // are notes and are ignored. To restore every default,
   // delete this file and start the app again: a fresh copy is written for you.
-
+ 
   // "local"  = run the copy of PreCenter that is inside this app (works offline).
   // "remote" = load the address in "startUrl" instead (for example your hosted copy).
   "mode": "remote",
-  "startUrl": "startUrl": "https://precenter-bay.vercel.app//",
-
+  "startUrl": "https://precenter-bay.vercel.app/",
+ 
   // Automatic page updates (only used while "mode" is "local"). On each start the app looks at your hosted
   // copy; if it has a newer version it is downloaded and used from the next start. Offline, or if anything
   // looks wrong, the copy already on this computer is used.
@@ -15,10 +15,10 @@
     "enabled": true,
     "url": "https://precenter-bay.vercel.app/index.html"
   },
-
+ 
   // Your Disciples site. PreCenter asks it for the sign-in settings.
   "siteUrl": "https://worship-chords-rho.vercel.app",
-
+ 
   "window": {
     "width": 1500,
     "height": 900,
@@ -27,7 +27,7 @@
     "menuBar": false,          // true shows File / View / Help all the time (otherwise press Alt)
     "backgroundColor": "#0e0f13"
   },
-
+ 
   // What PreCenter may ask this computer for. false = always refused.
   "permissions": {
     "media": true,                       // camera and microphone
@@ -41,7 +41,7 @@
     "notifications": false,
     "geolocation": false
   },
-
+ 
   // Web addresses that PreCenter may call even though the app runs from its own address.
   // Needed so sign-in and the web tools work. Add a host here only if a feature says it is blocked.
   "corsRelaxHosts": [
@@ -49,19 +49,19 @@
     "bible-api.com",
     "api.planningcenteronline.com"
   ],
-
+ 
   // Links that leave the app: "browser" opens them in your normal browser, "block" ignores them.
   "externalLinks": "browser",
-
+ 
   // true = use the built-in copy of JSZip so saving a service works with no internet.
   "offlineLibraries": true,
-
+ 
   // true = opening the app a second time just brings the first window forward.
   "singleInstance": true,
-
+ 
   // true = allow the developer tools (F12). Leave false for church use.
   "devTools": false,
-
+ 
   // NDI video output. Needs the NDI add-on described in README.md. Off by default.
   "ndi": { "enabled": false }
 }
