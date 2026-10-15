@@ -8,13 +8,13 @@ const { DEFAULTS, stripComments, parseText, loadConfig } = require('../lib/confi
 const { createUrlPolicy } = require('../lib/urls');
 const { isPermissionAllowed } = require('../lib/permissions');
 const { mimeFor, resolveAppFile } = require('../lib/files');
-
+ 
 const root = path.join(__dirname, '..');
 let pass = 0, fail = 0;
 const queue = [];
 function test(name, fn) { queue.push([name, fn]); }
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'precenter-'));
-
+ 
 // ---- config ----
 test('comments are stripped but https:// inside text survives', () => {
   const t = stripComments('{ // note\n "a": "https://x.y/z", /* c */ "b": 1, }');
@@ -26,6 +26,11 @@ test('the shipped default file parses and equals the built-in defaults', () => {
   assert.strictEqual(r.error, '');
   assert.deepStrictEqual(r.warnings, []);
   assert.deepStrictEqual(r.config, DEFAULTS);
+});
+test('a fresh install starts in remote mode', () => {
+  const r = parseText('{}');
+  assert.strictEqual(r.config.mode, 'remote');
+  assert.strictEqual(r.config.startUrl, 'https://precenter-bay.vercel.app/');
 });
 test('user values override defaults and wrong types are reported', () => {
   const r = parseText('{ "window": { "width": 1200, "height": "tall" }, "devTools": true, "externalLinks": "nope" }');
@@ -71,9 +76,9 @@ test('a broken config.json on disk is reported and never overwritten', () => {
   assert.strictEqual(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'), '{ nope');
   assert.deepStrictEqual(r.config, DEFAULTS);
 });
-
+ 
 // ---- URL policy ----
-const local = createUrlPolicy(parseText('{}').config);
+const local = createUrlPolicy(parseText('{ "mode": "local" }').config);
 test('the bundled app and blank pop-ups are app addresses', () => {
   assert.ok(local.isAppUrl('dsc://app/index.html#output'));
   assert.ok(local.isAppUrl('about:blank'));
@@ -111,20 +116,20 @@ test('CORS headers are added only for hosts in the list', () => {
   assert.ok(wild.needsCors('https://api.example.org/x'));
   assert.ok(!wild.needsCors('https://example.org.evil.com/x'));
 });
-
+ 
 // ---- permissions ----
 test('permissions follow the config and only for app pages', () => {
-  const cfg = parseText('{}').config, pol = createUrlPolicy(cfg);
+  const cfg = parseText('{ "mode": "local" }').config, pol = createUrlPolicy(cfg);
   assert.ok(isPermissionAllowed(cfg, pol, 'media', 'dsc://app/index.html'));
   assert.ok(isPermissionAllowed(cfg, pol, 'midi', 'dsc://app'));
   assert.ok(isPermissionAllowed(cfg, pol, 'window-placement', 'about:blank'));
   assert.ok(!isPermissionAllowed(cfg, pol, 'geolocation', 'dsc://app/index.html'));
   assert.ok(!isPermissionAllowed(cfg, pol, 'media', 'https://www.youtube.com/embed/x'));
   assert.ok(!isPermissionAllowed(cfg, pol, 'openExternal', 'dsc://app/index.html'));
-  const off = parseText('{ "permissions": { "media": false } }').config;
+  const off = parseText('{ "mode": "local", "permissions": { "media": false } }').config;
   assert.ok(!isPermissionAllowed(off, createUrlPolicy(off), 'media', 'dsc://app/index.html'));
 });
-
+ 
 // ---- files ----
 test('the app protocol cannot read outside the app folder', () => {
   const appDir = path.join(root, 'app');
@@ -136,8 +141,8 @@ test('the app protocol cannot read outside the app folder', () => {
   assert.strictEqual(mimeFor('a.HTML'), 'text/html; charset=utf-8');
   assert.strictEqual(mimeFor('a.unknown'), 'application/octet-stream');
 });
-
-
+ 
+ 
 // ---- page updates ----
 const { createUpdater, parseVersion, looksValid, cmp } = require('../lib/update');
 const fakePage = v => '<!doctype html><html><head></head><body><script>const DSC_VERSION=\'' + v + '\',DSC_RELEASED=\'x\';</script>' + 'x'.repeat(120000) + '</body></html>\n';
@@ -205,7 +210,7 @@ test('the update address must be https', () => {
   assert.strictEqual(r.config.update.enabled, false);
   assert.ok(r.warnings.some(w => /update\.url/.test(w)));
 });
-
+ 
 // ---- package sanity ----
 test('every file the installer needs is present', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -216,7 +221,7 @@ test('every file the installer needs is present', () => {
   assert.ok(pkg.dependencies.jszip);
   assert.strictEqual(pkg.build.npmRebuild, false);
 });
-
+ 
 (async () => {
   for (const [name, fn] of queue) {
     try { await fn(); pass++; console.log('PASS ' + name); }
