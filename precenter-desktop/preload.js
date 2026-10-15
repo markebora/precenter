@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('dscNative', {
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
+    setNdi: on => ipcRenderer.invoke('app:setNdi', !!on),
     openConfig: () => ipcRenderer.invoke('app:openConfig'),
     openData: () => ipcRenderer.invoke('app:openData')
   }
