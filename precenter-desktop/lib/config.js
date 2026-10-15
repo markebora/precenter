@@ -6,8 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULTS = {
-  mode: 'local',
-  startUrl: '',
+  mode: 'remote',
+  startUrl: 'https://precenter-bay.vercel.app/',
   update: { enabled: true, url: 'https://precenter-bay.vercel.app/index.html' },
   siteUrl: 'https://worship-chords-rho.vercel.app',
   window: { width: 1500, height: 900, maximized: true, menuBar: false, customTitleBar: true, backgroundColor: '#0e0f13' },
