@@ -4773,7 +4773,7 @@ const MENUS=window.dscMENUS={
  File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
- Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
+ Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
@@ -9395,5 +9395,40 @@ window.dscNdiGuide=async function(){
 };
 })();
 </script>
+<script>
+/* ---- Stream link: sends the live slide to Disciples Stream (server /link, role=remote) ---- */
+(function(){
+  const K='lp-sl';let C={addr:'',code:'',on:false};try{C=Object.assign(C,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
+  let ws=null,tm=null,stt='Off',last='';
+  const save=()=>{try{localStorage.setItem(K,JSON.stringify(C))}catch(e){}};
+  const url=()=>{let a=(C.addr||'').trim().replace(/\/+$/,'');if(!a||!(C.code||'').trim())return'';const sec=/^(https|wss):/i.test(a);a=a.replace(/^[a-z]+:\/\//i,'');return(sec?'wss://':'ws://')+a+'/link?role=remote&code='+encodeURIComponent(C.code.trim())};
+  const state=()=>{const s=cur();return black?{t:'black',on:true}:clear?{t:'clear'}:{t:'slide',text:slideText(s,idx),ref:(s&&s.title)||''}};
+  function send(force){if(!ws||ws.readyState!==1)return;const k=JSON.stringify(state());if(!force&&k===last)return;last=k;ws.send(k)}
+  function setS(x){stt=x;const e=document.getElementById('slSt');if(e)e.textContent=x;const b=document.getElementById('slB');if(b)b.textContent=C.on?'Disconnect':'Connect'}
+  function stop(){clearTimeout(tm);if(ws){ws.onclose=null;try{ws.close()}catch(e){}ws=null}}
+  function start(){
+    stop();const u=url();if(!u){setS('Enter the server address and code');return}
+    setS('Connecting\u2026');try{ws=new WebSocket(u)}catch(e){setS('That address does not work');return}
+    ws.onopen=()=>{setS('Linked');last='';send(true);try{toast('Stream link connected.')}catch(e){}};
+    ws.onclose=ev=>{ws=null;if(!C.on)return setS('Off');const bad=ev&&ev.code===4001;setS(bad?'Wrong pairing code':'Reconnecting\u2026');tm=setTimeout(start,bad?8000:2500)};
+    ws.onerror=()=>{};
+  }
+  const _push=push;push=function(){const r=_push.apply(this,arguments);try{send(false)}catch(e){}return r};
+  setInterval(()=>{try{send(true)}catch(e){}},5000);
+  window.slOpen=function(){
+    const w=document.createElement('div');w.className='qe';
+    w.innerHTML='<div class="qb" style="width:min(440px,94vw);display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:space-between;align-items:center"><b>Stream link \u2013 Disciples Stream</b><button class="x" title="Close">\u2715</button></div>'
+      +'<div class="hint" style="margin:0">Sends the live slide, clear and black to Disciples Stream. Use the address and pairing code the Stream server prints when it starts.</div>'
+      +'<label>Server address<input id="slA" placeholder="localhost:3000" autocomplete="off"></label><label>Pairing code<input id="slC" autocomplete="off"></label>'
+      +'<div class="row" style="justify-content:space-between;align-items:center"><span class="hint" style="margin:0">Status: <b id="slSt"></b></span><button id="slB" class="pri"></button></div></div>';
+    const kd=e=>{if(e.key==='Escape'){e.stopPropagation();done()}},done=()=>{document.removeEventListener('keydown',kd,true);w.remove()};
+    document.addEventListener('keydown',kd,true);w.querySelector('.x').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
+    document.body.appendChild(w);const A=w.querySelector('#slA'),Cd=w.querySelector('#slC');A.value=C.addr;Cd.value=C.code;setS(stt);
+    w.querySelector('#slB').onclick=()=>{if(C.on){C.on=false;save();stop();setS('Off');return}C.addr=A.value.trim();C.code=Cd.value.trim();C.on=true;save();start()};
+  };
+  if(C.on&&url())setTimeout(start,1500);
+})();
+</script>
+
 </body>
 </html>
