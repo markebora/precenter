@@ -689,7 +689,7 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
 <div id="sed" hidden>
   <div class="sedtop">
     <b id="sedT">Slide editor</b>
-    <span class="row" style="gap:4px"><button data-a="addSlide" title="Add a blank slide after this one">+ Slide</button><button data-a="dupSlide" title="Duplicate this slide with its design">Duplicate slide</button><button data-a="delSlide" title="Delete this slide">Delete slide</button><button data-a="master" title="Shapes, pictures and text shown on every slide of this item">Master</button><button data-a="copyDesign" title="Copy this slide's design (background, shapes, text styling) to other slides">Copy design to…</button><button data-a="layout" title="Apply a slide layout">Layout</button><button data-ins="1" title="Insert an object: text, shape, media, video input or web page">Insert &#9662;</button><button data-a="addText">Text</button><button data-a="addRect">Rectangle</button><button data-a="addEll">Ellipse</button><button data-a="addImg">Image</button><button data-a="dup">Duplicate</button><button data-a="front">Bring forward</button><button data-a="back">Send back</button><button data-a="del">Delete</button><button data-a="undo">Undo</button><button data-a="redo">Redo</button></span>
+    <span class="row" style="gap:4px"><button data-a="addSlide" title="Add a blank slide after this one">+ Slide</button><button data-a="dupSlide" title="Duplicate this slide with its design">Duplicate slide</button><button data-a="delSlide" title="Delete this slide">Delete slide</button><button data-a="master" title="Shapes, pictures and text shown on every slide of this item">Master</button><button data-a="copyDesign" title="Copy this slide's design (background, shapes, text styling) to other slides">Copy design to…</button><button data-ins="1" title="Insert an object: text, shape, media, video input or web page">Insert &#9662;</button><button data-a="addText">Text</button><button data-a="addRect">Rectangle</button><button data-a="addEll">Ellipse</button><button data-a="addImg">Image</button><button data-a="front">Bring forward</button><button data-a="back">Send back</button><button data-a="del">Delete</button><button data-a="undo">Undo</button><button data-a="redo">Redo</button></span>
     <span class="row" style="gap:4px"><button id="sedAll" title="Copy this layout to every slide in the song">Apply to all slides</button><button id="sedReset" title="Go back to the plain text layout for this slide">Reset layout</button><button id="sedCancel">Cancel</button><button id="sedDone" class="pri">Done</button></span>
   </div>
   <div id="sedHome"></div>
@@ -716,9 +716,9 @@ const loadedF=new Set(['Inter']);
 function ensureFont(f){if(!f||loadedF.has(f)||!GF[f])return;loadedF.add(f);const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f.replace(/ /g,'+')+':wght@'+GF[f]+'&display=swap';l.onload=()=>{document.querySelectorAll('.stage').forEach(fitStage)};document.head.appendChild(l)}
 const fmt=n=>{const h=Math.floor(n/3600),m=Math.floor(n%3600/60),sc=n%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sc).padStart(2,'0')};
 function tick(){if(window.dscTick)return window.dscTick();document.querySelectorAll('.tm[data-end]').forEach(e=>{const n=Math.max(0,Math.round((e.dataset.end-Date.now())/1000));e.textContent=fmt(n)})}
-const RK=['k','b','i','u','c','s','h','v','l','f'];
+const RK=['k','b','i','u','c','x','h','v','l','f'];/* 'x' = strikethrough (was 's', which clashed with the run start index) */
 const skey=c=>RK.some(p=>c[p]!==undefined)?JSON.stringify(RK.map(p=>c[p]===undefined?null:c[p])):'';
-function runsToChars(runs,n){const ch=Array.from({length:n},()=>({}));(runs||[]).forEach(r=>{for(let i=Math.max(0,r.s);i<Math.min(n,r.e);i++)RK.forEach(p=>{if(r[p]!==undefined&&r[p]!==null)ch[i][p]=r[p]})});return ch}
+function runsToChars(runs,n){const ch=Array.from({length:n},()=>({}));(runs||[]).forEach(r=>{if(typeof r.s!=='number')return;for(let i=Math.max(0,r.s);i<Math.min(n,r.e);i++)RK.forEach(p=>{if(r[p]!==undefined&&r[p]!==null)ch[i][p]=r[p]})});return ch}
 function charsToRuns(ch){const out=[];let cur=null,key='';ch.forEach((c,i)=>{const k=skey(c);if(k&&cur&&k===key&&cur.e===i)cur.e=i+1;else if(k){cur={s:i,e:i+1};RK.forEach(p=>{if(c[p]!==undefined)cur[p]=c[p]});key=k;out.push(cur)}else{cur=null;key=''}});return out}
 function shiftRuns(o,oldT,newT){
   if(!o.runs||!o.runs.length)return;
@@ -737,7 +737,7 @@ function runStyle(e,st){
   if(st.k!==undefined)e.style.fontSize=st.k+'em';
   if(st.b!==undefined)e.style.fontWeight=st.b?700:400;
   if(st.i!==undefined)e.style.fontStyle=st.i?'italic':'normal';
-  const td=[st.u?'underline':'',st.s?'line-through':''].filter(Boolean).join(' ');if(td)e.style.textDecoration=td;
+  const td=[st.u?'underline':'',st.x?'line-through':''].filter(Boolean).join(' ');if(td)e.style.textDecoration=td;
   if(st.c)e.style.color=st.c;
   if(st.h)e.style.background=st.h;
   if(st.l!==undefined)e.style.letterSpacing=(st.l/19.2)+'cqw';
@@ -763,7 +763,7 @@ function fillRich(sp,t,runs,o){
     let ind=lvl*1.2,hang=0;
     if(isList&&!empty){
       hang=1.15;cnt[lvl]++;for(let k=lvl+1;k<cnt.length;k++)cnt[k]=0;
-      const m=document.createElement('span');m.style.cssText='display:inline-block;width:1.15em;text-indent:0;white-space:pre';
+      const m=document.createElement('span');m.style.cssText='display:inline-block;width:1.15em;text-indent:0;white-space:pre';m.dataset.mk='1';m.contentEditable='false';
       if(isNum){const ns=o.ns||'1.',st=(ns==='1.'||ns==='1)')?[ns,'a.','i.'][lvl%3]:ns;m.textContent=numFmt(cnt[lvl],st)}
       else{const set=BUL[o.bs||'dot']||BUL.dot;m.textContent=set[lvl%3]}
       p.appendChild(m);
@@ -2896,7 +2896,7 @@ function sedAct(a){
   else if(a==='addRect'){E.tab='S';add({t:'rect',x:660,y:340,w:600,h:400,fill:'#e8b923',rad:0});sedPanel()}
   else if(a==='addEll'){E.tab='S';add({t:'ellipse',x:660,y:340,w:600,h:400,fill:'#e8b923'});sedPanel()}
   else if(a==='addImg'){E.repl=false;$('#sedFile').click()}
-  else if(a==='layout'){const r=document.querySelector('#sed [data-a=layout]').getBoundingClientRect();showMenu(r.left,r.bottom+2,[{t:'Full text',fn:()=>sedLayout('full')},{t:'Title at top',fn:()=>sedLayout('title')},{t:'Lower third (over video)',fn:()=>sedLayout('lower')},{sep:1},{t:'Text left, picture right\u2026',fn:()=>sedLayout('picR')},{t:'Picture left, text right\u2026',fn:()=>sedLayout('picL')},{sep:1},{t:'Blank (no text)',fn:()=>sedLayout('blank')}])}else if(a==='addSlide')sedSlide('add');else if(a==='dupSlide')sedSlide('dup');else if(a==='delSlide')sedSlide('del');else if(a==='undo')sedUndo();else if(a==='redo')sedRedo();
+  else if(a==='layout'){const r=(document.querySelector('#sed [data-h=lay]')||document.querySelector('#sedBox')).getBoundingClientRect();showMenu(r.left,r.bottom+2,[{t:'Full text',fn:()=>sedLayout('full')},{t:'Title at top',fn:()=>sedLayout('title')},{t:'Lower third (over video)',fn:()=>sedLayout('lower')},{sep:1},{t:'Text left, picture right\u2026',fn:()=>sedLayout('picR')},{t:'Picture left, text right\u2026',fn:()=>sedLayout('picL')},{sep:1},{t:'Blank (no text)',fn:()=>sedLayout('blank')}])}else if(a==='addSlide')sedSlide('add');else if(a==='dupSlide')sedSlide('dup');else if(a==='delSlide')sedSlide('del');else if(a==='undo')sedUndo();else if(a==='redo')sedRedo();
   else if(!o)return;
   else if(a==='dup'){sedSnap();const n={...JSON.parse(JSON.stringify(o)),id:uid(),linked:false,x:o.x+40,y:o.y+40};if(o.linked&&o.t==='text')n.text=E.text;E.objs.push(n);E.sel=n.id;sedRender();sedPanel()}
   else if(a==='del'){sedSnap();E.objs=E.objs.filter(x=>!msel().includes(x.id));E.sel=null;sedRender();sedPanel()}
@@ -3041,12 +3041,12 @@ function sedReset(){const s=cur(),i=E.i;if(s.ov&&s.ov[i]){delete s.ov[i].lay;if(
 $('#sedAll').onclick=()=>{if(E)sedAll()};$('#sedDone').onclick=()=>{if(E)sedDone()};$('#sedCancel').onclick=()=>{if(E)sedClose()};$('#sedReset').onclick=()=>{if(E)sedReset()};
 document.addEventListener('keydown',e=>{
   if(!E)return;
-  const tg=e.target.tagName,inp=/INPUT|TEXTAREA|SELECT/.test(tg);
+  const tg=e.target.tagName,inp=/INPUT|TEXTAREA|SELECT/.test(tg)||!!(e.target&&e.target.isContentEditable);
   if(e.key==='Escape'&&e.target.classList&&e.target.classList.contains('inl')){e.target.blur();return}
   if(e.key==='Escape'){e.preventDefault();if(E.sel&&!inp){E.sel=null;sedUi();sedPanel()}else sedClose();return}
   const cm=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
-  if(cm&&k==='z'&&tg!=='TEXTAREA'){e.preventDefault();e.shiftKey?sedRedo():sedUndo();return}
-  if(cm&&k==='y'&&tg!=='TEXTAREA'){e.preventDefault();sedRedo();return}
+  if(cm&&k==='z'&&tg!=='TEXTAREA'&&!(e.target&&e.target.isContentEditable)){e.preventDefault();e.shiftKey?sedRedo():sedUndo();return}
+  if(cm&&k==='y'&&tg!=='TEXTAREA'&&!(e.target&&e.target.isContentEditable)){e.preventDefault();sedRedo();return}
   if(inp)return;
   if(cm&&k==='a'){e.preventDefault();E.ms=E.objs.map(x=>x.id);E.sel=E.ms[E.ms.length-1]||null;sedUi();sedPanel();return}
   if(cm&&k==='c'){const q=selObj();if(q){const c=JSON.parse(JSON.stringify(q));if(c.linked&&c.t==='text')c.text=E.text;window._sc=c;try{navigator.clipboard.writeText('PreCenter object').catch(()=>{})}catch(e){}}return}
@@ -9553,9 +9553,9 @@ document.getElementById('sedUi').addEventListener('pointerdown',e=>{
 /* ---------- font ---------- */
 function toggle(p){
   const T=texts();if(!T.length){info('Select a text box first.');return}
-  sedSnap();const f=T[0],r=RG(f,T);
-  if(r.part){const ch=runsToChars(f.runs||[],getT(f).length),cv=c=>c[p]!==undefined?c[p]:!!f[p];let all=true;for(let i=r.a;i<r.b;i++)if(!cv(ch[i]))all=false;for(let i=r.a;i<r.b;i++)ch[i][p]=!all;f.runs=charsToRuns(ch)}
-  else{const nv=!T.every(o=>o[p]);T.forEach(o=>{o[p]=nv;stripRun(o,p)})}
+  sedSnap();const f=T[0],r=RG(f,T),pk=p==='s'?'x':p;
+  if(r.part){const ch=runsToChars(f.runs||[],getT(f).length),cv=c=>c[pk]!==undefined?c[pk]:!!f[p];let all=true;for(let i=r.a;i<r.b;i++)if(!cv(ch[i]))all=false;for(let i=r.a;i<r.b;i++)ch[i][pk]=!all;f.runs=charsToRuns(ch)}
+  else{const nv=!T.every(o=>o[p]);T.forEach(o=>{o[p]=nv;stripRun(o,pk)})}
   refresh();
 }
 function setStyle(prop,val){
@@ -9815,7 +9815,7 @@ function hmSync(){
   if(!o){['hB','hI','hU','hS','hSub','hSup','hBul','hNum'].forEach(i=>on(i,false));return}
   const r=T.length===1?rangeOf(o):{part:false},ch=r.part?runsToChars(o.runs||[],getT(o).length):null,c0=ch?ch[r.a]:{};
   const pv=(k,d)=>c0[k]!==undefined?c0[k]:d;
-  on('hB',pv('b',!!o.b));on('hI',pv('i',!!o.i));on('hU',pv('u',!!o.u));on('hS',pv('s',!!o.s));on('hSub',c0.v===-1);on('hSup',c0.v===1);
+  on('hB',pv('b',!!o.b));on('hI',pv('i',!!o.i));on('hU',pv('u',!!o.u));on('hS',pv('x',!!o.s));on('hSub',c0.v===-1);on('hSup',c0.v===1);
   on('hBul',o.list&&o.lt!=='num');on('hNum',o.list&&o.lt==='num');
   ['left','center','right','justify'].forEach(v=>on('hAl-'+v,(o.al||'center')===v));
   ['top','middle','bottom'].forEach(v=>on('hVa-'+v,(o.va||'middle')===v));
@@ -10578,5 +10578,210 @@ window.dscDesign={applyDesign,TH,variantPatch};
 
 </script>
 
+<script>
+/* ===== Click-to-type: edit lyrics / text directly on the slide (WYSIWYG) =====
+   Click any text on the slide and just type. The real slide text becomes editable in place,
+   so fonts, sizes, colours and styled words look exactly like they will on screen.
+   Esc or click outside = done. Drag handles / Esc then drag = move or resize the box.          */
+(function(){
+  const q=s=>document.querySelector(s),ZW=/\u200b/g;
+  const legacyInline=sedInline;
+
+  /* ---- DOM <-> plain text (ignores list bullets, zero-width placeholders, trailing <br>) ---- */
+  function scan(root,sn,so){
+    let out='',pos=-1,fb=true;
+    (function w(n){
+      const kids=n.childNodes;
+      for(let i=0;i<=kids.length;i++){
+        if(pos<0&&n===sn&&so===i)pos=out.length;
+        const c=kids[i];if(!c)break;
+        if(c.nodeType===3){
+          if(pos<0&&c===sn)pos=out.length+c.data.slice(0,so).replace(ZW,'').length;
+          out+=c.data.replace(ZW,'');
+        }else if(c.nodeType===1){
+          if(c.dataset&&c.dataset.mk)continue;
+          if(c.tagName==='BR'){if(i!==kids.length-1)out+='\n';continue}
+          if(c.tagName==='DIV'||c.tagName==='P'){if(!fb)out+='\n';fb=false}
+          w(c);
+        }
+      }
+    })(root);
+    return{text:out,pos:pos<0?out.length:pos};
+  }
+  function locate(root,t){
+    let out=0,res=null,fb=true;
+    (function w(n){
+      const kids=n.childNodes;
+      for(let i=0;i<kids.length&&!res;i++){
+        const c=kids[i];
+        if(c.nodeType===3){
+          const d=c.data,L=d.replace(ZW,'').length;
+          if(t<=out+L){let raw=0,v=0;while(raw<d.length&&v<t-out){if(d[raw]!=='\u200b')v++;raw++}res={node:c,off:raw};return}
+          out+=L;
+        }else if(c.nodeType===1){
+          if(c.dataset&&c.dataset.mk)continue;
+          if(c.tagName==='BR'){if(i!==kids.length-1){if(t<=out){res={node:n,off:i};return}out++}continue}
+          if(c.tagName==='DIV'||c.tagName==='P'){if(!fb)out++;fb=false}
+          w(c);
+        }
+      }
+    })(root);
+    return res||{node:root,off:root.childNodes.length};
+  }
+  const suffix=o=>{if(!o.linked)return'';try{const r=cur().ref;return r?'\n\u2014 '+r:''}catch(e){return''}};
+  const modelT=o=>o.linked?E.text:(o.text||'');
+  function getText(sp,o){let t=scan(sp).text;const sf=suffix(o);if(sf&&t.endsWith(sf))t=t.slice(0,-sf.length);return t}
+  function setSel(sp,a,b){
+    const A=locate(sp,a),B=locate(sp,b==null?a:b),r=document.createRange();
+    r.setStart(A.node,A.off);r.setEnd(B.node,B.off);
+    const s=getSelection();s.removeAllRanges();s.addRange(r);
+  }
+  function caretAt(sp,x,y){
+    let r=null;
+    if(document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
+    else if(document.caretPositionFromPoint){const p=document.caretPositionFromPoint(x,y);if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true)}}
+    if(r&&sp.contains(r.startContainer)&&!(r.startContainer.parentNode&&r.startContainer.parentNode.dataset&&r.startContainer.parentNode.dataset.mk)){
+      const s=getSelection();s.removeAllRanges();s.addRange(r);
+    }else{const n=getText(sp,sp._o).length,rc=sp.getBoundingClientRect();setSel(sp,y<rc.top?0:n)}
+  }
+
+  /* ---- keep objects tagged so we can find the rendered element ---- */
+  function tagObjs(){
+    const lay=q('#sedCv>.tx.lay:not(.mstL)');if(!lay||!E)return;
+    const k=[...lay.children];let L=E.objs.filter(o=>!o.hid);
+    if(k.length!==L.length){if(k.length===E.objs.length)L=E.objs;else return}
+    k.forEach((el,i)=>{el.dataset.oid=L[i].id});
+  }
+
+  /* ---- make one rendered text object editable ---- */
+  function editOn(o,st,pt){
+    const ob=q('#sedCv .ob[data-oid="'+o.id+'"]');if(!ob)return false;
+    let sp=ob.querySelector(':scope>span');
+    if(!sp){sp=document.createElement('span');sp.textContent='\u200b';ob.appendChild(sp)}
+    sp.classList.add('inl');sp.contentEditable='true';sp.spellcheck=false;
+    sp.style.outline='none';sp.style.minHeight='1em';sp.style.cursor='text';
+    sp.style.webkitUserSelect=sp.style.userSelect='text';
+    ob.style.outline='1.5px dashed var(--acc,#e8b923)';ob.style.outlineOffset='-2px';ob.style.pointerEvents='auto';
+    sp._o=o;sp._a=sp._b=0;
+    Object.defineProperty(sp,'value',{configurable:true,get(){return getText(sp,o)},set(v){}});
+    Object.defineProperty(sp,'selectionStart',{configurable:true,get(){return sp._a}});
+    Object.defineProperty(sp,'selectionEnd',{configurable:true,get(){return sp._b}});
+    sp.addEventListener('input',()=>{
+      if(!E||E.ine!==sp)return;
+      const old=modelT(o),nw=getText(sp,o);
+      if(nw!==old){shiftRuns(o,old,nw);if(o.linked)E.text=nw;else o.text=nw}
+      const pt2=q('#sedPanel [data-k=text]');if(pt2&&document.activeElement!==pt2&&pt2.value!==nw)pt2.value=nw;
+    });
+    sp.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text/plain');if(t)document.execCommand('insertText',false,t)});
+    sp.addEventListener('beforeinput',e=>{if(/^format/.test(e.inputType))e.preventDefault()});
+    sp.addEventListener('drop',e=>e.preventDefault());
+    sp.addEventListener('keydown',e=>{
+      const cm=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
+      if(cm&&!e.shiftKey&&!e.altKey&&(k==='b'||k==='i'||k==='u')){e.preventDefault();const b=document.getElementById({b:'hB',i:'hI',u:'hU'}[k]);if(b)b.click()}
+    });
+    sp.addEventListener('focusout',e=>{
+      if(!E||E.ine!==sp||E._re)return;
+      const nx=e.relatedTarget;
+      if(nx&&nx.closest&&nx.closest('#sed')&&!nx.closest('#sedCv'))return;   /* focus moved to ribbon / side panel: keep editing */
+      endEdit();
+    });
+    ob.addEventListener('mousedown',e=>{       /* click in the padding / empty part of the box */
+      if(e.target!==ob||E.ine!==sp)return;e.preventDefault();sp.focus();
+      const rc=sp.getBoundingClientRect(),n=getText(sp,o).length;setSel(sp,e.clientY<rc.top?0:n);
+    });
+    E.ine=sp;E.editId=o.id;
+    q('#sedUi').style.pointerEvents='none';
+    if(!st||st.foc)sp.focus();
+    if(st){sp._a=Math.min(st.a,modelT(o).length);sp._b=Math.min(st.b,modelT(o).length);if(st.foc)setSel(sp,sp._a,sp._b)}
+    else if(pt)caretAt(sp,pt.x,pt.y);
+    else setSel(sp,getText(sp,o).length);
+    return true;
+  }
+  function endEdit(){
+    const sp=E&&E.ine;if(!sp)return;
+    E.ine=null;E.editId=null;
+    const ui=q('#sedUi');if(ui)ui.style.pointerEvents='';
+    sedRender();sedPanel();   /* (film strip is left alone so a click on another slide still lands) */
+  }
+
+  /* ---- public: replaces the old textarea overlay ---- */
+  sedInline=function(o,pt){
+    if(!E||!o||o.t!=='text')return;
+    if(E.ine&&E.editId===o.id){E.ine.focus();if(pt)caretAt(E.ine,pt.x,pt.y);return}
+    if(E.ine)endEdit();
+    tagObjs();
+    sedSnap();
+    if(!editOn(o,null,pt)){E.ine=null;E.editId=null;q('#sedUi').style.pointerEvents='';return legacyInline(o)}
+    const sp=E.ine;
+    if(getText(sp,o)!==modelT(o)){   /* text shows tokens / something we can't map 1:1 -> use the classic editor box */
+      sp.contentEditable='false';sp.classList.remove('inl');E.ine=null;E.editId=null;q('#sedUi').style.pointerEvents='';
+      sedRender();return legacyInline(o);
+    }
+    sedUi();
+  };
+
+  /* ---- survive re-renders (ribbon buttons etc. call sedRender) ---- */
+  const _sr=sedRender;
+  sedRender=function(){
+    const sp0=E&&E.ine,st=sp0?{a:sp0._a,b:sp0._b,foc:document.activeElement===sp0}:null;
+    if(E)E._re=!!sp0;
+    try{_sr.apply(this,arguments)}finally{if(E)E._re=false}
+    if(!E)return;
+    tagObjs();
+    if(E.editId){
+      const o=E.objs.find(x=>x.id===E.editId);
+      if(!o||o.hid||o.t!=='text'||!editOn(o,st)){E.ine=null;E.editId=null;q('#sedUi').style.pointerEvents=''}
+      else sedUi();
+    }
+  };
+  const _su=sedUi;
+  sedUi=function(){
+    _su.apply(this,arguments);if(!E)return;
+    const ui=q('#sedUi');if(!ui)return;
+    ui.querySelectorAll('.hit').forEach(h=>{
+      const o=E.objs.find(x=>x.id===h.dataset.id);
+      if(o&&o.t==='text'&&h.style.pointerEvents!=='none')h.style.cursor='text';
+    });
+    if(E.editId){
+      ui.style.pointerEvents='none';
+      ui.querySelectorAll('.hit').forEach(h=>{
+        if(h.dataset.id===E.editId){h.style.pointerEvents='none';h.querySelectorAll('.hdl').forEach(x=>x.style.pointerEvents='auto')}
+        else if(h.style.pointerEvents!=='none')h.style.pointerEvents='auto';
+      });
+    }else ui.style.pointerEvents='';
+  };
+
+  /* ---- caret / selection tracking (drives the ribbon B / I / U / S state and formatting of selected words) ---- */
+  document.addEventListener('selectionchange',()=>{
+    const sp=E&&E.ine;if(!sp)return;
+    const s=getSelection();if(!s.rangeCount||!sp.contains(s.anchorNode)||!sp.contains(s.focusNode))return;
+    const a=scan(sp,s.anchorNode,s.anchorOffset).pos,b=scan(sp,s.focusNode,s.focusOffset).pos,n=modelT(sp._o).length;
+    const A=Math.min(a,b,n),B=Math.min(Math.max(a,b),n);
+    if(A===sp._a&&B===sp._b)return;
+    sp._a=A;sp._b=B;
+    clearTimeout(sp._t);sp._t=setTimeout(()=>{if(E&&E.ine===sp)sedUi()},30);
+  });
+
+  /* ---- a simple click (no drag) on a text box starts typing; dragging still moves it ---- */
+  const ui=q('#sedUi'),_dn=ui.onpointerdown,_up=ui.onpointerup;
+  let st0=null;
+  ui.onpointerdown=function(e){
+    if(E&&E.ine)endEdit();
+    st0={x:e.clientX,y:e.clientY,hd:!!e.target.closest('[data-h]'),sh:e.shiftKey};
+    return _dn.call(this,e);
+  };
+  ui.onpointerup=ui.onpointercancel=function(e){
+    const D=E&&E.drag,s0=st0;st0=null;
+    const r=_up.call(this,e);
+    if(e.type==='pointerup'&&E&&D&&D.mode==='move'&&s0&&!s0.hd&&!s0.sh&&Math.hypot(e.clientX-s0.x,e.clientY-s0.y)<4&&msel().length<2){
+      const o=E.objs.find(x=>x.id===D.id);
+      if(o&&o.t==='text'&&!o.lock&&!o.hid)sedInline(o,{x:e.clientX,y:e.clientY});
+    }
+    return r;
+  };
+  ui.ondblclick=null;   /* native double-click selects a word while typing */
+})();
+
+</script>
 </body>
 </html>
