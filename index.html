@@ -940,15 +940,18 @@ function paint(stage,p){
       [...stage.children].forEach(c=>{if(c.classList.contains('ov')||c.classList.contains('tm')||c.classList.contains('pp')||c.classList.contains('cdx'))return;if(st==='Morph'&&!c.classList.contains('tx'))return;old.appendChild(c.cloneNode(true))});
     }
   }
-  const k=[d.bg,d.color,JSON.stringify(d.grad||''),(d.img||'').length,u,d.dim||0,d.fit||''].join('|');
+  const k=[d.bg,d.color,JSON.stringify(d.grad||''),(d.img||'').length,u,d.dim||0,d.fit||'',JSON.stringify(d.pat||''),d.tex||'',d.bgop||0,d.tile||0].join('|');
   if(stage.dataset.k!==k){
     stage.dataset.k=k;
     let h;
     if(d.bg==='Video'&&u)h=`<video src="${u}" autoplay loop muted playsinline></video>`;
-    else if(d.bg==='Image'&&(u||d.img))h=`<div class="bg" style="background-image:url('${u||d.img}')${d.fit==='contain'?';background-size:contain;background-repeat:no-repeat;background-color:#000':''}"></div>`;
-    else{let c=G[d.bg]||G.Midnight;if(d.bg==='Color')c=d.color;else if(d.bg==='Gradient'&&d.grad)c=`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`;
+    else if(d.bg==='Image'&&(u||d.img))h=`<div class="bg" style="background-image:url('${u||d.img}')${d.fit==='contain'?';background-size:contain;background-repeat:no-repeat;background-color:#000':''}${d.tile?`;background-size:${d.tile/19.2}cqw;background-repeat:repeat`:''}"></div>`;
+    else if(d.bg==='Pattern'&&d.pat&&window.patCss)h=`<div class="bg" style="${window.patCss(d.pat)}"></div>`;
+    else if(d.bg==='Texture'&&d.tex&&window.texCss)h=`<div class="bg" style="${window.texCss(d.tex,d.color)}"></div>`;
+    else{let c=G[d.bg]||G.Midnight;if(d.bg==='Color')c=d.color;else if(d.bg==='Gradient'&&d.grad)c=d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`;
       h=`<div class="bg${d.bg==='Aurora'?' anim':''}" style="background:${c}"></div>`}
     stage.innerHTML=h+(d.dim?`<div class="dim" style="opacity:${d.dim/100}"></div>`:'');
+    {const be=stage.querySelector(':scope>.bg,:scope>video');if(be&&d.bgop)be.style.opacity=String(1-d.bgop/100)}
   }
   stage.querySelectorAll(':scope>.tx,:scope>.ov,:scope>.tm,:scope>.pp,:scope>.cdx').forEach(e=>e.remove());
   const j={Top:'flex-start',Middle:'center',Bottom:'flex-end'}[d.pos];
@@ -4254,7 +4257,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.13',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.14',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -9677,9 +9680,9 @@ function flip(axis){
   refresh();sedPanel();
 }
 function addShape(k){
-  sedSnap();const g={x:660,y:340,w:600,h:400};let n;
-  if(k==='rect')n={t:'rect',...g,fill:'#e8b923',rad:0};else if(k==='rrect')n={t:'rect',...g,fill:'#e8b923',rad:80};else if(k==='ellipse')n={t:'ellipse',...g,fill:'#e8b923'};
-  else n={t:'shape',sh:k,...g,fill:'#e8b923',n:k==='star'?5:6,pts:k==='custom'?'10,10 90,25 70,90 20,70 0,40':''};
+  sedSnap();const AC=(window.dscTpal?window.dscTpal()[0]:AC);const g={x:660,y:340,w:600,h:400};let n;
+  if(k==='rect')n={t:'rect',...g,fill:AC,rad:0};else if(k==='rrect')n={t:'rect',...g,fill:AC,rad:80};else if(k==='ellipse')n={t:'ellipse',...g,fill:AC};
+  else n={t:'shape',sh:k,...g,fill:AC,n:k==='star'?5:6,pts:k==='custom'?'10,10 90,25 70,90 20,70 0,40':''};
   n.id=uid();n.op=100;E.objs.push(n);E.sel=n.id;E.ms=[n.id];E.tab='S';sedRender();sedPanel();
 }
 const QS_TXT=[
@@ -9740,7 +9743,7 @@ function resetSlide(){if(!E)return;if(!confirm('Reset this slide? Its shapes, pi
 function reuse(song){
   const s=cur(),a=expand(song);if(!a.length){info('That item has no slides.');return}
   const w=document.createElement('div');w.className='qe';w.style.zIndex=320;
-  w.innerHTML='<div class="qb" style="width:min(760px,94vw);display:flex;flex-direction:column"><div style="margin-bottom:6px"><b></b> <span class="hint" style="margin:0">Tick the slides to insert after slide '+(E.i+1)+'.</span></div><div class="rg" style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;max-height:52vh"></div><div class="row" style="justify-content:space-between;align-items:center;margin-top:8px"><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" class="kf" checked style="width:auto"> Keep source formatting</label><span class="row" style="gap:6px"><button class="all">Select all</button><button class="x">Cancel</button><button class="pri ok">Insert</button></span></div></div>';
+  w.innerHTML='<div class="qb" style="width:min(760px,94vw)"><div style="margin-bottom:6px"><b></b> <span class="hint" style="margin:0">Tick the slides to insert after slide '+(E.i+1)+'.</span></div><div class="rg" style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;max-height:52vh"></div><div class="row" style="flex:none;justify-content:space-between;align-items:center;margin-top:8px"><label style="flex:none;flex-direction:row;align-items:center;gap:6px"><input type="checkbox" class="kf" checked style="width:auto"> Keep source formatting</label><span class="row" style="gap:6px"><button class="all">Select all</button><button class="x">Cancel</button><button class="pri ok">Insert</button></span></div></div>';
   w.querySelector('b').textContent='Reuse slides from “'+(song.title||'Untitled')+'”';
   const grid=w.querySelector('.rg'),pick=new Set();
   a.forEach((x,i)=>{const c=document.createElement('div');c.style.cssText='cursor:pointer;border:2px solid transparent;border-radius:6px;padding:3px;font-size:10px';c.innerHTML='<div class="stage" style="width:100%;aspect-ratio:16/9"></div><div></div>';c.lastChild.textContent=(i+1)+' '+(x.label||'');
@@ -9766,7 +9769,7 @@ function reuseMenu(ev){
 /* ---------- ribbon ---------- */
 const H=document.getElementById('sedHome');
 const FS=[['Poppins','']];
-H.innerHTML=`<div class="hm"><button data-h="tabHome" id="tabHome" title="Home: clipboard, font, paragraph, drawing, slides">Home</button><button data-h="tabIns" id="tabIns" title="Insert: text, pictures, tables, charts, media">Insert</button><button data-h="tog" id="hmTog" title="Show or hide the ribbon">&#9662;</button><span id="hmInfo" class="hint" style="margin:0"></span></div>
+H.innerHTML=`<div class="hm"><button data-h="tabHome" id="tabHome" title="Home: clipboard, font, paragraph, drawing, slides">Home</button><button data-h="tabIns" id="tabIns" title="Insert: text, pictures, tables, charts, media">Insert</button><button data-h="tabDes" id="tabDes" title="Design: themes, colors, fonts, background, design ideas">Design</button><button data-h="tog" id="hmTog" title="Show or hide the ribbon">&#9662;</button><span id="hmInfo" class="hint" style="margin:0"></span></div>
 <div class="hbody" id="hbHome">
 <div class="hg"><div class="hr"><button data-h="paste" title="Paste (Ctrl+V). Menu: keep formatting, text only, in place, picture">Paste &#9662;</button><button data-h="cut" title="Cut (Ctrl+X)">Cut</button><button data-h="copy" title="Copy (Ctrl+C)">Copy</button><button data-h="fp" id="hFP" title="Format Painter (Ctrl+Shift+C / V). Double-click to keep it on">Painter</button><button data-h="dup" title="Duplicate selection (Ctrl+D)">Duplicate</button></div><small>Clipboard</small></div>
 <div class="hg"><div class="hr"><select id="hFont" title="Font" style="width:118px">${fontOpts('')}</select><input type="number" id="hSize" min="8" max="600" title="Font size" style="width:54px"><button data-h="big" title="Increase font size (Ctrl+Shift+&gt;)">A&#9650;</button><button data-h="small" title="Decrease font size (Ctrl+Shift+&lt;)">A&#9660;</button><button data-h="case" title="Change case">Aa &#9662;</button></div>
@@ -9789,8 +9792,9 @@ css.textContent=`#sedHome{background:var(--panel);border-bottom:1px solid var(--
 #sedHome .hc{display:inline-flex;flex-direction:row;align-items:center;gap:3px;font-size:11px;min-width:0}
 #sedHome input[type=color]{width:26px;height:22px;padding:0;border:1px solid var(--line);background:none}
 #sedHome.col .hbody{display:none!important}
-#sedHome[data-tab=ins] #hbHome{display:none}
-#sedHome[data-tab=home] #hbIns{display:none}
+#sedHome:not([data-tab=home]) #hbHome{display:none}
+#sedHome:not([data-tab=ins]) #hbIns{display:none}
+#sedHome:not([data-tab=des]) #hbDes{display:none}
 #sedBox.fp #sedUi{cursor:copy}
 #sedFilm .psec{font-size:10px;font-weight:700;color:var(--acc);padding:3px 4px;border-radius:4px;background:var(--bg);cursor:pointer}
 .gbox{position:absolute;border:1px dashed var(--acc);pointer-events:none}
@@ -9836,12 +9840,12 @@ sa('#hFill','input',e=>shapeColor('fill',e.target.value));
 sa('#hLine','input',e=>shapeColor('line',e.target.value));
 H.addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault()});
 
-function setTab(t){if(H.dataset.tab===t&&!H.classList.contains('col')){HA.tog();return}H.dataset.tab=t;H.classList.remove('col');try{localStorage.setItem('hmCol','0')}catch(e){}document.getElementById('tabHome').classList.toggle('on',t==='home');document.getElementById('tabIns').classList.toggle('on',t==='ins')}
+function setTab(t){if(H.dataset.tab===t&&!H.classList.contains('col')){HA.tog();return}H.dataset.tab=t;H.classList.remove('col');try{localStorage.setItem('hmCol','0')}catch(e){}[['home','tabHome'],['ins','tabIns'],['des','tabDes']].forEach(([k,id])=>{const b=document.getElementById(id);if(b)b.classList.toggle('on',t===k)})}
 const menuAt=(ev,items)=>{const r=ev.currentTarget.getBoundingClientRect();showMenu(r.left,r.bottom+2,items)};
 const ck=(on,t)=>(on?'✓ ':'    ')+t;
 const HA={
   tog:()=>{H.classList.toggle('col');try{localStorage.setItem('hmCol',H.classList.contains('col')?'1':'0')}catch(e){}},
-  tabHome:()=>setTab('home'),tabIns:()=>setTab('ins'),
+  tabHome:()=>setTab('home'),tabIns:()=>setTab('ins'),tabDes:()=>setTab('des'),
   paste:ev=>menuAt(ev,[{t:'Paste  (Ctrl+V)',fn:()=>pasteObjs(false)},{t:'Keep source formatting',fn:()=>pasteObjs(false)},{t:'Paste in place',fn:()=>pasteObjs(true)},{t:'Paste text only',fn:pasteTextOnly},{t:'Paste picture from clipboard',fn:pasteImgClip}]),
   cut:()=>copyObjs(true),copy:()=>copyObjs(false),
   fp:ev=>{if(ev.detail>=2){if(E.fp)fpOff();fpArm(true)}else fpArm(false)},
@@ -9991,7 +9995,8 @@ document.addEventListener('paste',e=>{
   if(window._scl&&(!txt||txt===window._sclTxt||txt==='PreCenter objects')){e.preventDefault();pasteObjs(false);return}
   if(txt){e.preventDefault();sedSnap();const n={id:uid(),op:100,t:'text',x:560,y:440,w:800,h:200,text:txt,font:'Poppins',size:64,b:true,color:'#ffffff',al:'center',va:'middle',sc:'none',shadow:true,sw:4,scol:'#000000'};E.objs.push(n);E.sel=n.id;E.ms=[n.id];E.tab='T';sedRender();sedPanel()}
 },true);
-window.dscHome={addShape,SHN,ask,info,sel,texts,getT,setT,rangeOf,refresh,menuAt:(ev,items)=>{const r=ev.currentTarget.getBoundingClientRect();showMenu(r.left,r.bottom+2,items)},copyObjs,pasteObjs,group,ungroup,regroup,alignO,distribute,order,rot90,flip,changeCase,toggle,setStyle,indentLines,secAdd,reuse,stepSize,script,clearFormat};
+window.dscTpal=()=>{try{const s=cur();if(s&&s.theme&&s.theme.pal)return s.theme.pal}catch(e){}return['#e8b923','#5d9cec','#7fb069','#e07a5f','#9b7fd1','#4fb3bf']};
+window.dscHome={setTab,shapeColor,addShape,SHN,ask,info,sel,texts,getT,setT,rangeOf,refresh,menuAt:(ev,items)=>{const r=ev.currentTarget.getBoundingClientRect();showMenu(r.left,r.bottom+2,items)},copyObjs,pasteObjs,group,ungroup,regroup,alignO,distribute,order,rot90,flip,changeCase,toggle,setStyle,indentLines,secAdd,reuse,stepSize,script,clearFormat};
 })();
 
 </script>
@@ -10083,7 +10088,7 @@ function chartSvg(o){
   return s+'</svg>';
 }
 function decChart(ob,o){ob.style.background='none';ob.style.border='0';ob.insertAdjacentHTML('beforeend',chartSvg(o))}
-function addChart(t){addObj({t:'chart',name:'Chart',...center(1300,760),ct:t,title:'Attendance',data:'Week 1, 120, 90\nWeek 2, 150, 110\nWeek 3, 135, 125\nWeek 4, 180, 140',sn:'Sunday, Midweek',fs:34,tc:'#ffffff',vals:true,leg:true,font:'Poppins',pal:PAL.slice()})}
+function addChart(t){addObj({t:'chart',name:'Chart',...center(1300,760),ct:t,title:'Attendance',data:'Week 1, 120, 90\nWeek 2, 150, 110\nWeek 3, 135, 125\nWeek 4, 180, 140',sn:'Sunday, Midweek',fs:34,tc:'#ffffff',vals:true,leg:true,font:'Poppins',pal:window.dscTpal().slice()})}
 
 /* ---------- SmartArt ---------- */
 function wrapTxt(t,max){const w=String(t).split(/\s+/),out=[];let cur='';w.forEach(x=>{if((cur+' '+x).trim().length>max&&cur){out.push(cur);cur=x}else cur=(cur+' '+x).trim()});if(cur)out.push(cur);return out}
@@ -10112,7 +10117,7 @@ function smartSvg(o){
 }
 function decSmart(ob,o){ob.style.background='none';ob.style.border='0';ob.insertAdjacentHTML('beforeend',smartSvg(o))}
 const SMART=[['list','Vertical list'],['hlist','Horizontal list'],['process','Basic process'],['vprocess','Vertical process'],['cycle','Cycle'],['pyramid','Pyramid'],['hierarchy','Hierarchy'],['matrix','Matrix (up to 4)']];
-function addSmart(ly){addObj({t:'smart',name:'SmartArt',...center(1500,760),ly,items:ly==='hierarchy'?'Our church\nWorship\nCare\nOutreach':'Pray\nStudy\nShare\nServe',fs:44,tc:'#ffffff',btc:'#10151f',font:'Poppins',pal:PAL.slice()})}
+function addSmart(ly){addObj({t:'smart',name:'SmartArt',...center(1500,760),ly,items:ly==='hierarchy'?'Our church\nWorship\nCare\nOutreach':'Pray\nStudy\nShare\nServe',fs:44,tc:'#ffffff',btc:'#10151f',font:'Poppins',pal:window.dscTpal().slice()})}
 
 /* ---------- symbols, equations, tokens ---------- */
 const SYM='© ® ™ ° ± × ÷ ≠ ≤ ≥ ∞ ≈ √ π Σ Δ Ω α β γ θ λ μ ← ↑ → ↓ ↔ ⇒ ⇔ ★ ☆ ♥ ♦ ♣ ♠ ♪ ♫ ✓ ✔ ✗ ✘ ✝ ✠ ✡ ☮ ☯ • ● ○ ■ □ ▲ ▼ ◆ … — – “ ” ‘ ’ « » § ¶ † ‡ € £ ¥ ¢ ₱ ½ ⅓ ¼ ¾ ¹ ² ³ ⁰ ⁴ ₂ ₃ á é í ó ú ñ ü ç à è ê ö ä ß'.split(' ');
@@ -10348,5 +10353,230 @@ window.dscInsert={addObj,addTable,addChart,addSmart,addWordArt,chartSvg,smartSvg
 })();
 
 </script>
+<script>
+/* ---- Slide editor: Design ribbon (PowerPoint inventory, section 3) ---- */
+(function(){
+if(window.__des||!window.dscHome)return;window.__des=1;
+const D=window.dscHome,H=document.getElementById('sedHome');
+const dc=x=>JSON.parse(JSON.stringify(x));
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const BGK=['bg','color','grad','img','lib','fit','dim','pat','tex','bgop','tile','hideMst'];
+const lum=c=>{const m=/^#([0-9a-f]{6})$/i.exec(c||'');if(!m)return .5;const n=parseInt(m[1],16);return(.299*(n>>16)+.587*((n>>8)&255)+.114*(n&255))/255};
+
+/* ---------- patterns and textures ---------- */
+const PATS=[['dots','Dots'],['dots-sm','5% dots'],['dots-lg','Large dots'],['hstripe','Horizontal stripes'],['vstripe','Vertical stripes'],['diag','Diagonal stripes'],['diag-rev','Reverse diagonal'],['check','Checkerboard'],['grid','Grid'],['hatch','Cross-hatch'],['zig','Zigzag']];
+window.patCss=function(p){
+  const fg=p.fg||'#ffffff',bg=p.bg||'#0b1d3a',s=Math.max(6,p.s||36),u=s/19.2+'cqw';let img,size=u+' '+u,extra='';
+  switch(p.k){
+    case 'dots-sm':img=`radial-gradient(${fg} 9%,transparent 11%)`;break;
+    case 'dots-lg':img=`radial-gradient(${fg} 28%,transparent 30%)`;break;
+    case 'hstripe':img=`linear-gradient(${fg} 50%,transparent 50%)`;break;
+    case 'vstripe':img=`linear-gradient(90deg,${fg} 50%,transparent 50%)`;break;
+    case 'diag':img=`repeating-linear-gradient(45deg,${fg} 0 ${s/4/19.2}cqw,transparent ${s/4/19.2}cqw ${s/2/19.2}cqw)`;size='auto';break;
+    case 'diag-rev':img=`repeating-linear-gradient(-45deg,${fg} 0 ${s/4/19.2}cqw,transparent ${s/4/19.2}cqw ${s/2/19.2}cqw)`;size='auto';break;
+    case 'check':img=`conic-gradient(${fg} 25%,transparent 0 50%,${fg} 0 75%,transparent 0)`;break;
+    case 'grid':img=`linear-gradient(${fg} 2px,transparent 2px),linear-gradient(90deg,${fg} 2px,transparent 2px)`;break;
+    case 'hatch':img=`repeating-linear-gradient(45deg,${fg} 0 1.5px,transparent 1.5px ${s/3/19.2}cqw),repeating-linear-gradient(-45deg,${fg} 0 1.5px,transparent 1.5px ${s/3/19.2}cqw)`;size='auto';break;
+    case 'zig':img=`linear-gradient(135deg,${fg} 25%,transparent 25%) -${s/2/19.2}cqw 0/${u} ${u},linear-gradient(225deg,${fg} 25%,transparent 25%) -${s/2/19.2}cqw 0/${u} ${u},linear-gradient(315deg,${fg} 25%,transparent 25%) 0 0/${u} ${u},linear-gradient(45deg,${fg} 25%,transparent 25%) 0 0/${u} ${u}`;size=null;break;
+    default:img=`radial-gradient(${fg} 18%,transparent 20%)`;
+  }
+  return `background-color:${bg};background-image:${img};`+(size?`background-size:${size};`:'')+extra;
+};
+const TEXS={
+  paper:{n:'Paper',base:'#f1e8d2',f:'0.8',o:4,col:'#7a6540',a:.5},
+  linen:{n:'Linen',base:'#d8d2c2',f:'0.015 0.6',o:3,col:'#6a604a',a:.5},
+  canvas:{n:'Canvas',base:'#c9b99a',f:'0.7 0.9',o:3,col:'#5a4a30',a:.55},
+  parchment:{n:'Parchment',base:'#e6d2a2',f:'0.04',o:5,col:'#8a6a30',a:.7},
+  concrete:{n:'Concrete',base:'#8a8d91',f:'0.55',o:4,col:'#202226',a:.6},
+  granite:{n:'Granite',base:'#2a2c31',f:'0.9',o:2,col:'#ffffff',a:.22},
+  slate:{n:'Slate',base:'#1d2733',f:'0.08 0.5',o:4,col:'#9bb0c9',a:.25},
+  wood:{n:'Wood grain',base:'#8b5a2b',f:'0.008 0.35',o:5,col:'#2b1608',a:.7},
+  sand:{n:'Sand',base:'#d9c49a',f:'1.1',o:2,col:'#6a5430',a:.4}
+};
+window.texCss=function(k,color){
+  const t=TEXS[k]||TEXS.paper,base=t.base,rgb=parseInt(t.col.slice(1),16),r=(rgb>>16)/255,g=((rgb>>8)&255)/255,b=(rgb&255)/255;
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='n' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='${t.f}' numOctaves='${t.o}' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 ${r.toFixed(2)} 0 0 0 0 ${g.toFixed(2)} 0 0 0 0 ${b.toFixed(2)} 1.4 0 0 0 ${(-.45).toFixed(2)}'/></filter><rect width='100%' height='100%' filter='url(#n)' opacity='${t.a}'/></svg>`;
+  return `background-color:${base};background-image:url("data:image/svg+xml,${encodeURIComponent(svg)}");background-size:${420/19.2}cqw;`;
+};
+
+/* ---------- theme data ---------- */
+const TH=[
+ {n:'Gold on Night',f:'Poppins',pal:['#e8b923','#f5d76e','#b8860b','#8a8d91','#ffffff','#3b2d07'],v:[['#0a0a0b','#3b2d07','#ffffff'],['#000000','#1d1d21','#fff4d6'],['#1d1407','#5a4310','#fff8e1'],['#0b0b0e','#24243a','#ffffff']]},
+ {n:'Deep Blue & Earth',f:'Montserrat',pal:['#e9d36a','#5d7a3a','#2b4a6f','#a9c07a','#fff6cf','#0b1d3a'],v:[['#0b1d3a','#14305e','#fff6cf'],['#10233f','#2f4a2a','#fff6cf'],['#0a1830','#274a6a','#f4edc0'],['#0b1d3a','#3d5a2a','#fff6cf']]},
+ {n:'Forest',f:'Lora',pal:['#7fb069','#d9e8a6','#2f5d3a','#a38b5a','#f4f1de','#06251c'],v:[['#06251c','#0d3f2f','#f4f1de'],['#0b2a12','#3b5a2a','#fffbe6'],['#041a14','#1c4a3a','#e8f5e9'],['#10281c','#4a5a2a','#f4f1de']]},
+ {n:'Ember',f:'Oswald',pal:['#ff7a18','#ffb347','#a3200d','#ffe0b2','#ffffff','#3a0f0b'],v:[['#3a0f0b','#7a3a0b','#ffffff'],['#1a0505','#5a1a0a','#ffe9d0'],['#2b0a08','#a3340d','#fff3e0'],['#3a0f0b','#14080a','#ffd9a8']]},
+ {n:'Royal',f:'Playfair Display',pal:['#c9a0ff','#f0d98a','#4b2a8a','#8e6fd6','#ffffff','#1d0f3a'],v:[['#1d0f3a','#4b2a8a','#ffffff'],['#120826','#2c1a5a','#f6e6ff'],['#241446','#5a2a7a','#fff4d6'],['#0e0a1f','#3a1f6a','#ffffff']]},
+ {n:'Ocean',f:'Raleway',pal:['#4aa3ff','#9be7ff','#0a4a7a','#e0f4ff','#ffffff','#031a2e'],v:[['#031a2e','#0a4a7a','#ffffff'],['#02101c','#0b3a5c','#e0f4ff'],['#04283f','#126a8a','#ffffff'],['#021622','#1b5a7a','#d9f1ff']]},
+ {n:'Daybreak (light)',f:'Lato',pal:['#b7791f','#2b6cb0','#2f855a','#c05621','#2d3748','#fdf6e3'],v:[['#fdf6e3','#f0e1b8','#2b2b2b'],['#ffffff','#e9eef5','#1a202c'],['#fff7ec','#ffe0b8','#3a2a1a'],['#f4f8ef','#d8e8c8','#1f2d1a']]},
+ {n:'Monochrome',f:'Inter',pal:['#ffffff','#cfcfcf','#9a9a9a','#6a6a6a','#3a3a3a','#000000'],v:[['#000000','#1d1d21','#ffffff'],['#111111','#333333','#f2f2f2'],['#1a1a1a','#555555','#ffffff'],['#ffffff','#d8d8d8','#111111']]},
+ {n:'Parchment',f:'Cormorant Garamond',pal:['#8a5a2b','#b08a4a','#5a3a1a','#d9c7a0','#3a2a1a','#f1e5c8'],v:[['#f1e5c8','#d9c7a0','#3a2a1a'],['#e8d9b5','#c9b27a','#2a1d0f'],['#f6eedb','#e0cfa6','#4a3420'],['#2a1d0f','#4a3420','#f1e5c8']]}
+];
+const EXTRA_PAL=[['Pastel',['#f6b8b8','#b8e0f6','#c8f0c0','#f6e3a8','#d8c0f0','#ffd9b0']],['Vivid',['#ff3b30','#ff9500','#34c759','#007aff','#af52de','#ffcc00']]];
+function variantPatch(t,k){const v=t.v[k%t.v.length],lite=lum(v[2])>.5;return{bg:'Gradient',grad:{a:160,c:[v[0],v[1]]},fg:v[2],font:t.f,shadow:lite,outline:false,lib:'',img:'',pat:null,tex:null,bgop:0,tile:0}}
+const themeMeta=t=>({theme:{name:t.n,pal:t.pal.slice()}});
+const FONTS=['Poppins','Montserrat','Playfair Display','Lora','Oswald','Raleway','Merriweather','Libre Baskerville','Cormorant Garamond','Barlow Condensed','Nunito','Josefin Sans','Inter','Lato'];
+const EFFECTS=[['No effects',{shadow:false,outline:false,box:false}],['Soft shadow',{shadow:true,outline:false,box:false}],['Outline',{shadow:false,outline:true,box:false}],['Shadow and outline',{shadow:true,outline:true,box:false}],['Text on a translucent box',{box:true}]];
+const IDEAS=[
+ ['Gold on Night',()=>variantPatch(TH[0],0)],['Deep blue and earth',()=>variantPatch(TH[1],0)],['Spotlight',()=>({bg:'Spotlight',fg:'#ffffff',shadow:true,lib:'',img:'',pat:null,tex:null,bgop:0})],['Rays',()=>({bg:'Rays',fg:'#ffffff',shadow:true,lib:'',img:'',pat:null,tex:null,bgop:0})],
+ ['Aurora',()=>({bg:'Aurora',fg:'#ffffff',shadow:true,lib:'',img:'',pat:null,tex:null,bgop:0})],['Daybreak',()=>variantPatch(TH[6],0)],['Parchment texture',()=>({bg:'Texture',tex:'parchment',fg:'#3a2a1a',shadow:false,lib:'',img:'',pat:null,bgop:0})],['Forest',()=>variantPatch(TH[2],1)],
+ ['Midnight stripes',()=>({bg:'Pattern',pat:{k:'diag',fg:'#14305e',bg:'#0b1d3a',s:44},fg:'#ffffff',shadow:true,lib:'',img:'',tex:null,bgop:0})],['Radial glow',()=>({bg:'Gradient',grad:{t:'radial',a:0,x:50,y:40,c:['#2f4a7a','#050a14']},fg:'#fff6cf',shadow:true,lib:'',img:'',pat:null,tex:null,bgop:0})],
+ ['Ember glow',()=>({bg:'Gradient',grad:{t:'radial',a:0,x:50,y:100,c:['#ff7a18','#2b0a08']},fg:'#ffffff',shadow:true,lib:'',img:'',pat:null,tex:null,bgop:0})],['Slate',()=>({bg:'Texture',tex:'slate',fg:'#ffffff',shadow:true,lib:'',img:'',pat:null,bgop:0})]
+];
+
+/* ---------- applying a design ---------- */
+const snapDesign=()=>{if(E&&!E.dsnap){const s=cur();E.dsnap=JSON.stringify({d:s.d,ov:s.ov||{},theme:s.theme||null,mst:s.mst||[]})}};
+function restyle(objs,p){(objs||[]).forEach(o=>{if(o.t==='text'&&o.linked){if(p.font)o.font=p.font;if(p.fg)o.color=p.fg;if('shadow' in p)o.shadow=!!p.shadow;if('outline' in p)o.stroke=!!p.outline}})}
+const later=(()=>{let t=0;return()=>{clearTimeout(t);t=setTimeout(()=>{if(!E)return;save();drawGrid();if(E.i===idx)push();sedFilm()},140)}})();
+function live(patch){const s=cur();snapDesign();s.ov=s.ov||{};s.ov[E.i]=Object.assign(s.ov[E.i]||{},patch);sedRender();later()}
+function applyDesign(patch,scope,meta){
+  if(!E)return;const s=cur();snapDesign();
+  if(scope==='all'&&s.deck&&['bg','lib','img'].some(k=>k in patch)){toast('This is a PowerPoint deck: its slides are pictures, so the background was changed for this slide only.');scope='slide'}
+  const untouched=E.nolay&&JSON.stringify(E.objs)===E.init;
+  if(scope==='all'){
+    Object.assign(s.d,patch);clearOv(Object.keys(patch));if(meta&&meta.theme)s.theme=meta.theme;
+    if(patch.font||patch.fg||'shadow' in patch||'outline' in patch)Object.keys(s.ov||{}).forEach(k=>{const o=s.ov[k];if(+k!==E.i&&o&&o.lay)restyle(o.lay,patch)});
+  }else{s.ov=s.ov||{};s.ov[E.i]=Object.assign(s.ov[E.i]||{},patch)}
+  if(untouched){E.objs=[defLinked(eff(s,E.i))];E.init=JSON.stringify(E.objs);E.sel=E.objs[0].id;E.ms=[E.sel]}else restyle(E.objs,patch);
+  save();drawGrid();push();sedRender();sedPanel();sedFilm();
+}
+const scopeV=()=>{const e=document.getElementById('dScope');return e?e.value:'all'};
+
+/* ---------- gallery dialog ---------- */
+function gallery(title,items,opts){
+  opts=opts||{};const s=cur(),w=document.createElement('div');w.className='qe';w.style.zIndex=320;
+  w.innerHTML='<div class="qb" style="width:min(820px,95vw)"><div style="margin-bottom:6px"><b></b> <span class="hint" style="margin:0"></span></div><div class="gg" style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;max-height:58vh"></div><div class="row" style="flex:none;justify-content:space-between;align-items:center;margin-top:8px"><label style="flex:none;flex-direction:row;align-items:center;gap:6px">Apply to <select class="scp" style="width:auto;flex:none"><option value="all">All slides in this item</option><option value="slide">This slide only</option></select></label><button class="x">Close</button></div></div>';
+  w.querySelector('b').textContent=title;w.querySelector('.hint').textContent=opts.hint||'Click one to apply it.';w.querySelector('.scp').value=opts.scope||scopeV();
+  const g=w.querySelector('.gg'),text=(E.text||'Amazing grace, how sweet the sound').split('\n').slice(0,2).join('\n');
+  items.forEach(it=>{const c=document.createElement('div');c.style.cssText='cursor:pointer;border:2px solid transparent;border-radius:6px;padding:3px;font-size:10px';c.innerHTML='<div class="stage" style="width:100%;aspect-ratio:16/9;pointer-events:none"></div><div></div>';c.lastChild.textContent=it.n;
+    const e=eff(s,E.i);try{paint(c.firstChild,{d:{...e,...it.p,lay:null,tr:0,ta:'None',st:'None',dim:0},u:libUrl({...e,...it.p}),text})}catch(er){}
+    c.onmouseenter=()=>{c.style.borderColor='var(--acc)'};c.onmouseleave=()=>{c.style.borderColor='transparent'};
+    c.onclick=()=>{const sc=w.querySelector('.scp').value;done();applyDesign(it.p,sc,it.meta)};g.appendChild(c)});
+  const kd=e=>{if(e.key==='Escape'){e.stopPropagation();e.preventDefault();done()}},done=()=>{window.removeEventListener('keydown',kd,true);w.remove()};
+  window.addEventListener('keydown',kd,true);w.querySelector('.x').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};document.body.appendChild(w);
+}
+const curTheme=()=>{const s=cur(),n=s.theme&&s.theme.name;return TH.find(t=>t.n===n)||TH[0]};
+
+/* ---------- slide size guides ---------- */
+function sizeMenu(ev){
+  const set=r=>{E.safe=r;sedUi()},items=[['16:9 Widescreen (the output)',0],['4:3 Standard',4/3],['16:10',16/10],['1:1 Square',1],['9:16 Vertical',9/16]];
+  D.menuAt(ev,items.map(([n,r])=>({t:(((E.safe||0)===r)?'✓ ':'    ')+n,fn:()=>set(r)})).concat([{sep:1},{t:'Custom ratio…',fn:()=>D.ask('Width:height (for example 5:4)','5:4',v=>{const m=/^(\d+(?:\.\d+)?)\s*[:x/]\s*(\d+(?:\.\d+)?)$/.exec(v);if(m)set(+m[1]/+m[2]);else D.info('Type it like 5:4.')})},{t:(E.margin?'✓ ':'    ')+'Show 5% safe margins',fn:()=>{E.margin=!E.margin;sedUi()}},{sep:1},{t:'Why a guide? PreCenter outputs are always 16:9. Pick a ratio to see where a 4:3 or square display would crop.',fn:()=>{}}]));
+}
+const _su3=sedUi;
+sedUi=function(){
+  _su3.apply(this,arguments);if(!E)return;const ui=document.getElementById('sedUi');
+  if(E.safe&&Math.abs(E.safe-16/9)>.001){const r=E.safe;let w=1080*r,h=1080;if(w>1920){w=1920;h=1920/r}
+    const d=document.createElement('div');d.style.cssText=`position:absolute;pointer-events:none;border:2px dashed #ffd24a;left:${(1920-w)/2/19.2}%;top:${(1080-h)/2/10.8}%;width:${w/19.2}%;height:${h/10.8}%;box-shadow:0 0 0 9999px rgba(0,0,0,.35)`;ui.appendChild(d)}
+  if(E.margin){const d=document.createElement('div');d.style.cssText='position:absolute;pointer-events:none;border:1px dashed #7fd04a;left:5%;top:5%;right:5%;bottom:5%';ui.appendChild(d)}
+};
+
+/* ---------- master graphics ---------- */
+const _eff3=eff;
+eff=function(s,i){const e=_eff3(s,i);if(e&&e.hideMst&&e.lay&&e.lay.some(o=>o.mst)){const lay=e.lay.filter(o=>!o.mst);return Object.assign({},e,{lay:lay.length?lay:null})}return e};
+const _sr3=sedRender;
+sedRender=function(){_sr3.apply(this,arguments);try{if(E&&eff(cur(),E.i).hideMst)document.querySelectorAll('#sedCv>.mstL').forEach(x=>x.remove())}catch(e){}};
+
+/* ---------- cancel restores design changes ---------- */
+const _sc3=sedClose;
+sedClose=function(){
+  if(E&&E.dsnap&&!E.dok){const s=cur(),o=JSON.parse(E.dsnap);s.d=o.d;s.ov=o.ov;s.theme=o.theme||undefined;s.mst=o.mst;if(!o.theme)delete s.theme;save();drawGrid();push()}
+  return _sc3.apply(this,arguments);
+};
+const _sd3=sedDone;sedDone=function(){if(E)E.dok=1;return _sd3.apply(this,arguments)};
+const _sr4=sedReset;sedReset=function(){if(E)E.dok=1;return _sr4.apply(this,arguments)};
+const _os3=openSed;openSed=function(i){const r=_os3.apply(this,arguments);if(E){const e=eff(cur(),i);E.nolay=!(e.lay&&e.lay.length)}return r};
+
+/* ---------- Format Background pane ---------- */
+const tabs=document.querySelector('#sedSide .tabs'),tb=document.createElement('button');tb.id='sedTabF';tb.textContent='Background';tabs.appendChild(tb);
+tb.onclick=()=>{if(E){E.tab='F';sedPanel()}};
+const _sp3=sedPanel;
+sedPanel=function(){
+  if(E&&E.tab==='F'){bgPane();['S','T','B','O','F'].forEach(k=>{const b=document.getElementById('sedTab'+k);if(b)b.classList.toggle('on',E.tab===k)});return}
+  const r=_sp3.apply(this,arguments);tb.classList.remove('on');return r;
+};
+function ftype(e){const b=e.bg;return b==='Color'?'solid':b==='Gradient'?'grad':(b==='Image'||b==='Video')?'pic':b==='Texture'?'tex':b==='Pattern'?'pat':'preset'}
+const GP=['Gold','Spotlight','Rays','Aurora','Onyx','Midnight','Ember','Forest','Dusk'];
+function bgPane(){
+  const P=document.getElementById('sedPanel'),s=cur(),e=eff(s,E.i),ft=E.ft||ftype(e),g=e.grad||{a:160,c:['#0b1d3a','#14305e']};
+  const col=(k,v)=>`<input type="color" data-k="${k}" value="${/^#[0-9a-f]{6}$/i.test(v||'')?v:'#0b1d3a'}" style="flex:1;min-width:34px">`;
+  const types=[['solid','Solid'],['grad','Gradient'],['pic','Picture'],['tex','Texture'],['pat','Pattern'],['preset','Preset']];
+  let body='';
+  if(ft==='solid')body=`<div class="row" style="align-items:center"><label style="flex:1">Color${col('color',e.color)}</label>${window.EyeDropper?'<button data-b="eye" title="Pick a color from the screen">Pick</button>':''}</div>`;
+  else if(ft==='grad'){const c=g.c;body=`<div class="row"><label>Type<select data-k="gt"><option value="linear"${g.t==='radial'?'':' selected'}>Linear</option><option value="radial"${g.t==='radial'?' selected':''}>Radial</option></select></label><label>Stops<select data-k="gn"><option value="2"${c.length===2?' selected':''}>2</option><option value="3"${c.length===3?' selected':''}>3</option></select></label></div>
+  <div class="row">${c.map((x,i)=>`<label style="flex:1">Stop ${i+1}${col('gc'+i,x)}</label>`).join('')}</div>
+  ${g.t==='radial'?`<div class="row"><label>Center X %<input type="number" data-k="gx" min="0" max="100" value="${g.x==null?50:g.x}"></label><label>Center Y %<input type="number" data-k="gy" min="0" max="100" value="${g.y==null?50:g.y}"></label></div>`:`<label>Angle (${g.a}&deg;)<input type="range" data-k="ga" min="0" max="360" value="${g.a}"></label>`}
+  <button data-b="rev">Reverse stops</button>`}
+  else if(ft==='pic')body=`<div class="row"><button data-b="file">Picture from file…</button><button data-b="url">From web address…</button></div><div class="row"><label>Fit<select data-k="fit"><option value="cover"${e.fit==='contain'?'':' selected'}>Fill (crop)</option><option value="contain"${e.fit==='contain'?' selected':''}>Fit (bars)</option></select></label><label>Tile size px (0 = off)<input type="number" data-k="tile" min="0" max="1200" step="20" value="${e.tile||0}"></label></div><div class="hint" style="margin:0">${e.bg==='Image'?(e.lib?'Using '+esc(e.lib):(e.img?'Using a web picture':'')):''}</div>`;
+  else if(ft==='tex')body=`<div class="tx5" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${Object.keys(TEXS).map(k=>`<button data-tex="${k}" class="${e.tex===k&&e.bg==='Texture'?'on':''}" style="height:46px;font-size:10px;padding:0;overflow:hidden;position:relative;color:#000;text-shadow:0 0 3px #fff;border:2px solid ${e.tex===k&&e.bg==='Texture'?'var(--acc)':'var(--line)'};${window.texCss(k).replace(/cqw/g,'px').replace(/background-size:[^;]+;/,'background-size:60px;')}">${TEXS[k].n}</button>`).join('')}</div>`;
+  else if(ft==='pat'){const p=e.pat||{k:'dots',fg:'#ffffff',bg:'#0b1d3a',s:36};body=`<label>Pattern<select data-k="pk">${PATS.map(([k,n])=>`<option value="${k}"${p.k===k?' selected':''}>${n}</option>`).join('')}</select></label><div class="row"><label style="flex:1">Foreground${col('pf',p.fg)}</label><label style="flex:1">Background${col('pb',p.bg)}</label></div><label>Size (${p.s||36} px)<input type="range" data-k="ps" min="10" max="160" value="${p.s||36}"></label>`}
+  else body=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${GP.map(n=>`<button data-pre="${n}" style="height:46px;font-size:10px;padding:0;color:#fff;text-shadow:0 0 3px #000;border:2px solid ${e.bg===n?'var(--acc)':'var(--line)'};background:${G[n]}">${n}</button>`).join('')}</div>`;
+  P.innerHTML=`<div class="hint" style="margin:0">Format Background <span style="opacity:.7">(this slide; changes revert if you press Cancel)</span></div>
+  <div class="seg" data-g="ft" style="flex-wrap:wrap">${types.map(([k,n])=>`<button data-v="${k}" class="${ft===k?'on':''}">${n}</button>`).join('')}</div>
+  <div id="bgBody" style="display:flex;flex-direction:column;gap:6px">${body}</div>
+  <label>Transparency (${e.bgop||0}%)<input type="range" data-k="bgop" min="0" max="100" value="${e.bgop||0}"></label>
+  <label>Darken (${e.dim||0}%)<input type="range" data-k="dim" min="0" max="90" value="${e.dim||0}"></label>
+  <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" data-k="hideMst" style="width:auto"${e.hideMst?' checked':''}> Hide background graphics (master objects)</label>
+  <div class="row"><button data-b="all" class="pri">Apply to all slides</button><button data-b="reset">Reset background</button></div>`;
+  const q=k=>P.querySelector('[data-k='+k+']'),lbl=(el,t)=>{el.parentNode.firstChild.textContent=t};
+  P.querySelectorAll('[data-g=ft] button').forEach(b=>b.onclick=()=>{const k=b.dataset.v;E.ft=k;
+    if(k==='solid')live({bg:'Color',color:e.color&&/^#/.test(e.color)?e.color:'#0b1d3a',lib:'',img:''});
+    else if(k==='grad')live({bg:'Gradient',grad:e.grad||{a:160,c:['#0b1d3a','#14305e']},lib:'',img:''});
+    else if(k==='pat')live({bg:'Pattern',pat:e.pat||{k:'dots',fg:'#ffffff',bg:'#0b1d3a',s:36},lib:'',img:''});
+    else if(k==='tex')live({bg:'Texture',tex:e.tex||'paper',lib:'',img:''});
+    sedPanel()});
+  if(q('color'))q('color').oninput=v=>live({bg:'Color',color:v.target.value,lib:'',img:''});
+  const gset=()=>{const n=+q('gn').value,c=[];for(let i=0;i<n;i++){const el=q('gc'+i);c.push(el?el.value:(g.c[i]||g.c[g.c.length-1]))}const o={t:q('gt').value,a:q('ga')?+q('ga').value:(g.a||160),c,x:q('gx')?+q('gx').value:50,y:q('gy')?+q('gy').value:50};live({bg:'Gradient',grad:o,lib:'',img:''})};
+  ['gt','gn'].forEach(k=>{if(q(k))q(k).onchange=()=>{gset();sedPanel()}});
+  ['ga','gx','gy','gc0','gc1','gc2'].forEach(k=>{if(q(k))q(k).oninput=()=>{if(k==='ga')lbl(q('ga'),'Angle ('+q('ga').value+'°)');gset()}});
+  const pset=()=>live({bg:'Pattern',pat:{k:q('pk').value,fg:q('pf').value,bg:q('pb').value,s:+q('ps').value},lib:'',img:''});
+  ['pk','pf','pb','ps'].forEach(k=>{if(q(k))q(k).oninput=()=>{if(k==='ps')lbl(q('ps'),'Size ('+q('ps').value+' px)');pset()}});
+  P.querySelectorAll('[data-tex]').forEach(b=>b.onclick=()=>{live({bg:'Texture',tex:b.dataset.tex,lib:'',img:''});sedPanel()});
+  P.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{live({bg:b.dataset.pre,lib:'',img:''});sedPanel()});
+  if(q('fit'))q('fit').onchange=v=>live({fit:v.target.value});
+  if(q('tile'))q('tile').oninput=v=>live({tile:+v.target.value||0});
+  q('bgop').oninput=v=>{lbl(v.target,'Transparency ('+v.target.value+'%)');live({bgop:+v.target.value})};
+  q('dim').oninput=v=>{lbl(v.target,'Darken ('+v.target.value+'%)');live({dim:+v.target.value})};
+  q('hideMst').onchange=v=>{live({hideMst:v.target.checked});later()};
+  P.querySelectorAll('input[type=range]').forEach(r=>r.addEventListener('change',()=>later()));
+  P.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{const a=b.dataset.b;
+    if(a==='eye'){new EyeDropper().open().then(r=>{live({bg:'Color',color:r.sRGBHex,lib:'',img:''});sedPanel()}).catch(()=>{})}
+    else if(a==='rev'){const c=g.c.slice().reverse();live({bg:'Gradient',grad:{...g,c}});sedPanel()}
+    else if(a==='file'){const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=addLib(f);if(!r){D.info('That file type is not supported.');return}live({bg:'Image',lib:r.name,img:''});sedPanel()};i.click()}
+    else if(a==='url')D.ask('Picture web address (https://…)','',u=>{if(u){live({bg:'Image',img:u,lib:''});sedPanel()}});
+    else if(a==='all'){const e2=eff(s,E.i),p={};BGK.forEach(k=>{if(e2[k]!==undefined)p[k]=dc(e2[k])});if(!('pat' in p))p.pat=null;if(!('tex' in p))p.tex=null;applyDesign(p,'all');D.info('Background applied to all slides')}
+    else if(a==='reset'){snapDesign();const o=s.ov&&s.ov[E.i];if(o){BGK.forEach(k=>delete o[k]);if(!Object.keys(o).length)delete s.ov[E.i]}E.ft=null;save();drawGrid();push();sedRender();sedFilm();sedPanel()}});
+}
+
+/* ---------- ribbon ---------- */
+const B=document.createElement('div');B.className='hbody';B.id='hbDes';
+B.innerHTML=`<div class="hg"><div class="hr"><button data-d="themes" title="Choose a theme for this item">Themes &#9662;</button><button data-d="variants" title="Variants of the current theme">Variants &#9662;</button><button data-d="ideas" title="Design Ideas: suggested looks for this slide">Design Ideas</button></div><div class="hr"><label class="hc">Apply to <select id="dScope" style="width:116px"><option value="all">All slides</option><option value="slide">This slide</option></select></label></div><small>Themes</small></div>
+<div class="hg"><div class="hr"><span id="dSw" class="hr" style="gap:2px"></span></div><div class="hr"><button data-d="colors" title="Theme colors">Colors &#9662;</button><button data-d="fonts" title="Theme font">Fonts &#9662;</button><button data-d="effects" title="Theme text effects">Effects &#9662;</button></div><small>Variants: colors, fonts, effects</small></div>
+<div class="hg"><div class="hr"><button data-d="size" title="Slide size guides">Slide size &#9662;</button><button data-d="bg" title="Format Background">Format Background</button></div><div class="hr"><button data-d="bgall" title="Copy this slide's background to all slides">Background to all</button><button data-d="hide" id="dHide" title="Hide master graphics on this slide">Hide graphics</button></div><small>Customize</small></div>`;
+H.appendChild(B);
+function swatches(){const sw=document.getElementById('dSw');if(!sw||!E)return;const pal=window.dscTpal();sw.innerHTML=pal.map((c,i)=>`<button data-sw="${c}" title="Theme color ${i+1}: click to apply to the selected object" style="width:22px;height:22px;padding:0;background:${c};border:1px solid #fff6"></button>`).join('')}
+swatches();
+const _spx=sedPanel;sedPanel=function(){const r=_spx.apply(this,arguments);try{swatches();const h=document.getElementById('dHide');if(h&&E)h.classList.toggle('on',!!eff(cur(),E.i).hideMst)}catch(e){}return r};
+const DA={
+  themes:()=>gallery('Themes',TH.map(t=>({n:t.n,p:variantPatch(t,0),meta:themeMeta(t)})),{hint:'Background, font and text colors for the whole item.'}),
+  variants:()=>{const t=curTheme();gallery('Variants of '+t.n,t.v.map((v,i)=>({n:'Variant '+(i+1),p:variantPatch(t,i),meta:themeMeta(t)})),{hint:'Same theme, different backgrounds.'})},
+  ideas:()=>gallery('Design Ideas',IDEAS.map(([n,f])=>({n,p:f()})),{scope:'slide',hint:'Suggested looks for this slide.'}),
+  colors:ev=>D.menuAt(ev,TH.map(t=>({t:t.n,fn:()=>{snapDesign();cur().theme={name:t.n,pal:t.pal.slice()};save();sedPanel();D.info('Theme colors: '+t.n)}})).concat(EXTRA_PAL.map(([n,p])=>({t:n,fn:()=>{snapDesign();cur().theme={name:(cur().theme||{}).name||TH[0].n,pal:p.slice()};save();sedPanel();D.info('Theme colors: '+n)}})))),
+  fonts:ev=>D.menuAt(ev,FONTS.map(f=>({t:f,fn:()=>applyDesign({font:f},scopeV())}))),
+  effects:ev=>D.menuAt(ev,EFFECTS.map(([n,p])=>({t:n,fn:()=>applyDesign(p,scopeV())}))),
+  size:sizeMenu,
+  bg:()=>{E.tab='F';E.ft=null;sedPanel()},
+  bgall:()=>{const s=cur(),e2=eff(s,E.i),p={};BGK.forEach(k=>{if(e2[k]!==undefined)p[k]=dc(e2[k])});if(!('pat' in p))p.pat=null;if(!('tex' in p))p.tex=null;applyDesign(p,'all');D.info('Background applied to all slides')},
+  hide:()=>{const e2=eff(cur(),E.i);live({hideMst:!e2.hideMst});later();sedPanel()}
+};
+B.addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault()});
+B.addEventListener('click',e=>{
+  if(!E)return;const sw=e.target.closest('[data-sw]');
+  if(sw){e.stopPropagation();const c=sw.dataset.sw;if(D.texts().length)D.setStyle('color',c);else D.shapeColor('fill',c);return}
+  const b=e.target.closest('[data-d]');if(!b)return;e.stopPropagation();const f=DA[b.dataset.d];if(f)f({currentTarget:b,detail:e.detail});
+});
+window.dscDesign={applyDesign,TH,variantPatch};
+})();
+
+</script>
+
 </body>
 </html>
