@@ -1,7 +1,8 @@
 # Disciples PreCenter
-
-A free church presentation app for lyrics, songs and services, with a separate
-audience output screen and stage screens. Runs on Windows.
+Disciples PreCenter is free, open-source presentation software that eases the work of presenting
+church services. Songs, Bible passages, announcements, timers, messages and media are all
+in one place with simple navigation, with separate audience and stage screens, so worship teams
+can run a service smoothly.
 
 ## Download
 
