@@ -19,6 +19,7 @@ const DEFAULTS = {
   externalLinks: 'browser',
   offlineLibraries: true,
   singleInstance: true,
+  autoUpdate: true,
   devTools: false,
   ndi: { enabled: false }
 };

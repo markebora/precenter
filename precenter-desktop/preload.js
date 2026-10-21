@@ -37,10 +37,12 @@ contextBridge.exposeInMainWorld('dscNative', {
   },
   displays: {
     list: () => ipcRenderer.invoke('display:list'),
-    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false)
+    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false),
+    sendNamed: (name, x, y) => ipcRenderer.invoke('display:sendNamed', name, x, y)
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
+    setNdi: on => ipcRenderer.invoke('app:setNdi', !!on),
     openConfig: () => ipcRenderer.invoke('app:openConfig'),
     openData: () => ipcRenderer.invoke('app:openData')
   }
@@ -52,7 +54,13 @@ ipcRenderer.on('file:open', (_e, f) => {
 
 // ---- Slim title strip (Windows draws minimize / maximize / close over its right end) ----
 const barArg = process.argv.find(a => a.startsWith('--dsc-titlebar='));
-if (barArg) {
+// Pop-up windows (output / stage / layout / remote...) inherit the main window's launch args,
+// so they must opt out here: only the main window gets the title strip.
+let isPopup = false;
+try {
+  isPopup = !!window.opener || /^(lp-|dsc)/.test(window.name || '') || /#(output|stage|layout)/.test(location.hash || '');
+} catch (e) { /* ignore */ }
+if (barArg && !isPopup) {
   const H = parseInt(barArg.split('=')[1], 10) || 32;
   window.addEventListener('DOMContentLoaded', () => {
     const css = document.createElement('style');
@@ -99,5 +107,24 @@ if (barArg) {
     new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', sync);
     ipcRenderer.on('win:fullscreen', (_e, on) => document.documentElement.classList.toggle('dsc-fs', !!on));
+  });
+}
+
+// ---- "Update ready" notice (main window only). The update installs when the app is closed. ----
+if (!isPopup) {
+  ipcRenderer.on('update:ready', (_e, info) => {
+    const show = () => {
+      if (document.getElementById('dscUpdateNote')) return;
+      const n = document.createElement('div');
+      n.id = 'dscUpdateNote';
+      n.textContent = 'Update ' + ((info && info.version) || '') + ' is ready. It installs when you close PreCenter.';
+      n.style.cssText = 'position:fixed;right:16px;bottom:40px;z-index:2147483000;max-width:340px;padding:10px 14px;' +
+        'border-radius:8px;background:#1d1f27;color:#f7f7f7;border:1px solid #E8B923;font:13px/1.4 system-ui,Segoe UI,sans-serif;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer';
+      n.onclick = () => n.remove();
+      document.body.appendChild(n);
+      setTimeout(() => { try { n.remove(); } catch (e) { /* gone */ } }, 15000);
+    };
+    if (document.body) show(); else window.addEventListener('DOMContentLoaded', show);
   });
 }

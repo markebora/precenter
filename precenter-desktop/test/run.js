@@ -8,6 +8,7 @@ const { DEFAULTS, stripComments, parseText, loadConfig } = require('../lib/confi
 const { createUrlPolicy } = require('../lib/urls');
 const { isPermissionAllowed } = require('../lib/permissions');
 const { mimeFor, resolveAppFile } = require('../lib/files');
+const appUpdate = require('../lib/appupdate');
  
 const root = path.join(__dirname, '..');
 let pass = 0, fail = 0;
@@ -211,6 +212,32 @@ test('the update address must be https', () => {
   assert.ok(r.warnings.some(w => /update\.url/.test(w)));
 });
  
+// ---- program auto-update ----
+test('program auto-update is off for portable and unpackaged runs', () => {
+  assert.strictEqual(appUpdate.isInstalledBuild({ isPackaged: false }, {}), false);
+  assert.strictEqual(appUpdate.isInstalledBuild({ isPackaged: true }, { PORTABLE_EXECUTABLE_DIR: 'C:\\x' }), false);
+  assert.strictEqual(appUpdate.isInstalledBuild({ isPackaged: true }, {}), true);
+  assert.strictEqual(appUpdate.start({ app: { isPackaged: false } }), null);
+});
+test('program auto-update downloads quietly, installs on close, and reports when ready', () => {
+  const handlers = {};
+  const fake = { autoUpdater: { on: (n, f) => { handlers[n] = f; }, checkForUpdates: () => Promise.resolve() } };
+  let told = null;
+  const u = appUpdate.start({ app: { isPackaged: true }, env: {}, updater: fake, delayMs: 1e9, everyMs: 1e9, notify: i => { told = i; } });
+  assert.ok(u && typeof u.check === 'function');
+  assert.strictEqual(fake.autoUpdater.autoDownload, true);
+  assert.strictEqual(fake.autoUpdater.autoInstallOnAppQuit, true);
+  handlers['update-downloaded']({ version: '9.9.9' });
+  assert.deepStrictEqual(told, { version: '9.9.9' });
+  handlers.error(new Error('offline')); // must not throw
+});
+test('auto-update is on by default and publishes to GitHub Releases', () => {
+  assert.strictEqual(DEFAULTS.autoUpdate, true);
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.ok(pkg.dependencies['electron-updater']);
+  assert.strictEqual(pkg.build.publish[0].provider, 'github');
+});
+
 // ---- package sanity ----
 test('every file the installer needs is present', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));

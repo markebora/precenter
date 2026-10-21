@@ -5,15 +5,16 @@
   "description": "Disciples: PreCenter, the church presentation software, as a Windows desktop app",
   "main": "main.js",
   "author": "Disciples",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-only",
   "private": true,
   "scripts": {
     "start": "electron .",
     "test": "node test/run.js",
-    "dist": "electron-builder --win",
+    "dist": "electron-builder --win --publish never",
     "dist:dir": "electron-builder --win --dir"
   },
   "dependencies": {
+    "electron-updater": "^6.3.9",
     "jszip": "^3.10.1"
   },
   "devDependencies": {
@@ -46,7 +47,14 @@
     ],
     "asar": true,
     "npmRebuild": false,
-    "publish": null,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "markebora",
+        "repo": "precenter",
+        "releaseType": "release"
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [

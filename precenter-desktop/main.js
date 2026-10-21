@@ -9,38 +9,39 @@ const { mimeFor, resolveAppFile } = require('./lib/files');
 const log = require('./lib/log');
 const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
-
+const appUpdate = require('./lib/appupdate');
+ 
 // The bundled app is served from its own address (dsc://app/) instead of file://, so storage,
 // BroadcastChannel between windows, file pickers and sign-in behave as they do on the web.
 protocol.registerSchemesAsPrivileged([{
   scheme: 'dsc',
   privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true }
 }]);
-
+ 
 const APP_DIR = path.join(__dirname, 'app');
 const FILE_EXT = /\.(dscservice|dscitems)$/i;
-
+ 
 let cfgResult = null;      // { config, warnings, path, created }
 let cfg = null;
 let policy = null;
 let mainWin = null;
 let pendingFiles = [];
 let rendererReady = false;
-
+ 
 function defaultConfigFile() {
   const packaged = path.join(process.resourcesPath || '', 'config.default.json');
   return fs.existsSync(packaged) ? packaged : path.join(__dirname, 'config', 'config.default.json');
 }
-
+ 
 function jszipPath() {
   try { return require.resolve('jszip/dist/jszip.min.js'); } catch (e) { return null; }
 }
-
+ 
 // ---------- files opened from Windows (double-click, "Open with", second launch) ----------
 function filesFromArgv(argv) {
   return argv.slice(app.isPackaged ? 1 : 2).filter(a => FILE_EXT.test(a) && fs.existsSync(a));
 }
-
+ 
 function sendFile(p) {
   try {
     const buf = fs.readFileSync(p);
@@ -48,22 +49,22 @@ function sendFile(p) {
     mainWin.webContents.send('file:open', { name: path.basename(p), b64: buf.toString('base64') });
   } catch (e) { log.error(e); dialog.showErrorBox('Could not open the file', String(e.message || e)); }
 }
-
+ 
 function flushFiles() {
   if (!mainWin || !rendererReady) return;
   const list = pendingFiles; pendingFiles = [];
   list.forEach(sendFile);
 }
-
+ 
 function queueFiles(list) {
   pendingFiles.push(...list);
   flushFiles();
 }
-
+ 
 // ---------- security: permissions, downloads of links, CORS for the hosts in config.json ----------
 function setupSession() {
   const ses = session.defaultSession;
-
+ 
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     const url = (details && details.requestingUrl) || wc.getURL();
     const ok = isPermissionAllowed(cfg, policy, permission, url);
@@ -74,14 +75,14 @@ function setupSession() {
     const url = (details && details.requestingUrl) || requestingOrigin || '';
     return isPermissionAllowed(cfg, policy, permission, url);
   });
-
+ 
   // "Share a screen or window": use the system picker where there is one, else the first screen.
   ses.setDisplayMediaRequestHandler((request, callback) => {
     desktopCapturer.getSources({ types: ['screen', 'window'] })
       .then(sources => callback(sources.length ? { video: sources[0] } : {}))
       .catch(e => { log.error(e); callback({}); });
   }, { useSystemPicker: true });
-
+ 
   // Offline copy of JSZip (used when saving a whole service as one file).
   const jz = cfg.offlineLibraries ? jszipPath() : null;
   if (jz) {
@@ -89,7 +90,7 @@ function setupSession() {
       callback({ redirectURL: 'dsc://app/vendor/jszip.min.js' });
     });
   }
-
+ 
   // The bundled app runs from dsc://app, so a few web services need CORS headers added to answer it.
   const ALLOW_HEADERS = 'authorization,content-type,accept,x-requested-with,x-firebase-gmpid';
   ses.webRequest.onHeadersReceived((details, callback) => {
@@ -104,7 +105,7 @@ function setupSession() {
     callback(out);
   });
 }
-
+ 
 function setupProtocol() {
   const vendor = {};
   const jz = jszipPath();
@@ -123,7 +124,7 @@ function setupProtocol() {
     }
   });
 }
-
+ 
 // ---------- windows ----------
 function popupOptions() {
   return {
@@ -135,8 +136,8 @@ function popupOptions() {
     }
   };
 }
-
-
+ 
+ 
 // ---------- output windows: keep them on the screen the user picked ----------
 // Electron/Windows quirks this works around:
 //  - a window opened with left/top for a second monitor is sized with the FIRST monitor's DPI scale,
@@ -147,7 +148,7 @@ function displayFromOptions(o) {
   const w = o.width || 800, h = o.height || 600;
   return screen.getDisplayNearestPoint({ x: Math.round(o.x + w / 2), y: Math.round(o.y + h / 2) });
 }
-
+ 
 // Move a window onto a display (twice, for the DPI quirk) and optionally make it fullscreen there.
 function placeOnDisplay(win, display, goFull) {
   if (!win || win.isDestroyed() || !display) return;
@@ -160,13 +161,13 @@ function placeOnDisplay(win, display, goFull) {
   if (win.isFullScreen()) { win.once('leave-full-screen', apply); win.setFullScreen(false); }
   else apply();
 }
-
+ 
 function trackOutputWindow(win, display) {
   let target = display;          // the display this window is meant to live on
   let fixing = false;
   const remember = () => { if (!win.isDestroyed() && !win.isFullScreen() && !fixing) target = screen.getDisplayMatching(win.getBounds()); };
   win.on('moved', remember);
-
+ 
   // If it went fullscreen on the wrong display, put it back on the right one.
   win.on('enter-full-screen', () => {
     if (fixing || !target || win.isDestroyed()) return;
@@ -181,14 +182,14 @@ function trackOutputWindow(win, display) {
     });
     win.setFullScreen(false);
   });
-
+ 
   // Fix the DPI overshoot as soon as the window is on screen.
   win.once('ready-to-show', () => {
     const o = win.__dscOpts;
     if (o && typeof o.x === 'number') { const b = { x: o.x, y: o.y, width: o.width || 800, height: o.height || 600 }; win.setBounds(b); win.setBounds(b); }
   });
 }
-
+ 
 function guardWebContents(wc) {
   wc.setWindowOpenHandler(({ url }) => {
     const d = policy.windowOpen(url);
@@ -202,7 +203,16 @@ function guardWebContents(wc) {
       const opts = (details && details.options) || {};
       win.__dscOpts = opts;
       const d = displayFromOptions(opts);
-      if (d) trackOutputWindow(win, d);
+      win.__dscName = (details && details.frameName) || '';
+      if (d) {
+        trackOutputWindow(win, d);
+        // Output / stage windows sent to a chosen screen go fullscreen there by themselves.
+        const isOut = /#(output|stage|layout)/.test((details && details.url) || '');
+        const w = opts.width || 0, h = opts.height || 0, wa = d.workArea;
+        const fillsScreen = Math.abs(w - wa.width) <= 40 && Math.abs(h - wa.height) <= 40;
+        const notMain = d.id !== screen.getPrimaryDisplay().id;
+        if (isOut && (notMain || fillsScreen)) win.once('ready-to-show', () => placeOnDisplay(win, d, true));
+      }
     } catch (e) { log.warn('Output window tracking: ' + e.message); }
   });
   wc.on('will-navigate', (e, url) => {
@@ -212,10 +222,10 @@ function guardWebContents(wc) {
     if (d === 'external') shell.openExternal(url).catch(err => log.error(err));
   });
 }
-
+ 
 const TITLE_H = 32;
 let customBar = false;
-
+ 
 function createMain() {
   const w = cfg.window;
   customBar = !!w.customTitleBar && process.platform === 'win32';
@@ -233,7 +243,7 @@ function createMain() {
       backgroundThrottling: false, spellcheck: false, devTools: !!cfg.devTools
     }
   });
-
+ 
   mainWin.on('enter-full-screen', () => mainWin.webContents.send('win:fullscreen', true));
   mainWin.on('leave-full-screen', () => mainWin.webContents.send('win:fullscreen', false));
   mainWin.once('ready-to-show', () => { if (w.maximized) mainWin.maximize(); mainWin.show(); });
@@ -253,12 +263,44 @@ function createMain() {
   mainWin.on('closed', () => { ndi.stopAll(); mainWin = null; app.quit(); });
   mainWin.loadURL(policy.startUrl());
 }
-
+ 
+// Turn NDI on or off from the app: rewrites the "ndi" line in config.json (comments stay) and applies it now.
+function setNdi(on, withDialog) {
+  on = !!on;
+  try {
+    const file = cfgResult.path;
+    let text = fs.readFileSync(file, 'utf8');
+    const line = '"ndi": { "enabled": ' + (on ? 'true' : 'false') + ' }';
+    if (/"ndi"\s*:\s*\{[^}]*\}/.test(text)) text = text.replace(/"ndi"\s*:\s*\{[^}]*\}/, line);
+    else text = text.replace(/\}\s*$/, '  ,' + line + '\n}\n');
+    fs.writeFileSync(file, text);
+  } catch (e) {
+    log.error(e);
+    dialog.showErrorBox('Could not save the NDI setting', String(e.message || e));
+    buildMenu();
+    return { enabled: !!cfg.ndi.enabled, available: ndiSender.available(), error: String(e.message || e) };
+  }
+  cfg.ndi.enabled = on;
+  if (!on) { try { ndi.stopAll(); } catch (e) { log.error(e); } }
+  buildMenu();
+  if (mainWin) mainWin.webContents.send('ndi:enabled', on);
+  const available = ndiSender.available();
+  if (withDialog && mainWin) {
+    dialog.showMessageBox(mainWin, on
+      ? (available
+        ? { type: 'info', message: 'NDI is on', detail: 'Set a screen\'s output to NDI under Screens. If a screen is already set to NDI, switch it off and on once to start sending.' }
+        : { type: 'warning', message: 'NDI is on, but the NDI add-on is missing', detail: 'This build does not include the NDI add-on yet, so nothing can be sent. See README.md, "Turning on NDI".' })
+      : { type: 'info', message: 'NDI is off', detail: 'Screens set to NDI stop sending.' });
+  }
+  return { enabled: on, available };
+}
+ 
 function buildMenu() {
   const tmpl = [
     { label: '&File', submenu: [
       { label: 'Open settings file (config.json)', click: () => shell.openPath(cfgResult.path) },
       { label: 'Show data folder', click: () => shell.openPath(app.getPath('userData')) },
+      { label: 'NDI video output (needs the NDI add-on)', type: 'checkbox', checked: !!cfg.ndi.enabled, click: mi => setNdi(mi.checked, true) },
       { type: 'separator' },
       { role: 'quit', label: 'Quit' }
     ] },
@@ -276,7 +318,7 @@ function buildMenu() {
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tmpl));
 }
-
+ 
 function aboutText() {
   return [
     'Version ' + app.getVersion(),
@@ -288,11 +330,11 @@ function aboutText() {
     'NDI: ' + (cfg.ndi.enabled ? (ndiSender.available() ? 'on' : 'on, but the NDI add-on is missing') : 'off')
   ].join('\n');
 }
-
+ 
 function showAbout() {
   dialog.showMessageBox(mainWin, { type: 'info', title: 'About', message: 'Disciples PreCenter', detail: aboutText() });
 }
-
+ 
 // ---------- IPC from the page ----------
 function setupIpc() {
   ipcMain.handle('app:info', () => ({
@@ -320,25 +362,33 @@ function setupIpc() {
     placeOnDisplay(win, d, fullscreen !== false);
     return true;
   });
+  // Called from the main window: send an already-open output/stage window (by its window name) to the display at a point.
+  ipcMain.handle('display:sendNamed', (e, name, x, y) => {
+    const win = BrowserWindow.getAllWindows().find(w => w !== mainWin && w.__dscName === String(name) && !w.isDestroyed());
+    if (!win || typeof x !== 'number' || typeof y !== 'number') return false;
+    placeOnDisplay(win, screen.getDisplayNearestPoint({ x: Math.round(x), y: Math.round(y) }), true);
+    return true;
+  });
+  ipcMain.handle('app:setNdi', (_e, on) => setNdi(on, false));
   ipcMain.handle('app:openConfig', () => shell.openPath(cfgResult.path));
   ipcMain.handle('app:openData', () => shell.openPath(app.getPath('userData')));
   ipcMain.handle('ndi:sync', async (_e, list) => {
     const cfgs = Array.isArray(list) ? list : [];
-    if (cfgs.length && !cfg.ndi.enabled) throw new Error('NDI is turned off. Set "ndi": { "enabled": true } in config.json (see README).');
+    if (cfgs.length && !cfg.ndi.enabled) throw new Error('NDI is turned off. Turn it on from File > NDI video output (or Help > NDI output in the app).');
     if (cfgs.length && !ndiSender.available()) throw new Error('The NDI add-on is not installed (see README: Turning on NDI).');
     return ndi.sync(cfgs);
   });
 }
-
+ 
 // ---------- start ----------
 process.on('uncaughtException', e => { try { log.error(e); } catch (x) { /* ignore */ } });
 process.on('unhandledRejection', e => { try { log.error(e); } catch (x) { /* ignore */ } });
-
+ 
 cfgResult = loadConfig(app.getPath('userData'), defaultConfigFile());
 cfg = cfgResult.config;
 policy = createUrlPolicy(cfg);
 log.init(app.getPath('userData'));
-
+ 
 if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -347,7 +397,7 @@ if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
     queueFiles(filesFromArgv(argv));
   });
   app.on('open-file', (e, p) => { e.preventDefault(); queueFiles([p]); });
-
+ 
   app.whenReady().then(() => {
     log.info('Starting Disciples PreCenter ' + app.getVersion() + ' (' + cfg.mode + ')');
     cfgResult.warnings.forEach(w => log.warn(w));
@@ -359,6 +409,7 @@ if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
     buildMenu();
     pendingFiles = filesFromArgv(process.argv);
     createMain();
+    if (cfg.autoUpdate) appUpdate.start({ app, log, notify: info => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('update:ready', info); } });
     if (cfgResult.warnings.length) {
       dialog.showMessageBox(mainWin, {
         type: 'warning', message: 'Some settings were not used',

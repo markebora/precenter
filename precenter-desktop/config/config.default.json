@@ -59,6 +59,10 @@
   // true = opening the app a second time just brings the first window forward.
   "singleInstance": true,
  
+  // true = the installed program checks GitHub for a new version, downloads it quietly, and installs it
+  // when you close the app (never during a service). Not used by the portable version.
+  "autoUpdate": true,
+ 
   // true = allow the developer tools (F12). Leave false for church use.
   "devTools": false,
  
