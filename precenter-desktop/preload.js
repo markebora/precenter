@@ -54,7 +54,13 @@ ipcRenderer.on('file:open', (_e, f) => {
 
 // ---- Slim title strip (Windows draws minimize / maximize / close over its right end) ----
 const barArg = process.argv.find(a => a.startsWith('--dsc-titlebar='));
-if (barArg) {
+// Pop-up windows (output / stage / layout / remote...) inherit the main window's launch args,
+// so they must opt out here: only the main window gets the title strip.
+let isPopup = false;
+try {
+  isPopup = !!window.opener || /^(lp-|dsc)/.test(window.name || '') || /#(output|stage|layout)/.test(location.hash || '');
+} catch (e) { /* ignore */ }
+if (barArg && !isPopup) {
   const H = parseInt(barArg.split('=')[1], 10) || 32;
   window.addEventListener('DOMContentLoaded', () => {
     const css = document.createElement('style');
