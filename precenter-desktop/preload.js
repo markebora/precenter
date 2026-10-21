@@ -37,12 +37,10 @@ contextBridge.exposeInMainWorld('dscNative', {
   },
   displays: {
     list: () => ipcRenderer.invoke('display:list'),
-    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false),
-    sendNamed: (name, x, y) => ipcRenderer.invoke('display:sendNamed', name, x, y)
+    send: (displayId, fullscreen) => ipcRenderer.invoke('display:send', displayId, fullscreen !== false)
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
-    setNdi: on => ipcRenderer.invoke('app:setNdi', !!on),
     openConfig: () => ipcRenderer.invoke('app:openConfig'),
     openData: () => ipcRenderer.invoke('app:openData')
   }
@@ -54,13 +52,7 @@ ipcRenderer.on('file:open', (_e, f) => {
 
 // ---- Slim title strip (Windows draws minimize / maximize / close over its right end) ----
 const barArg = process.argv.find(a => a.startsWith('--dsc-titlebar='));
-// Pop-up windows (output / stage / layout / remote...) inherit the main window's launch args,
-// so they must opt out here: only the main window gets the title strip.
-let isPopup = false;
-try {
-  isPopup = !!window.opener || /^(lp-|dsc)/.test(window.name || '') || /#(output|stage|layout)/.test(location.hash || '');
-} catch (e) { /* ignore */ }
-if (barArg && !isPopup) {
+if (barArg) {
   const H = parseInt(barArg.split('=')[1], 10) || 32;
   window.addEventListener('DOMContentLoaded', () => {
     const css = document.createElement('style');
