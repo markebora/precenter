@@ -2194,6 +2194,8 @@ function openBible(sec){
       <label style="flex:3;min-width:190px">Passage<input id="bbRef" placeholder="e.g. John 3:16-18, Psalm 23, John 3:16-4:2" autocomplete="off"></label>
       <label style="flex:2;min-width:130px">Book<select id="bbBook"></select></label>
       <label style="flex:none;width:84px;min-width:0">Chapter<select id="bbCh"></select></label>
+      <label style="flex:none;width:76px;min-width:0">From verse<select id="bbV1"></select></label>
+      <label style="flex:none;width:76px;min-width:0">To verse<select id="bbV2"></select></label>
     </div>
     <div class="row" style="align-items:center;gap:10px">
       <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none">Verses per slide<input type="number" id="bbPer" min="1" max="40" placeholder="auto" style="width:74px"></label>
@@ -2231,6 +2233,16 @@ function openBible(sec){
     for(let i=1;i<=bk.c.length;i++){const o=document.createElement('option');o.value=i;o.textContent=i;cs.appendChild(o)}
     cs.value=keep&&+keep<=bk.c.length?keep:'1';
   }
+  function fillV(p){
+    const v1=q('bbV1'),v2=q('bbV2'),bk=d1&&d1.books[p.bi];v1.innerHTML='';v2.innerHTML='';if(!bk)return;
+    const n=bk.c[p.c1-1].length,multi=p.c1!==p.c2;
+    for(let i=1;i<=n;i++){[v1,v2].forEach(sel=>{const o=document.createElement('option');o.value=i;o.textContent=i;sel.appendChild(o)})}
+    v1.value=p.v1;v2.value=multi?n:p.v2;v1.disabled=v2.disabled=multi;
+  }
+  function verseSel(){
+    let a=+q('bbV1').value,b=+q('bbV2').value;if(b<a){b=a;q('bbV2').value=b}
+    q('bbRef').value=d1.books[+q('bbBook').value].n+' '+q('bbCh').value+':'+a+(b>a?'-'+b:'');render();
+  }
   async function load(){
     const my=++gen,dual=q('bbDual').checked;q('bbTr2L').style.display=dual?'':'none';
     try{const a=await bbLoad(q('bbTr').value),b=dual?await bbLoad(q('bbTr2').value):null;if(my!==gen)return;d1=a;d2=b}
@@ -2249,10 +2261,10 @@ function openBible(sec){
     V=[];slides=[];notice='';
     if(!d1){drawPrev();return}
     const dual=q('bbDual').checked&&!!d2,ref=q('bbRef').value.trim();
-    if(!ref){msg('Type a passage, for example John 3:16-18, or pick a book and chapter.');drawPrev();return}
+    if(!ref){msg('Type a passage, for example John 3:16-18, or pick book, chapter and verses.');drawPrev();return}
     const p=bbParse(ref,d1);
     if(p.err){msg(p.err);drawPrev();return}
-    q('bbBook').value=p.bi;fillCh();q('bbCh').value=p.c1;
+    q('bbBook').value=p.bi;fillCh();q('bbCh').value=p.c1;fillV(p);
     V=bbCollect(p,d1,dual?d2:null);
     book=d1.books[p.bi].n;book2=dual?d2.books[p.bi].n:'';
     const per=Math.max(0,parseInt(q('bbPer').value,10)||0),t1=tagOf(q('bbTr').value),t2=dual?tagOf(q('bbTr2').value):'';
@@ -2267,6 +2279,7 @@ function openBible(sec){
   q('bbTr').onchange=load;q('bbTr2').onchange=load;q('bbDual').onchange=load;
   q('bbRef').oninput=render;q('bbRef').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();render()}};
   q('bbBook').onchange=()=>{q('bbCh').innerHTML='';fillCh();q('bbRef').value=d1.books[+q('bbBook').value].n+' 1';render()};
+  q('bbV1').onchange=verseSel;q('bbV2').onchange=verseSel;
   q('bbCh').onchange=()=>{q('bbRef').value=d1.books[+q('bbBook').value].n+' '+q('bbCh').value;render()};
   ['bbPer','bbNums','bbRefOn','bbNote'].forEach(id=>{q(id).oninput=render;q(id).onchange=render});
   w.querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{q('bbPer').value=b.dataset.p;render()});
@@ -4310,7 +4323,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.15',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.16',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
