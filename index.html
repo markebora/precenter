@@ -2095,140 +2095,193 @@ function importDeck(sec){
   };
   inp.click();
 }
-/* ---------- Bible passages ---------- */
-const BIBLES=[['web','World English Bible (WEB)','WEB'],['kjv','King James Version (KJV)','KJV'],['asv','American Standard Version (ASV)','ASV'],['darby','Darby Bible','Darby'],['bbe','Bible in Basic English (BBE)','BBE'],['webbe','World English Bible, British (WEBBE)','WEBBE']];
-const SUPD='\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079';
+/* ---------- Bible passages: local Bible files in the bible folder (same files as Stream), made into slides ---------- */
+const SUPD='⁰¹²³⁴⁵⁶⁷⁸⁹';
 const supN=n=>String(n).replace(/\d/g,d=>SUPD[d]);
-const BIBLE_PRESETS={
- 'p:esv':['ESV','ESV English Standard Version \u2013 paste the text','Scripture quotations are from the ESV\u00ae Bible (The Holy Bible, English Standard Version\u00ae), \u00a9 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.'],
- 'p:mbb':['MBB','MBBTAG Magandang Balita Biblia (Tagalog) \u2013 paste the text','Scripture texts are from the Magandang Balita Biblia \u00a9 2012 Philippine Bible Society, used with permission.'],
- 'p:asnd':['ASND','ASND Ang Salita ng Dios (Tagalog) \u2013 paste the text','Ang Salita ng Dios (Tagalog Contemporary Bible) Copyright \u00a9 2009, 2011, 2014, 2015 by Biblica, Inc.\u00ae Used by permission of Biblica, Inc.\u00ae All rights reserved worldwide.'],
- 'p:ab':['AB','Ang Biblia 2001 (Tagalog) \u2013 paste the text','Scripture texts are from the Ang Biblia \u00a9 2001 Philippine Bible Society, used with permission.']
-};
-const NIV_NOTICE='The Holy Bible, New International Version\u00ae NIV\u00ae Copyright \u00a9 1973, 1978, 1984, 2011 by Biblica, Inc.\u00ae Used by Permission of Biblica, Inc.\u00ae All rights reserved worldwide.';
-function parseRef(r){
-  const m=/^\s*((?:[1-3]\s*)?[A-Za-z][A-Za-z .]*?)\s*(\d+)(?:\s*:\s*(\d+)(?:\s*[-\u2013]\s*(\d+))?)?\s*$/.exec(r||'');
-  if(!m)return null;
-  const book=m[1].replace(/\s+/g,' ').trim().replace(/\b([a-z])/g,c=>c.toUpperCase());
-  return{book,ch:+m[2],v1:m[3]?+m[3]:1,v2:m[4]?+m[4]:(m[3]?+m[3]:null)};
+const NIV_NOTICE='The Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide.';
+// [file id, name, short tag, copyright notice added as the last slide ('' = public domain)]
+const BIBLES=[
+ ['kjv','King James Version (KJV)','KJV',''],
+ ['asv','American Standard Version (ASV)','ASV',''],
+ ['bbe','Bible in Basic English (BBE)','BBE',''],
+ ['abtag','Ang Biblia 1905 (Tagalog)','AB1905',''],
+ ['mbb','Magandang Balita Biblia 2005 (Tagalog)','MBB','Scripture texts are from the Magandang Balita Biblia (Revised) © 2005 Philippine Bible Society, used with permission.'],
+ ['asnd','Ang Salita ng Dios (Tagalog)','ASND','Ang Salita ng Dios (Tagalog Contemporary Bible) Copyright © 2009, 2011, 2014, 2015 by Biblica, Inc.® Used by permission of Biblica, Inc.® All rights reserved worldwide.'],
+ ['niv','New International Version (NIV)','NIV',NIV_NOTICE],
+ ['nkrv','개역개정 Korean (NKRV)','NKRV','개역개정 (NKRV) © 대한성서공회 (Korean Bible Society).']
+];
+const BB_EN = ['Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
+const BB_KO = ['창세기', '출애굽기', '레위기', '민수기', '신명기', '여호수아', '사사기', '룻기', '사무엘상', '사무엘하', '열왕기상', '열왕기하', '역대상', '역대하', '에스라', '느헤미야', '에스더', '욥기', '시편', '잠언', '전도서', '아가', '이사야', '예레미야', '예레미야애가', '에스겔', '다니엘', '호세아', '요엘', '아모스', '오바댜', '요나', '미가', '나훔', '하박국', '스바냐', '학개', '스가랴', '말라기', '마태복음', '마가복음', '누가복음', '요한복음', '사도행전', '로마서', '고린도전서', '고린도후서', '갈라디아서', '에베소서', '빌립보서', '골로새서', '데살로니가전서', '데살로니가후서', '디모데전서', '디모데후서', '디도서', '빌레몬서', '히브리서', '야고보서', '베드로전서', '베드로후서', '요한일서', '요한이서', '요한삼서', '유다서', '요한계시록'];
+const BB_AL = { gen: 0, ge: 0, gn: 0, ex: 1, exo: 1, lev: 2, lv: 2, num: 3, nu: 3, nm: 3, deut: 4, dt: 4, josh: 5, jos: 5, judg: 6, jdg: 6, jg: 6, ru: 7, '1sam': 8, '1sa': 8, '1sm': 8, '2sam': 9, '2sa': 9, '2sm': 9, '1ki': 10, '1kgs': 10, '2ki': 11, '2kgs': 11, '1chr': 12, '1ch': 12, '2chr': 13, '2ch': 13, ezr: 14, neh: 15, ne: 15, est: 16, esth: 16, jb: 17, ps: 18, psa: 18, pss: 18, psalm: 18, prov: 19, pr: 19, pro: 19, eccl: 20, ecc: 20, song: 21, sos: 21, songofsongs: 21, isa: 22, is: 22, jer: 23, lam: 24, ezek: 25, eze: 25, dan: 26, dn: 26, hos: 27, jl: 28, am: 29, obad: 30, ob: 30, jon: 31, jnh: 31, mic: 32, nah: 33, hab: 34, zeph: 35, zep: 35, hag: 36, zech: 37, zec: 37, mal: 38, matt: 39, mt: 39, mat: 39, mk: 40, mrk: 40, lk: 41, luk: 41, jn: 42, joh: 42, ac: 43, rom: 44, ro: 44, '1cor': 45, '1co': 45, '2cor': 46, '2co': 46, gal: 47, ga: 47, eph: 48, phil: 49, php: 49, col: 50, '1thess': 51, '1th': 51, '2thess': 52, '2th': 52, '1tim': 53, '1ti': 53, '2tim': 54, '2ti': 54, tit: 55, philem: 56, phm: 56, heb: 57, jas: 58, jm: 58, '1pet': 59, '1pe': 59, '2pet': 60, '2pe': 60, '1jn': 61, '1john': 61, '2jn': 62, '2john': 62, '3jn': 63, '3john': 63, jud: 64, rev: 65, re: 65 };
+const BBC={};
+const bbKey=t=>String(t).toLowerCase().replace(/[^a-z0-9ñ가-힣]/g,'');
+async function bbLoad(id){
+  if(BBC[id])return BBC[id];
+  const r=await fetch('bible/'+id+'.json');if(!r.ok)throw new Error('Bible file missing');
+  const d=await r.json();d.keys=d.books.map(b=>bbKey(b.n));BBC[id]=d;return d;
 }
-function splitPasted(text,start,ch){
-  let t=String(text||'').replace(/\r/g,'').replace(/\u00a0/g,' ').replace(/\[[a-z]\]|\([A-Z]\)/g,'').trim();
-  if(!t)return[];
-  const hits=[];let n=start,pos=0;
-  for(;;){
-    const re=new RegExp('(?<![0-9A-Za-z])('+n+')(?![0-9])(?:(?=[A-Za-z\\u201c\\u2018"\'(\\[])|(?=\\s+[A-Z\\u201c\\u2018"\'(\\[]))','g');re.lastIndex=pos;
-    const m=re.exec(t);if(!m)break;
-    const at=m.index;
-    hits.push({n,at});pos=at+String(n).length;n++;
+function bbBook(txt,d){
+  const k=bbKey(txt);if(k.length<2)return -1;if(BB_AL[k]!==undefined)return BB_AL[k];
+  let i=d.keys.findIndex(x=>x===k);if(i>=0)return i;
+  i=BB_EN.findIndex(x=>bbKey(x)===k);if(i>=0)return i;
+  i=BB_KO.findIndex(x=>x===k);if(i>=0)return i;
+  i=d.keys.findIndex(x=>x.startsWith(k));if(i>=0)return i;
+  i=BB_EN.findIndex(x=>bbKey(x).startsWith(k));if(i>=0)return i;
+  return k.length>=4?d.keys.findIndex(x=>x.includes(k)):-1;
+}
+// John 3:16 | John 3:16-18 | John 3:16-4:2 | John 3-4 | Psalm 23 | Genesis (= chapter 1)
+function bbParse(str,d){
+  const m=/^(.*?[A-Za-zñÑ.가-힣])(?:\s*(\d+)(?:\s*[:.]\s*(\d+))?(?:\s*[-–—]\s*(?:(\d+)\s*[:.]\s*)?(\d+))?)?\s*$/.exec(String(str||'').trim());
+  if(!m)return{err:'Type a passage like John 3:16-18, Psalm 23 or Genesis 1:1-5'};
+  const bi=bbBook(m[1],d);if(bi<0||!d.books[bi])return{err:'Book not found: '+m[1].trim()};
+  const bk=d.books[bi],nch=bk.c.length,len=c=>bk.c[c-1].length;
+  let c1,v1,c2,v2;
+  if(!m[2]){c1=c2=1;v1=1;v2=len(1)}
+  else if(m[3]===undefined&&m[5]===undefined){c1=c2=+m[2];v1=1;v2=c1>=1&&c1<=nch?len(c1):1}
+  else if(m[3]===undefined){c1=+m[2];c2=+m[5];v1=1;v2=c2>=1&&c2<=nch?len(c2):1}
+  else if(m[5]===undefined){c1=c2=+m[2];v1=v2=+m[3]}
+  else if(m[4]===undefined){c1=c2=+m[2];v1=+m[3];v2=+m[5]}
+  else{c1=+m[2];v1=+m[3];c2=+m[4];v2=+m[5]}
+  if(c1<1||c1>nch)return{err:bk.n+' has '+nch+' chapters'};
+  if(c2<c1||c2>nch)return{err:'Check the chapters in that passage ('+bk.n+' has '+nch+')'};
+  if(v1<1||v1>len(c1))return{err:bk.n+' '+c1+' has '+len(c1)+' verses'};
+  v2=Math.min(Math.max(v2,c1===c2?v1:1),len(c2));
+  return{bi,c1,v1,c2,v2};
+}
+function bbCollect(p,d1,d2){
+  const out=[],b1=d1.books[p.bi],b2=d2&&d2.books[p.bi];
+  for(let ch=p.c1;ch<=p.c2;ch++){
+    const a=b1.c[ch-1],b=b2&&b2.c[ch-1]||[];
+    const from=ch===p.c1?p.v1:1,to=ch===p.c2?Math.min(p.v2,a.length):a.length;
+    for(let v=from;v<=to;v++){const t1=a[v-1]||'',t2=d2?(b[v-1]||''):'';if(t1||t2)out.push({ch,v,t1,t2})}
   }
-  const clean=x=>x.replace(/\s+/g,' ').trim();
-  if(hits.length){
-    return hits.map((h,i)=>({ch,v:h.n,text:clean(t.slice(h.at+String(h.n).length,i+1<hits.length?hits[i+1].at:t.length))})).filter(v=>v.text);
-  }
-  const lines=t.split(/\n+/).map(clean).filter(Boolean);
-  return lines.map((l,i)=>({ch,v:start+i,text:l}));
+  return out;
 }
 function bbLabel(a,b,book,tag){
-  const r=a.ch===b.ch?(a.v===b.v?book+' '+a.ch+':'+a.v:book+' '+a.ch+':'+a.v+'-'+b.v):book+' '+a.ch+':'+a.v+' \u2013 '+b.ch+':'+b.v;
+  const r=a.ch===b.ch?(a.v===b.v?book+' '+a.ch+':'+a.v:book+' '+a.ch+':'+a.v+'-'+b.v):book+' '+a.ch+':'+a.v+' – '+b.ch+':'+b.v;
   return r+(tag?' ('+tag+')':'');
 }
+// per = verses per slide (0 = fit by length)
 function bbSlides(V,o){
-  const out=[];let i=0;
+  const out=[],lim=o.dual?260:190;let i=0;
   while(i<V.length){
     let j;
-    if(o.per==='auto'){j=i+1;let len=V[i].text.length;while(j<V.length&&len+V[j].text.length<=190){len+=V[j].text.length;j++}}
-    else j=Math.min(V.length,i+(+o.per||1));
-    const part=V.slice(i,j);
-    const body=part.map(x=>(o.nums?supN(x.v)+'\u2009':'')+x.text).join(' ');
-    out.push(body+(o.ref?'\n\u2014 '+bbLabel(part[0],part[part.length-1],o.book,o.tag):''));
+    if(!o.per){j=i+1;let len=V[i].t1.length+V[i].t2.length;while(j<V.length&&len+V[j].t1.length+V[j].t2.length<=lim){len+=V[j].t1.length+V[j].t2.length;j++}}
+    else j=Math.min(V.length,i+o.per);
+    const part=V.slice(i,j),a=part[0],b=part[part.length-1];
+    const jn=k=>part.map(x=>x[k]?(o.nums?supN(x.v)+' ':'')+x[k]:'').filter(Boolean).join(' ');
+    const lines=[jn('t1')];if(o.dual)lines.push(jn('t2'));
+    if(o.ref)lines.push('— '+bbLabel(a,b,o.book,o.tag)+(o.dual?'  |  '+bbLabel(a,b,o.book2,o.tag2):''));
+    out.push(lines.filter(Boolean).join('\n'));
     i=j;
   }
   return out;
 }
 function openBible(sec){
   let saved={};try{saved=JSON.parse(localStorage.getItem('lp-bible')||'{}')}catch(e){}
+  const ok=id=>BIBLES.some(b=>b[0]===id);
+  const tr0=ok(saved.tr)?saved.tr:'kjv',tr20=ok(saved.tr2)?saved.tr2:(tr0==='nkrv'?'niv':'nkrv');
   const w=document.createElement('div');w.className='qe';
-  w.innerHTML=`<div class="qb" style="width:min(700px,94vw);max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:8px">
-    <div class="row" style="justify-content:space-between;align-items:center"><b>Bible &ndash; make scripture slides</b><button class="x" title="Close">\u2715</button></div>
+  const opts=BIBLES.map(b=>`<option value="${b[0]}">${b[1]}</option>`).join('');
+  w.innerHTML=`<div class="qb" style="width:min(720px,94vw);max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:8px">
+    <div class="row" style="justify-content:space-between;align-items:center"><b>Bible &ndash; make scripture slides</b><button class="x" title="Close">✕</button></div>
     <div class="row" style="align-items:flex-end">
-      <label style="flex:2;min-width:160px">Passage<input id="bbRef" placeholder="e.g. John 3:16-18 or Psalm 23" autocomplete="off"></label>
-      <label style="flex:2;min-width:180px">Version<select id="bbTr">${BIBLES.map(b=>`<option value="${b[0]}">${b[1]}</option>`).join('')}${Object.entries(BIBLE_PRESETS).map(([k,p])=>`<option value="${k}">${p[1]}</option>`).join('')}<option value="paste">NIV / other \u2013 paste the text</option></select></label>
-      <button id="bbGo" class="pri">Look up</button>
+      <label style="flex:2;min-width:200px">Version<select id="bbTr">${opts}</select></label>
+      <label style="flex:none;flex-direction:row;align-items:center;gap:6px;min-width:0"><input type="checkbox" id="bbDual" style="width:auto">2 versions</label>
+      <label id="bbTr2L" style="flex:2;min-width:200px;display:none">Second version<select id="bbTr2">${opts}</select></label>
     </div>
-    <div id="bbPasteBox" hidden style="display:flex;flex-direction:column;gap:6px">
-      <label>Paste the passage (copy it from your licensed Bible app or website, verse numbers included)<textarea id="bbTxt" spellcheck="false" style="min-height:110px" placeholder="16 For God so loved the world that he gave his one and only Son..."></textarea></label>
-      <div class="row"><label style="flex:1;min-width:120px">Version label<input id="bbTag" value="NIV"></label></div>
-      <label>Copyright notice (added as a last slide; leave empty for none)<textarea id="bbNote" spellcheck="false" style="min-height:56px"></textarea></label>
-      <div class="hint" style="margin:0">These versions are copyrighted and have no free lookup, so paste only the verses you need. For ESV and Magandang Balita the publishers allow up to 500 verses and less than half a book without asking; for ASND and others, check the publisher. The right credit is filled in and added as the last slide, and the version is tagged on each reference.</div>
+    <div class="row" style="align-items:flex-end">
+      <label style="flex:3;min-width:190px">Passage<input id="bbRef" placeholder="e.g. John 3:16-18, Psalm 23, John 3:16-4:2" autocomplete="off"></label>
+      <label style="flex:2;min-width:130px">Book<select id="bbBook"></select></label>
+      <label style="flex:none;width:84px;min-width:0">Chapter<select id="bbCh"></select></label>
+    </div>
+    <div class="row" style="align-items:center;gap:10px">
+      <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none">Verses per slide<input type="number" id="bbPer" min="1" max="40" placeholder="auto" style="width:74px"></label>
+      <span class="row" style="gap:4px;flex:none"><button type="button" data-p="1">1</button><button type="button" data-p="2">2</button><button type="button" data-p="3">3</button><button type="button" data-p="4">4</button><button type="button" data-p="">Auto</button></span>
+      <span class="hint" style="margin:0;flex:1;min-width:140px">Type any number. Empty = fit by length.</span>
     </div>
     <div class="row" style="align-items:center;gap:12px">
-      <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none">Verses per slide<select id="bbPer" style="width:auto"><option value="auto">Auto (by length)</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
       <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none"><input type="checkbox" id="bbNums" style="width:auto">Verse numbers</label>
       <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none"><input type="checkbox" id="bbRefOn" style="width:auto">Reference on each slide</label>
+      <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none"><input type="checkbox" id="bbNote" style="width:auto">Copyright slide at the end</label>
     </div>
     <div id="bbMsg" class="hint" style="margin:0;min-height:14px"></div>
-    <div id="bbPrev" style="max-height:230px;overflow:auto"></div>
+    <div id="bbPrev" style="max-height:260px;overflow:auto"></div>
     <div class="row" style="justify-content:flex-end"><button class="x2">Cancel</button><button id="bbAdd" class="pri" disabled>Add to Presentation</button></div>
   </div>`;
   const q=id=>w.querySelector('#'+id);
-  q('bbRef').value=saved.ref||'';q('bbTr').value=saved.tr||'web';q('bbPer').value=saved.per||'auto';
-  q('bbNums').checked=saved.nums!==false;q('bbRefOn').checked=saved.refOn!==false;q('bbTag').value=saved.tag||'NIV';
-  let V=[],book='',slides=[],notice='';
-  setTimeout(()=>{if(BIBLE_PRESETS[q('bbTr').value]){applyPreset();render()}},0);
+  q('bbTr').value=tr0;q('bbTr2').value=tr20;q('bbDual').checked=!!saved.dual;q('bbRef').value=saved.ref||'';
+  q('bbPer').value=saved.per&&saved.per!=='auto'?saved.per:'';
+  q('bbNums').checked=saved.nums!==false;q('bbRefOn').checked=saved.refOn!==false;q('bbNote').checked=saved.note!==false;
+  let d1=null,d2=null,V=[],book='',book2='',slides=[],notice='',gen=0;
   const done=()=>{document.removeEventListener('keydown',kd,true);w.remove()};
   const kd=e=>{if(e.key==='Escape'){e.stopPropagation();done()}};
   document.addEventListener('keydown',kd,true);
-  const paste=()=>{const v=q('bbTr').value;return v==='paste'||v.startsWith('p:')};
-  const applyPreset=()=>{const p=BIBLE_PRESETS[q('bbTr').value];if(p){q('bbTag').value=p[0];q('bbNote').value=p[2];q('bbNote').dataset.touched='1'}};
-  const tagOf=()=>paste()?q('bbTag').value.trim():(BIBLES.find(b=>b[0]===q('bbTr').value)||[])[2]||'';
-  function render(){
-    q('bbPasteBox').hidden=!paste();q('bbPasteBox').style.display=paste()?'flex':'none';
-    q('bbGo').style.display=paste()?'none':'';
-    if(paste()){
-      const r=parseRef(q('bbRef').value);book=r?r.book:(q('bbRef').value.trim()||'Scripture');
-      V=splitPasted(q('bbTxt').value,r?r.v1:1,r?r.ch:1);
-      if(!q('bbNote').dataset.touched&&/niv/i.test(q('bbTag').value))q('bbNote').value=NIV_NOTICE;
-      else if(!q('bbNote').dataset.touched&&!/niv/i.test(q('bbTag').value))q('bbNote').value='';
-    }
-    slides=V.length?bbSlides(V,{per:q('bbPer').value,nums:q('bbNums').checked,ref:q('bbRefOn').checked,book,tag:tagOf()}):[];
-    notice=paste()?q('bbNote').value.replace(/\s*\n\s*/g,' ').trim():'';
+  const msg=t=>{q('bbMsg').textContent=t};
+  const tagOf=id=>(BIBLES.find(b=>b[0]===id)||[])[2]||'';
+  const noteOf=id=>(BIBLES.find(b=>b[0]===id)||[])[3]||'';
+  function fillBooks(){
+    const bs=q('bbBook'),keep=bs.value;bs.innerHTML='';
+    if(d1)d1.books.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.n;bs.appendChild(o)});
+    bs.value=keep!==''&&d1&&d1.books[+keep]?keep:'0';fillCh();
+  }
+  function fillCh(){
+    const cs=q('bbCh'),keep=cs.value;cs.innerHTML='';
+    const bk=d1&&d1.books[+q('bbBook').value];if(!bk)return;
+    for(let i=1;i<=bk.c.length;i++){const o=document.createElement('option');o.value=i;o.textContent=i;cs.appendChild(o)}
+    cs.value=keep&&+keep<=bk.c.length?keep:'1';
+  }
+  async function load(){
+    const my=++gen,dual=q('bbDual').checked;q('bbTr2L').style.display=dual?'':'none';
+    try{const a=await bbLoad(q('bbTr').value),b=dual?await bbLoad(q('bbTr2').value):null;if(my!==gen)return;d1=a;d2=b}
+    catch(e){if(my!==gen)return;d1=d2=null;V=[];slides=[];msg('Could not load the Bible files. Make sure the bible folder is published next to index.html.');drawPrev();return}
+    fillBooks();render();
+  }
+  function drawPrev(){
     const P=q('bbPrev');P.innerHTML='';
     slides.forEach((t,i)=>{const d=document.createElement('div');d.style.cssText='border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin:4px 0;font-size:12px;white-space:pre-wrap';d.textContent=(i+1)+'.  '+t;P.appendChild(d)});
     if(notice&&slides.length){const d=document.createElement('div');d.style.cssText='border:1px dashed var(--line);border-radius:6px;padding:6px 8px;margin:4px 0;font-size:11px;color:var(--mute)';d.textContent='Last slide: '+notice;P.appendChild(d)}
+    const n=slides.length+(notice?1:0);
     q('bbAdd').disabled=!slides.length;
-    q('bbAdd').textContent=slides.length?'Add '+(slides.length+(notice?1:0))+' slide'+(slides.length+(notice?1:0)>1?'s':'')+' to Presentation':'Add to Presentation';
+    q('bbAdd').textContent=slides.length?'Add '+n+' slide'+(n>1?'s':'')+' to Presentation':'Add to Presentation';
   }
-  async function lookup(){
-    const ref=q('bbRef').value.trim();if(!ref){q('bbMsg').textContent='Type a passage first, for example John 3:16-18.';return}
-    q('bbMsg').textContent='Looking up\u2026';q('bbGo').disabled=true;
-    try{
-      const res=await fetch('https://bible-api.com/'+encodeURIComponent(ref)+'?translation='+q('bbTr').value);
-      const j=await res.json();
-      if(!res.ok||j.error||!j.verses||!j.verses.length)throw new Error(j&&j.error||'not found');
-      V=j.verses.map(v=>({ch:v.chapter,v:v.verse,text:String(v.text).replace(/\s+/g,' ').trim()}));
-      book=j.verses[0].book_name||parseRef(ref)?.book||ref;
-      q('bbMsg').textContent=(j.reference||ref)+' \u2013 '+V.length+' verse'+(V.length>1?'s':'');
-    }catch(e){V=[];q('bbMsg').textContent='Could not get that passage. Check the spelling (for example "1 John 4:7-8") and your internet connection.'}
-    q('bbGo').disabled=false;render();
+  function render(){
+    V=[];slides=[];notice='';
+    if(!d1){drawPrev();return}
+    const dual=q('bbDual').checked&&!!d2,ref=q('bbRef').value.trim();
+    if(!ref){msg('Type a passage, for example John 3:16-18, or pick a book and chapter.');drawPrev();return}
+    const p=bbParse(ref,d1);
+    if(p.err){msg(p.err);drawPrev();return}
+    q('bbBook').value=p.bi;fillCh();q('bbCh').value=p.c1;
+    V=bbCollect(p,d1,dual?d2:null);
+    book=d1.books[p.bi].n;book2=dual?d2.books[p.bi].n:'';
+    const per=Math.max(0,parseInt(q('bbPer').value,10)||0),t1=tagOf(q('bbTr').value),t2=dual?tagOf(q('bbTr2').value):'';
+    slides=V.length?bbSlides(V,{per,nums:q('bbNums').checked,ref:q('bbRefOn').checked,dual,book,book2,tag:t1,tag2:t2}):[];
+    if(q('bbNote').checked&&slides.length){
+      const ids=[q('bbTr').value].concat(dual&&q('bbTr2').value!==q('bbTr').value?[q('bbTr2').value]:[]);
+      notice=ids.map(noteOf).filter(Boolean).join('\n');
+    }
+    msg(V.length?bbLabel(V[0],V[V.length-1],book,'')+' – '+V.length+' verse'+(V.length>1?'s':'')+' → '+slides.length+' slide'+(slides.length>1?'s':''):'No verses found for that passage.');
+    drawPrev();
   }
-  q('bbGo').onclick=lookup;
-  q('bbRef').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();if(!paste())lookup();else render()}};
-  q('bbTr').onchange=()=>{V=[];q('bbMsg').textContent='';applyPreset();render()};
-  ['bbPer','bbNums','bbRefOn'].forEach(id=>q(id).onchange=render);
-  q('bbTxt').oninput=render;q('bbRef').oninput=()=>{if(paste())render()};q('bbTag').oninput=render;
-  q('bbNote').oninput=()=>{q('bbNote').dataset.touched='1';render()};
+  q('bbTr').onchange=load;q('bbTr2').onchange=load;q('bbDual').onchange=load;
+  q('bbRef').oninput=render;q('bbRef').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();render()}};
+  q('bbBook').onchange=()=>{q('bbCh').innerHTML='';fillCh();q('bbRef').value=d1.books[+q('bbBook').value].n+' 1';render()};
+  q('bbCh').onchange=()=>{q('bbRef').value=d1.books[+q('bbBook').value].n+' '+q('bbCh').value;render()};
+  ['bbPer','bbNums','bbRefOn','bbNote'].forEach(id=>{q(id).oninput=render;q(id).onchange=render});
+  w.querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{q('bbPer').value=b.dataset.p;render()});
   q('bbAdd').onclick=()=>{
     if(!slides.length)return;
-    const tag=tagOf(),first=V[0],last=V[V.length-1];
-    const title=bbLabel(first,last,book,tag);
+    const dual=q('bbDual').checked&&!!d2,t1=tagOf(q('bbTr').value),t2=tagOf(q('bbTr2').value);
+    const title=bbLabel(V[0],V[V.length-1],book,'')+' ('+t1+(dual?' + '+t2:'')+')';
     const lyrics=slides.concat(notice?[notice]:[]).join('\n\n');
-    try{localStorage.setItem('lp-bible',JSON.stringify({ref:q('bbRef').value,tr:q('bbTr').value,per:q('bbPer').value,nums:q('bbNums').checked,refOn:q('bbRefOn').checked,tag:q('bbTag').value}))}catch(e){}
+    try{localStorage.setItem('lp-bible',JSON.stringify({ref:q('bbRef').value,tr:q('bbTr').value,tr2:q('bbTr2').value,dual:q('bbDual').checked,per:q('bbPer').value||'auto',nums:q('bbNums').checked,refOn:q('bbRefOn').checked,note:q('bbNote').checked}))}catch(e){}
+    const n=slides.length+(notice?1:0);
     done();addSec=sec||'Presentation';addItem(title,lyrics,{type:'scripture'});setMode('show');
-    toast((slides.length+(notice?1:0))+' slides added. Click a slide, then use Space or the arrow keys.');
+    toast(n+' slide'+(n>1?'s':'')+' added. Click a slide, then use Space or the arrow keys.');
   };
   w.querySelector('.x').onclick=done;w.querySelector('.x2').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
-  document.body.appendChild(w);render();q('bbRef').focus();
+  document.body.appendChild(w);load();q('bbRef').focus();
 }
 function newItem(sec,type){const [t,l]=ITEMDEF[type];addItem(t,l,{sec,type,...(type==='countdown'?{cd:{mode:'min',min:10,at:'09:00'}}:{})})}
 function addMenu(e,sec){
@@ -4298,12 +4351,12 @@ window.DSC_VERSION=DSC_VERSION;
 
     function set(){
       const o=LS('lp-dsc',{}),b=LS('lp-bible',{});let tm='dark';try{tm=localStorage.getItem('lp-theme')||'dark'}catch(e){}
-      const vers=BIBLES.map(x=>[x[0],x[1]]).concat(Object.entries(BIBLE_PRESETS).map(([k,p])=>[k,p[1].replace(/ \u2013 paste the text$/,'')])).concat([['paste','NIV / other (paste the text)']]);
+      const vers=BIBLES.map(x=>[x[0],x[1]]);
       body.innerHTML='<h3>General</h3><div class="pfG">'
         +sel('sTh','Theme',[['dark','Dark'],['light','Light'],['auto','Match this computer']],tm)
         +sel('sPer','Lines per slide for library songs',[['0','As written'],['2','2 lines'],['3','3 lines'],['4','4 lines']],o.per||0)
         +sel('sSec','Section for new library songs',S.secs.map(x=>[x,x]),S.secs.includes(o.sec)?o.sec:(S.secs.includes('Music')?'Music':S.secs[0]))
-        +sel('sBv','Bible version',vers,b.tr||'web')
+        +sel('sBv','Bible version',vers,BIBLES.some(x=>x[0]===b.tr)?b.tr:'kjv')
         +sel('sBp','Verses per slide',[['auto','Auto (by length)'],['1','1'],['2','2'],['3','3'],['4','4']],b.per||'auto')
         +'</div><label class="pfC"><input type="checkbox" id="sNm"'+(b.nums!==false?' checked':'')+'>Show verse numbers</label><label class="pfC"><input type="checkbox" id="sRf"'+(b.refOn!==false?' checked':'')+'>Show the reference on each scripture slide</label><div class="hint" id="sOk" style="margin:0;min-height:14px"></div><div class="row"><button id="sRs">Reset screen settings</button></div>';
       body.querySelectorAll('select,input').forEach(e=>e.onchange=()=>{
@@ -4333,9 +4386,9 @@ window.DSC_VERSION=DSC_VERSION;
     }
 
     function abt(){
-      const pd=BIBLES.map(b=>b[2]).join(', ');
+      const pd=BIBLES.filter(b=>!b[3]).map(b=>b[2]).join(', ');
       body.innerHTML='<h3>Disciples: PreCenter</h3><div style="margin:0"><b>Version '+DSC_VERSION+'</b> <span class="hint" style="margin:0">· released '+DSC_RELEASED+'</span></div><div class="hint" style="margin:0">Lyrics, scripture and stage display for worship, part of Disciples.</div><h4 style="margin:6px 0 0">Bible credits</h4><div class="hint" style="margin:0">Public domain (no credit needed): '+dscEsc(pd)+'.</div>'
-        +'<div class="pfCard" style="display:flex;flex-direction:column;gap:8px;font-size:12px">'+Object.values(BIBLE_PRESETS).map(p=>'<div><b>'+dscEsc(p[0])+'</b><br>'+dscEsc(p[2])+'</div>').join('')+'<div><b>NIV</b><br>'+dscEsc(NIV_NOTICE)+'</div></div>'
+        +'<div class="pfCard" style="display:flex;flex-direction:column;gap:8px;font-size:12px">'+BIBLES.filter(b=>b[3]).map(b=>'<div><b>'+dscEsc(b[2])+'</b><br>'+dscEsc(b[3])+'</div>').join('')+'</div>'
         +'<div class="hint">The matching credit is added as the last slide of each scripture. Check each publisher for how many verses you may quote.</div>';
     }
 
@@ -8733,7 +8786,7 @@ const E=[
 ['Edit mode','Main screen','Top left, the Edit button','Edit the songs, slides and layouts of the playlist.','editor change','click:#mEdit'],
 ['Search songs','Main screen','Search box above the playlist, or press /','Find a song or text in the library and playlist.','find lookup lyrics','sel:#q'],
 ['Jump to a slide number','Main screen','Slide number box, press / to jump','Type a slide number and press Enter to go to that slide.','goto go to slide number','sel:#gotoN'],
-['Bible','Bible','Top bar, Bible button','Look up a passage and make scripture slides. Choose the version and verses per slide.','scripture verse passage kjv web niv','click:#tBible'],
+['Bible','Bible','Top bar, Bible button','Type a passage (or pick book and chapter), choose one or two versions and how many verses per slide, then add it to the Presentation.','scripture verse passage kjv niv tagalog korean','click:#tBible'],
 ['Theme (backgrounds, fonts, colors)','Look','Top bar, Slide theme button','Change backgrounds, fonts and colours for the song or the whole service.','style design background font colour color','sel:#tTheme'],
 ['Media bin','Media','Bottom of the screen, Media bin','Pictures and videos to use as backgrounds. Minimise or restore it with the arrow.','pictures images videos backgrounds motion','click:#tMedia'],
 ['Load a folder of media','Media','Media bin, Load folder','Add a whole folder of images and videos to the bin.','import folder pictures','sel:#mDir'],
