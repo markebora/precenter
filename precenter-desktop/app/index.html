@@ -2578,6 +2578,12 @@ function openBible(sec){
   document.body.appendChild(w);load();q('bbRef').focus();
 }
 function newItem(sec,type){const [t,l]=ITEMDEF[type];addItem(t,l,{sec,type,...(type==='countdown'?{cd:{mode:'min',min:10,at:'09:00'}}:{})})}
+function newBlankPres(sec){
+  let n=1;const have=new Set(S.songs.map(x=>x.title));while(have.has('Presentation '+n))n++;
+  addItem('Presentation '+n,'\u200b',{sec,type:'present'});
+  try{if(typeof openSed==='function')openSed(0)}catch(e){}
+  toast('Blank presentation added. Use + Slide to add more, and Text, Image or Rectangle to fill it.');
+}
 function addMenu(e,sec){
   e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
   showMenu(r.left,r.bottom+2,[
@@ -2585,6 +2591,7 @@ function addMenu(e,sec){
     {t:'Announcement slides',fn:()=>newItem(sec,'announce')},
     {t:'Countdown timer',fn:()=>newItem(sec,'countdown')},
     {t:'Presentation / sermon',fn:()=>newItem(sec,'present')},
+    {t:'Blank presentation (empty slide)',fn:()=>newBlankPres(sec)},
     {t:'PowerPoint file (.pptx)\u2026',fn:()=>importPptxSlides(sec)},
     {t:'Slides from images (PNG/JPG)\u2026',fn:()=>importDeck(sec)},
     {t:'Bible passage\u2026',fn:()=>openBible(sec)},
