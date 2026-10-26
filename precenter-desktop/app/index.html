@@ -536,6 +536,11 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
 #bot.allmin::before{display:none}
 .ptabs{flex-wrap:nowrap}.ptabs button{flex:1 1 0;min-width:0;padding:8px 0;font-size:17px}.ptabs button span{display:none}
 #ptabs [data-p=pSl]{display:none}
+#clrRow{display:grid!important;grid-template-columns:repeat(3,1fr);gap:5px;align-items:stretch}
+#clrRow .cl{grid-column:1/-1;margin:0 0 1px}
+#clrRow button,#clrRow #gotoN{width:100%;min-width:0;box-sizing:border-box;padding:4px 6px;font-size:11.5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clrRow button.hold{grid-column:span 2}
+#clrRow [data-c=all],#clrRow [data-c=slide],#clrRow [data-c=media]{font-weight:600}
 </style>
 </head>
 <body>
@@ -13622,9 +13627,9 @@ window.dscDesign={applyDesign,TH,variantPatch};
 
 /* ---- simplified layout: editing lives in the bottom area next to Media; the duplicate Slide tab is gone from the right panel ---- */
 (function(){
-  const go=()=>{try{setMode('edit');setMin('#bin',true);setMin('#editSec',true)}catch(e){}
-    const m=document.getElementById('lyMin');if(m&&m.getAttribute('aria-expanded')==='true')m.click()};
-  setTimeout(go,1500);
+  const fold=()=>{try{setMode('edit');setMin('#bin',true);setMin('#editSec',true)}catch(e){}};
+  fold();setTimeout(fold,600);setTimeout(fold,3500);
+  setTimeout(()=>{const m=document.getElementById('lyMin');if(m&&m.getAttribute('aria-expanded')==='true')m.click()},1500);
 })();
 </script>
 </body>
