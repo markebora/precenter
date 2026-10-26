@@ -7349,11 +7349,24 @@ function render(t,now){
 const byName=n=>{n=String(n||'').trim().toLowerCase();return n?window.__tmx.find(x=>String(x.n).trim().toLowerCase()===n||x.id===n):null};
 const primary=()=>window.__tmx.find(x=>x.id===window.__tmP)||window.__tmx.find(x=>x.on)||window.__tmx[0];
 window.dscTmText=function(name){const t=byName(name)||primary();return t?render(t,Date.now()).t:'0:00'};
+/* clock look: position, size and font chosen per timer */
+const TMPOS={tr:['2cqw 2.5cqw auto auto','right',''],tl:['2cqw auto auto 2.5cqw','left',''],tc:['2cqw 0 auto 0','center',''],c:['50% 0 auto 0','center','translateY(-50%)'],bl:['auto auto 2cqw 2.5cqw','left',''],bc:['auto 0 2cqw 0','center',''],br:['auto 2.5cqw 2cqw auto','right','']};
+const TMFONT={'Orbitron':'700','Share Tech Mono':'400','VT323':'400','Bebas Neue':'400','Oswald':'700','Major Mono Display':'400'};
+const tmFontLoaded={};
+function tmLoadFont(f){if(!f||!TMFONT[f]||tmFontLoaded[f])return;tmFontLoaded[f]=1;try{const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f.replace(/ /g,'+')+':wght@'+TMFONT[f]+'&display=swap';document.head.appendChild(l)}catch(x){}}
+function tmLook(e,t){
+  const k=(t.pos||'')+'|'+(t.sz||0)+'|'+(t.ff||'');if(e.dataset.lk===k)return;e.dataset.lk=k;
+  const P=TMPOS[t.pos];
+  e.style.inset=P?P[0]:'';e.style.textAlign=P?P[1]:'';e.style.transform=P?P[2]:'';
+  e.style.fontSize=t.sz?t.sz+'cqw':'';
+  if(t.ff){tmLoadFont(t.ff);e.style.fontFamily="'"+t.ff+"',monospace,sans-serif"}else e.style.fontFamily='';
+}
 window.dscTick=function(){
   const now=Date.now(),pr=primary();
   document.querySelectorAll('.tm[data-end]').forEach(e=>{
     if(!pr){e.textContent='';return}
     const r=render(pr,now);e.textContent=r.t;e.style.color=r.c;e.style.visibility=r.hide?'hidden':'';
+    tmLook(e,pr);
   });
   document.querySelectorAll('.tpl').forEach(sp=>{
     const m=/\{timer(?::([^}]*))?\}/i.exec(sp.dataset.tpl||'');if(!m)return;
@@ -7376,12 +7389,14 @@ if(/^#(output|stage|layout)/.test(location.hash))return;
 const TR={};let PR=null;
 const TYPES=[['down','Countdown (duration)'],['to','Countdown to a time of day'],['up','Elapsed time (count up)']];
 const FMTS=[['auto','Automatic (m:ss, h:mm:ss)'],['m:ss','m:ss'],['mm:ss','mm:ss'],['h:mm:ss','h:mm:ss'],['hh:mm:ss','hh:mm:ss'],['mm:ss.ms','mm:ss.mmm (milliseconds)'],['hh:mm:ss.ms','hh:mm:ss.mmm (milliseconds)'],['ss','Seconds only']];
+const POSS=[['tr','Top right (default)'],['tc','Top center'],['tl','Top left'],['c','Center of screen'],['bc','Bottom center'],['bl','Bottom left'],['br','Bottom right']];
+const CFONTS=[['','Default (Poppins)'],['Orbitron','Digital: Orbitron'],['Share Tech Mono','Digital: Share Tech Mono'],['VT323','Retro LCD: VT323'],['Bebas Neue','Tall: Bebas Neue'],['Oswald','Condensed: Oswald'],['Consolas','Mono: Consolas'],['Courier New','Typewriter: Courier New'],['Arial Black','Heavy: Arial Black'],['Impact','Impact'],['Georgia','Serif: Georgia']];
 const OVERS=[['continue','Keep counting past zero (shows -0:05)'],['stop','Stop at zero'],['flash','Stop and flash'],['hide','Hide the timer']];
 const so=id=>TR[id]||(TR[id]={on:0,run:0,acc:0,st:0,tg:0,du:null});
 const cfg=c=>{c.type=c.type||'down';c.fmt=c.fmt||'auto';c.over=c.over||'continue';if(c.warn===undefined)c.warn=0;c.wcol=c.wcol||'#ffb020';c.ocol=c.ocol||'#ff4d4d';c.at=c.at||'09:00';if(c.max===undefined)c.max=0;return c};
 const nextAt=hm=>{const m=/^(\d{1,2}):(\d{2})/.exec(hm||'')||[0,9,0],d=new Date();d.setHours(+m[1],+m[2],0,0);if(d.getTime()<=Date.now()+500)d.setDate(d.getDate()+1);return d.getTime()};
 function entry(c){cfg(c);const s=so(c.id),du=s.du!=null?s.du:(c.type==='up'?0:(c.min||0)*60000);
-  return{id:c.id,n:c.n,ty:c.type,du,mx:c.type==='up'?(c.max||0)*60000:0,tg:(c.type==='to'&&!s.on)?nextAt(c.at):s.tg,on:s.on,run:s.run,acc:s.acc,st:s.st,ov:c.over,fm:c.fmt,wa:+c.warn||0,wc:c.wcol,oc:c.ocol}}
+  return{id:c.id,n:c.n,ty:c.type,du,mx:c.type==='up'?(c.max||0)*60000:0,tg:(c.type==='to'&&!s.on)?nextAt(c.at):s.tg,on:s.on,run:s.run,acc:s.acc,st:s.st,ov:c.over,fm:c.fmt,wa:+c.warn||0,wc:c.wcol,oc:c.ocol,pos:c.pos||'',sz:+c.sz||0,ff:c.ff||''}}
 const entries=()=>TMS().map(entry);
 const anyOn=()=>TMS().some(c=>so(c.id).on);
 function sync(){
@@ -7442,6 +7457,9 @@ function tmUi(){
   +(to?'<div class="row"><label>Target time<input id="tmAt" type="time" value="'+esc(c.at)+'"></label><span class="hint" style="margin:0">Counts to the next time the clock reaches this.</span></div>'
     :'<div class="row"><label>'+(up?'Stops at (0 = never)':'Duration')+'<span class="row" style="flex-wrap:nowrap;gap:3px"><input class="tmH" type="number" min="0" value="'+(up?hms(c.max)[0]:h)+'" style="width:52px" aria-label="Hours"><b>:</b><input class="tmM" type="number" min="0" value="'+(up?hms(c.max)[1]:m)+'" style="width:52px" aria-label="Minutes"><b>:</b><input class="tmS" type="number" min="0" value="'+(up?hms(c.max)[2]:s)+'" style="width:52px" aria-label="Seconds"></span></label><span class="hint" style="margin:0">hours : min : sec</span></div>')
   +'<div class="row"><label style="flex:1;min-width:0">Show as<select id="tmFm">'+opt(FMTS,c.fmt)+'</select></label></div>'
+  +'<div class="ph" style="margin-top:8px"><span>ON SCREEN</span></div>'
+  +'<div class="row"><label style="flex:1;min-width:0">Position<select id="tmPos">'+opt(POSS,c.pos||'tr')+'</select></label><label>Size (% of width)<input id="tmSz" type="number" min="2" max="60" step="0.5" value="'+(c.sz||6)+'" style="width:70px"></label></div>'
+  +'<div class="row"><label style="flex:1;min-width:0">Clock font<select id="tmFf">'+opt(CFONTS,c.ff||'')+'</select></label></div>'
   +'<div class="row"><label style="flex:1;min-width:0">When it reaches zero'+(up?' / the limit':'')+'<select id="tmOv">'+opt(OVERS,c.over)+'</select></label></div>'
   +'<div class="row"><label>Warn at (sec left)<input id="tmWa" type="number" min="0" value="'+(c.warn||0)+'" style="width:70px"></label><label>Warn colour<input id="tmWc" type="color" value="'+c.wcol+'" style="width:40px;padding:0"></label><label>Overrun colour<input id="tmOc" type="color" value="'+c.ocol+'" style="width:40px;padding:0"></label></div>'
   +'<div class="hint" style="margin:4px 0 0">Show it in slide text with <b>{timer}</b> (the latest one started) or <b>{timer:'+esc(c.n)+'}</b> (this one). Colours also apply to timer tokens.</div>';
@@ -7455,6 +7473,9 @@ function tmUi(){
   const dur=()=>{const v=fromHms(pane.querySelector('.tmH')&&pane.querySelector('.tmH').value,pane.querySelector('.tmM')&&pane.querySelector('.tmM').value,pane.querySelector('.tmS')&&pane.querySelector('.tmS').value);if(c.type==='up')c.max=v;else c.min=v>0?v:c.min;save();sync();push()};
   pane.querySelectorAll('.tmH,.tmM,.tmS').forEach(e=>e.onchange=dur);
   g('#tmFm').onchange=e=>{c.fmt=e.target.value;save();sync();push()};
+  g('#tmPos').onchange=e=>{c.pos=e.target.value==='tr'?'':e.target.value;save();sync();push()};
+  g('#tmSz').onchange=e=>{const v=Math.max(2,Math.min(60,+e.target.value||6));e.target.value=v;c.sz=v===6?0:v;save();sync();push()};
+  g('#tmFf').onchange=e=>{c.ff=e.target.value;save();sync();push()};
   g('#tmOv').onchange=e=>{c.over=e.target.value;save();sync();push()};
   g('#tmWa').onchange=e=>{c.warn=Math.max(0,+e.target.value||0);save();sync();push()};
   g('#tmWc').oninput=e=>{c.wcol=e.target.value;save();sync();push()};
