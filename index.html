@@ -114,10 +114,15 @@ body.out .stage{width:100vw;height:100vh;aspect-ratio:auto}
 :root:not(.dsc-fs) body:has(#dscTitle) #sed{top:28px}
 .sedtop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
 /* Editor header: title on its own line, then all the buttons in one tidy line under it (Apply / Reset / Cancel / Done stay together at the right end) */
-.sedtop{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"t t" "a b";align-items:center;gap:6px 12px}
+.sedtop{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"t f" "g g";align-items:center;gap:6px 12px}
 .sedtop>b{grid-area:t}
-.sedtop>span:nth-child(2){grid-area:a;min-width:0}
-.sedtop>span:nth-child(3){grid-area:b;flex-wrap:nowrap}
+.sedtop>.sedfin{grid-area:f;display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
+.sedtop>.sedgrps{grid-area:g;display:flex;flex-wrap:wrap;gap:4px 0;align-items:stretch;min-width:0}
+.sedvs{width:1px;align-self:stretch;background:var(--line);margin:0 6px}
+.sedg{display:flex;flex-direction:column;gap:2px;padding:0 12px;border-left:1px solid var(--line)}
+.sedg:first-child{padding-left:0;border-left:0}
+.sedg>small{color:var(--mute);font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+.sedg .row{gap:4px;flex-wrap:nowrap}
 #sedFilm{width:132px;flex:none;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:6px}
 #sedFilm .fs{cursor:pointer;border:2px solid transparent;border-radius:4px;font-size:10px}
 #sedFilm .fs.cur{border-color:var(--acc)}
@@ -561,12 +566,10 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
     <div class="tg">
       <button class="tbb" id="tSearch" title="Search songs"><b>&#8981;</b>Search</button>
       <button class="tbb" id="tBible" title="Bible: look up a passage and make slides"><b>&#10013;</b>Bible</button>
-      <button class="tbb" id="tTheme" title="Slide theme: backgrounds, fonts, colors"><b>&#9707;</b>Theme</button>
-      <button class="tbb on" id="tMedia" title="Minimize or restore the media bin"><b>&#9635;</b>Media</button>
     </div>
     <div class="tg">
       <button class="tbb on" id="mShow"><b>&#9654;</b>Show</button>
-      <button class="tbb" id="mEdit"><b>&#9998;</b>Edit</button>
+      <button class="tbb" id="mEdit" title="Edit mode: opens the lyrics editor and the media bin. Click again to close both."><b>&#9998;</b>Edit</button>
     </div>
     <div class="tg">
       <button class="tbb" id="tTimers"><b>&#9719;</b>Timers</button>
@@ -695,8 +698,13 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
 <div id="sed" hidden>
   <div class="sedtop">
     <b id="sedT">Slide editor</b>
-    <span class="row" style="gap:4px"><button data-a="addSlide" title="Add a blank slide after this one">+ Slide</button><button data-a="dupSlide" title="Duplicate this slide with its design">Duplicate slide</button><button data-a="delSlide" title="Delete this slide">Delete slide</button><button data-a="master" title="Shapes, pictures and text shown on every slide of this item">Master</button><button data-a="copyDesign" title="Copy this slide's design (background, shapes, text styling) to other slides">Copy design to…</button><button data-ins="1" title="Insert an object: text, shape, media, video input or web page">Insert &#9662;</button><button data-a="addText">Text</button><button data-a="addRect">Rectangle</button><button data-a="addEll">Ellipse</button><button data-a="addImg">Image</button><button data-a="front">Bring forward</button><button data-a="back">Send back</button><button data-a="del">Delete</button><button data-a="undo">Undo</button><button data-a="redo">Redo</button></span>
-    <span class="row" style="gap:4px"><button id="sedAll" title="Copy this layout to every slide in the song">Apply to all slides</button><button id="sedReset" title="Go back to the plain text layout for this slide">Reset layout</button><button id="sedCancel">Cancel</button><button id="sedDone" class="pri">Done</button></span>
+    <div class="sedfin"><button id="sedAll" title="Copy this layout to every slide in the song">Apply to all slides</button><button id="sedReset" title="Go back to the plain text layout for this slide">Reset layout</button><span class="sedvs"></span><button id="sedCancel">Cancel</button><button id="sedDone" class="pri">Done</button></div>
+    <div class="sedgrps">
+      <div class="sedg"><small>Slide</small><span class="row"><button data-a="addSlide" title="Add a blank slide after this one">+ Slide</button><button data-a="dupSlide" title="Duplicate this slide with its design">Duplicate slide</button><button data-a="delSlide" title="Delete this slide">Delete slide</button><button data-a="master" title="Shapes, pictures and text shown on every slide of this item">Master</button><button data-a="copyDesign" title="Copy this slide's design (background, shapes, text styling) to other slides">Copy design to…</button></span></div>
+      <div class="sedg"><small>Add</small><span class="row"><button data-ins="1" title="Insert an object: text, shape, media, video input or web page">Insert &#9662;</button><button data-a="addText">Text</button><button data-a="addRect">Rectangle</button><button data-a="addEll">Ellipse</button><button data-a="addImg">Image</button></span></div>
+      <div class="sedg"><small>Object</small><span class="row"><button data-a="front">Bring forward</button><button data-a="back">Send back</button><button data-a="del">Delete</button></span></div>
+      <div class="sedg"><small>History</small><span class="row"><button data-a="undo">Undo</button><button data-a="redo">Redo</button></span></div>
+    </div>
   </div>
   <div id="sedHome"></div>
   <div class="sedmain">
@@ -2774,17 +2782,17 @@ setInterval(dots,1500);
 function updBot(){
   const bot=$('#bot'),vis=[...bot.children].filter(c=>!c.hidden);
   bot.classList.toggle('allmin',vis.length>0&&vis.every(c=>c.classList.contains('min')));
-  $('#tMedia').classList.toggle('on',!$('#bin').hidden&&!$('#bin').classList.contains('min'));
 }
 function setMin(sel,on){$(sel).classList.toggle('min',on);updBot()}
 $('#binHide').onclick=()=>setMin('#bin',true);$('#edHide').onclick=()=>setMin('#editSec',true);
 [['#binMin','#bin'],['#edMin','#editSec']].forEach(([m,t])=>{const el=$(m);el.onclick=()=>setMin(t,false);el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setMin(t,false)}}});
-$('#mShow').onclick=()=>setMode('show');$('#mEdit').onclick=()=>setMode('edit');
-$('#tTheme').onclick=()=>{tab='D';setMode('edit')};
+/* Edit toggles: first click opens the lyrics editor and the media bin together, a second click closes both */
+function closeEdit(){setMode('show');setMin('#bin',true)}
+$('#mShow').onclick=()=>{if(mode==='edit')closeEdit();else setMode('show')};
+$('#mEdit').onclick=()=>{if(mode==='edit'&&!($('#editSec').classList.contains('min')&&$('#bin').classList.contains('min'))){closeEdit();return}const b=$('#bin');b.hidden=false;setMode('edit');setMin('#bin',false)};
 $('#tSearch').onclick=()=>$('#q').focus();$('#tBible').onclick=()=>openBible('Presentation');
 $('#tTimers').onclick=()=>{setMode('show');document.querySelector('#ptabs [data-p=pTm]').click();$('#tmin').focus()};
 $('#tMsgs').onclick=()=>{setMode('show');document.querySelector('#ptabs [data-p=pMsg]').click();$('#msg').focus()};
-$('#tMedia').onclick=()=>{const b=$('#bin');if(b.hidden){b.hidden=false;setMin('#bin',false)}else setMin('#bin',!b.classList.contains('min'))};
 $('#sz').oninput=e=>$('#grid').style.setProperty('--sz',e.target.value+'px');
 $('#tz').oninput=e=>$('#tray').style.setProperty('--tz',e.target.value+'px');
 function addLib(f){const t=/\.(mp4|webm|mov|m4v|ogv)$/i.test(f.name)?'video':/\.(jpe?g|png|webp|gif|avif)$/i.test(f.name)?'image':'';if(!t)return null;const n=f.webkitRelativePath||f.name;if(!lib[n]){lib[n]=URL.createObjectURL(f);libFile[n]=f;libList.push({name:n,type:t})}return{name:n,type:t}}
@@ -9091,8 +9099,8 @@ const E=[
 ['Search songs','Main screen','Search box above the playlist, or press /','Find a song or text in the library and playlist.','find lookup lyrics','sel:#q'],
 ['Jump to a slide number','Main screen','Slide number box, press / to jump','Type a slide number and press Enter to go to that slide.','goto go to slide number','sel:#gotoN'],
 ['Bible','Bible','Top bar, Bible button','Type a passage (or pick book and chapter), choose one or two versions and how many verses per slide, then add it to the Presentation.','scripture verse passage kjv niv tagalog korean','click:#tBible'],
-['Theme (backgrounds, fonts, colors)','Look','Top bar, Slide theme button','Change backgrounds, fonts and colours for the song or the whole service.','style design background font colour color','sel:#tTheme'],
-['Media bin','Media','Bottom of the screen, Media bin','Pictures and videos to use as backgrounds. Minimise or restore it with the arrow.','pictures images videos backgrounds motion','click:#tMedia'],
+['Theme (backgrounds, fonts, colors)','Look','Top bar, Slide theme button','Change backgrounds, fonts and colours for the song or the whole service.','style design background font colour color','click:#mEdit'],
+['Media bin','Media','Bottom of the screen, Media bin','Pictures and videos to use as backgrounds. Minimise or restore it with the arrow.','pictures images videos backgrounds motion','click:#mEdit'],
 ['Load a folder of media','Media','Media bin, Load folder','Add a whole folder of images and videos to the bin.','import folder pictures','sel:#mDir'],
 ['Load one image or video','Media','Media bin, Load file','Add and use a single image or video.','background picture video file','sel:#mOne'],
 ['Solid colour background','Media','Media bin, Colour','Pick a plain colour as the slide background.','color solid backdrop','sel:#mCol'],
@@ -13630,6 +13638,28 @@ window.dscDesign={applyDesign,TH,variantPatch};
   const fold=()=>{try{setMode('edit');setMin('#bin',true);setMin('#editSec',true)}catch(e){}};
   fold();setTimeout(fold,600);setTimeout(fold,3500);
   setTimeout(()=>{const m=document.getElementById('lyMin');if(m&&m.getAttribute('aria-expanded')==='true')m.click()},1500);
+})();
+</script>
+<script>
+/* Dropdown buttons toggle: clicking the button that opened a menu closes it */
+(function(){
+  let last=null,owner=null;
+  document.addEventListener('click',function(e){
+    const b=e.target.closest&&e.target.closest('button,[data-h],[data-ins]');
+    if(typeof cmEl!=='undefined'&&cmEl&&b&&b===owner){
+      e.stopPropagation();e.preventDefault();
+      closeCm();owner=null;last=null;return;
+    }
+    last=b||null;
+  },true);
+  const _open=showMenu;
+  showMenu=function(){
+    const r=_open.apply(this,arguments);
+    owner=last;
+    return r;
+  };
+  /* the menu is closed by any other path (item picked, Esc, click elsewhere): forget the owner */
+  document.addEventListener('click',function(){if(typeof cmEl==='undefined'||!cmEl)owner=null});
 })();
 </script>
 </body>
