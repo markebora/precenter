@@ -13622,7 +13622,7 @@ window.dscDesign={applyDesign,TH,variantPatch};
 
 /* ---- simplified layout: editing lives in the bottom area next to Media; the duplicate Slide tab is gone from the right panel ---- */
 (function(){
-  const go=()=>{try{setMode('edit')}catch(e){}
+  const go=()=>{try{setMode('edit');setMin('#bin',true);setMin('#editSec',true)}catch(e){}
     const m=document.getElementById('lyMin');if(m&&m.getAttribute('aria-expanded')==='true')m.click()};
   setTimeout(go,1500);
 })();
