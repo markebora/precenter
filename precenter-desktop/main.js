@@ -340,25 +340,55 @@ function showAbout() {
  
 // ---------- IPC from the page ----------
 // ---------- live mirror to other devices on the same network ----------
-let mirrorSrv = null;
+let mirrorSrv = null, mirrorStarting = null;
+
+// A six-digit code that stays the same between runs, so saved links keep working.
+// It is kept in mirror-code.txt in the data folder; edit that file to pick your own six digits.
+function mirrorCode() {
+  const f = path.join(app.getPath('userData'), 'mirror-code.txt');
+  try { const c = fs.readFileSync(f, 'utf8').trim(); if (/^\d{6}$/.test(c)) return c; } catch (e) { /* first run */ }
+  const c = String(require('crypto').randomInt(100000, 1000000));
+  try { fs.writeFileSync(f, c); } catch (e) { log.warn('mirror: could not save the code: ' + e.message); }
+  return c;
+}
+
+function mirrorLinks() {
+  const base = 'http://' + (mirrorSrv.addresses[0] || 'localhost') + ':' + mirrorSrv.port + '/?code=' + mirrorSrv.code;
+  return { full: base + '#view', text: base + '#view&mode=text' };
+}
+
+function startMirror() {
+  if (mirrorSrv) return Promise.resolve(mirrorSrv);
+  if (!mirrorStarting) {
+    mirrorStarting = mirrorLib.start({ appHtml: path.join(APP_DIR, 'index.html'), port: 3210, code: mirrorCode() }).then(s => {
+      mirrorSrv = s; mirrorStarting = null;
+      if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('mirror:state', true);
+      const l = mirrorLinks();
+      log.info('mirror: sharing at ' + l.full);
+      // Handy copy of the links: File > Show data folder > mirror-links.txt
+      try { fs.writeFileSync(path.join(app.getPath('userData'), 'mirror-links.txt'), 'Full audience screen:\n' + l.full + '\n\nText only:\n' + l.text + '\n'); } catch (e) { /* not important */ }
+      return s;
+    }, e => { mirrorStarting = null; throw e; });
+  }
+  return mirrorStarting;
+}
+
 function stopMirror() {
   if (!mirrorSrv) return;
   try { mirrorSrv.stop(); } catch (e) { log.error(e); }
   mirrorSrv = null;
   if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('mirror:state', false);
 }
+
 async function shareMirror() {
   try {
-    if (!mirrorSrv) {
-      mirrorSrv = await mirrorLib.start({ appHtml: path.join(APP_DIR, 'index.html'), port: 3210 });
-      if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('mirror:state', true);
-    }
-    const base = 'http://' + (mirrorSrv.addresses[0] || 'localhost') + ':' + mirrorSrv.port + '/?code=' + mirrorSrv.code;
-    const full = base + '#view', text = base + '#view&mode=text';
+    await startMirror();
+    const { full, text } = mirrorLinks();
     const r = await dialog.showMessageBox(mainWin, {
       type: 'info', title: 'Share live view', message: 'Devices on the same Wi-Fi or network can open these links',
       detail: 'Full audience screen:\n' + full + '\n\nText only:\n' + text +
-        '\n\nThe code is part of the link. If Windows asks about the firewall, allow the app on private networks. ' +
+        '\n\nThe code stays the same every time. The address changes only if this computer gets a new IP address from the router.' +
+        '\nIf Windows asks about the firewall, allow the app on private networks. ' +
         'Library pictures and videos are sent too (up to 150 MB each, 400 MB in all), so the first slide that uses one can take a moment on other devices.',
       buttons: ['Copy full link', 'Copy text link', 'Stop sharing', 'Close'], defaultId: 3, cancelId: 3
     });
@@ -445,6 +475,7 @@ if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
     ndi.init({ baseUrl: policy.startUrl(), notify: s => { if (mainWin) mainWin.webContents.send('ndi:status', s); } });
     buildMenu();
     pendingFiles = filesFromArgv(process.argv);
+    if (cfg.mirror.autoStart) startMirror().catch(e => log.error(e));
     createMain();
     if (cfg.autoUpdate) appUpdate.start({ app, log, notify: info => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('update:ready', info); } });
     if (cfgResult.warnings.length) {

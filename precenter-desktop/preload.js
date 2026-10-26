@@ -35,7 +35,8 @@ ipcRenderer.on('link:ev', (_e, m) => { const f = m && linkListeners.get(m.id); i
 // Live mirror: the page hands each audience slide to the app, which relays it to other devices.
 let mirrorOn = false;
 ipcRenderer.on('mirror:state', (_e, v) => { mirrorOn = !!v; });
-ipcRenderer.invoke('mirror:status').then(v => { mirrorOn = !!v; }).catch(() => {});
+const mirrorPoll = () => ipcRenderer.invoke('mirror:status').then(v => { mirrorOn = !!v; }).catch(() => {});
+mirrorPoll(); setInterval(mirrorPoll, 3000);
 
 contextBridge.exposeInMainWorld('dscNative', {
   isDesktop: true,

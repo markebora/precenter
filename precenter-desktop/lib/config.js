@@ -21,7 +21,8 @@ const DEFAULTS = {
   singleInstance: true,
   autoUpdate: true,
   devTools: false,
-  ndi: { enabled: false }
+  ndi: { enabled: false },
+  mirror: { autoStart: true }
 };
 
 // Removes // and /* */ comments but leaves text inside "strings" alone (so https:// survives).
