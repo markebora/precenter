@@ -37,6 +37,23 @@ function status(port, p) { return new Promise(ok => http.get({ port, path: p }, 
   assert.strictEqual(s.publish('x'.repeat(9 * 1024 * 1024)), false, 'oversized refused');
   assert.strictEqual(s.publish(123), false);
 
+  // library media
+  const data = Buffer.from(Array.from({ length: 1000 }, (_, i) => i % 251));
+  assert.strictEqual(s.putBlob('My Bg 1.mp4', 'video/mp4', data), true);
+  assert.strictEqual(s.putBlob('evil.html', 'text/html', Buffer.from('<script>x</script>')), true);
+  const get = (p, headers) => new Promise(ok => http.get({ port: s.port, path: p, headers }, r => { const c = []; r.on('data', x => c.push(x)); r.on('end', () => ok({ r, body: Buffer.concat(c) })); }));
+  const full = await get('/blob/' + encodeURIComponent('My Bg 1.mp4') + '?code=' + s.code);
+  assert.strictEqual(full.r.statusCode, 200); assert.strictEqual(full.r.headers['content-type'], 'video/mp4'); assert.ok(full.body.equals(data), 'whole file');
+  const part = await get('/blob/' + encodeURIComponent('My Bg 1.mp4') + '?code=' + s.code, { range: 'bytes=10-19' });
+  assert.strictEqual(part.r.statusCode, 206); assert.strictEqual(part.r.headers['content-range'], 'bytes 10-19/1000'); assert.ok(part.body.equals(data.subarray(10, 20)), 'range');
+  const tail = await get('/blob/' + encodeURIComponent('My Bg 1.mp4') + '?code=' + s.code, { range: 'bytes=990-' });
+  assert.strictEqual(tail.body.length, 10, 'open-ended range');
+  assert.strictEqual((await get('/blob/' + encodeURIComponent('My Bg 1.mp4') + '?code=' + s.code, { range: 'bytes=5000-' })).r.statusCode, 416);
+  assert.strictEqual((await get('/blob/' + encodeURIComponent('My Bg 1.mp4') + '?code=000000')).r.statusCode, 403, 'media needs the code');
+  assert.strictEqual((await get('/blob/nope?code=' + s.code)).r.statusCode, 404);
+  assert.strictEqual((await get('/blob/evil.html?code=' + s.code)).r.headers['content-type'], 'application/octet-stream', 'only image/video/audio types are passed on');
+  assert.strictEqual(s.putBlob('huge', 'video/mp4', Buffer.alloc(151 * 1024 * 1024)), false, 'file over the cap refused');
+
   a.close(); b.close(); await wait(100);
   assert.strictEqual(s.viewerCount(), 0, 'closed viewers are dropped');
   s.stop();

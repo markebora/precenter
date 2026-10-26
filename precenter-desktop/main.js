@@ -359,7 +359,7 @@ async function shareMirror() {
       type: 'info', title: 'Share live view', message: 'Devices on the same Wi-Fi or network can open these links',
       detail: 'Full audience screen:\n' + full + '\n\nText only:\n' + text +
         '\n\nThe code is part of the link. If Windows asks about the firewall, allow the app on private networks. ' +
-        'Pictures and videos from your library are not sent: viewers see the text, colours and looks.',
+        'Library pictures and videos are sent too (up to 150 MB each, 400 MB in all), so the first slide that uses one can take a moment on other devices.',
       buttons: ['Copy full link', 'Copy text link', 'Stop sharing', 'Close'], defaultId: 3, cancelId: 3
     });
     if (r.response === 0) clipboard.writeText(full);
@@ -371,6 +371,7 @@ async function shareMirror() {
 function setupIpc() {
   linkBridge.create(ipcMain);
   ipcMain.on('mirror:publish', (_e, text) => { if (mirrorSrv) mirrorSrv.publish(text); });
+  ipcMain.on('mirror:blob', (_e, name, type, data) => { if (mirrorSrv && !mirrorSrv.putBlob(name, type, data)) log.warn('mirror: a media file was too big or not accepted: ' + String(name).slice(0, 80)); });
   ipcMain.handle('mirror:status', () => !!mirrorSrv);
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(), configPath: cfgResult.path, dataPath: app.getPath('userData'),
