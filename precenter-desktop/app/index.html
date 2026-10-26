@@ -10174,16 +10174,18 @@ H.innerHTML=`<div class="hm"><button data-h="tabHome" id="tabHome" title="Home: 
 <div class="hg"><div class="hr"><button data-h="newsl" title="New slide (Ctrl+M). Menu: pick a layout">New slide &#9662;</button><button data-h="lay" title="Slide layout">Layout &#9662;</button><button data-h="rst" title="Reset this slide to the plain lyrics layout">Reset</button><button data-h="sec" title="Sections">Section &#9662;</button><button data-h="reuse" title="Reuse slides from another item">Reuse slides</button><button data-h="up" title="Move this slide up">&#9650;</button><button data-h="dn" title="Move this slide down">&#9660;</button></div><small>Slides</small></div>
 </div>`;
 const css=document.createElement('style');
-css.textContent=`#sedHome{background:var(--panel);border-bottom:1px solid var(--line);font-size:11px;padding:2px 10px 4px;max-height:34vh;overflow:auto}
-#sedHome .hm{display:flex;align-items:center;gap:10px}
-#sedHome .hbody{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:stretch}
-#sedHome .hg{display:flex;flex-direction:column;gap:3px;border-right:1px solid var(--line);padding-right:10px}
-#sedHome .hg small{color:var(--mute);text-align:center;font-size:9px;letter-spacing:.04em;text-transform:uppercase}
-#sedHome .hr{display:flex;gap:3px;align-items:center;flex-wrap:wrap}
-#sedHome button,#sedHome select,#sedHome input[type=number]{padding:2px 6px;font-size:11px;min-height:24px}
+css.textContent=`#sedHome{background:var(--panel);border-bottom:1px solid var(--line);font-size:12px;padding:8px 16px 10px;max-height:42vh;overflow:auto}
+#sedHome .hm{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+#sedHome .hm>button{padding:4px 14px;min-height:28px}
+#sedHome .hbody{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:stretch}
+#sedHome .hg{display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--line);padding-right:20px}
+#sedHome .hg small{color:var(--mute);text-align:center;font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+#sedHome .hr{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#sedHome button,#sedHome select,#sedHome input[type=number]{padding:3px 9px;font-size:12px;min-height:28px}
+#sedHome #hLH{width:80px!important}#sedHome #hCols{width:88px!important}#sedHome #hDir{width:82px!important}#sedHome #hSize{width:64px!important}#sedHome #hFont{width:140px!important}
 #sedHome button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
-#sedHome .hc{display:inline-flex;flex-direction:row;align-items:center;gap:3px;font-size:11px;min-width:0}
-#sedHome input[type=color]{width:26px;height:22px;padding:0;border:1px solid var(--line);background:none}
+#sedHome .hc{display:inline-flex;flex-direction:row;align-items:center;gap:6px;font-size:12px;min-width:0}
+#sedHome input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);background:none}
 #sedHome.col .hbody{display:none!important}
 #sedHome:not([data-tab=home]) #hbHome{display:none}
 #sedHome:not([data-tab=ins]) #hbIns{display:none}
