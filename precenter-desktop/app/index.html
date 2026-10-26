@@ -4621,7 +4621,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.17',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.18',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -9829,10 +9829,25 @@ window.dscNdiGuide=async function(){
   const state=()=>{const s=cur();return black?{t:'black',on:true}:clear?{t:'clear'}:{t:'slide',text:slideText(s,idx),ref:(s&&s.title)||''}};
   function send(force){if(!ws||ws.readyState!==1)return;const k=JSON.stringify(state());if(!force&&k===last)return;last=k;ws.send(k)}
   function setS(x){stt=x;const e=document.getElementById('slSt');if(e)e.textContent=x;const b=document.getElementById('slB');if(b)b.textContent=C.on?'Disconnect':'Connect'}
+  /* In the desktop app the connection is opened by the app itself: an https page may not open ws:// to another computer. */
+  function mkWS(u){
+    const N=window.dscNative&&window.dscNative.link;
+    if(!N)return new WebSocket(u);
+    const id='l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const o={readyState:0,onopen:null,onclose:null,onerror:null,
+      send(d){if(o.readyState===1)N.send(id,String(d))},
+      close(){if(o.readyState<2)o.readyState=2;N.close(id)}};
+    N.open(id,u,m=>{
+      if(m.type==='open'){o.readyState=1;o.onopen&&o.onopen()}
+      else if(m.type==='error'){o.onerror&&o.onerror()}
+      else if(m.type==='close'){o.readyState=3;o.onclose&&o.onclose({code:m.code})}
+    }).catch(()=>{o.readyState=3;o.onclose&&o.onclose({code:1006})});
+    return o;
+  }
   function stop(){clearTimeout(tm);if(ws){ws.onclose=null;try{ws.close()}catch(e){}ws=null}}
   function start(){
     stop();const u=url();if(!u){setS('Enter the server address and code');return}
-    setS('Connecting\u2026');try{ws=new WebSocket(u)}catch(e){setS('That address does not work');return}
+    setS('Connecting\u2026');try{ws=mkWS(u)}catch(e){setS('That address does not work');return}
     ws.onopen=()=>{setS('Linked');last='';send(true);try{toast('Stream link connected.')}catch(e){}};
     ws.onclose=ev=>{ws=null;if(!C.on)return setS('Off');const bad=ev&&ev.code===4001;setS(bad?'Wrong pairing code':'Reconnecting\u2026');tm=setTimeout(start,bad?8000:2500)};
     ws.onerror=()=>{};

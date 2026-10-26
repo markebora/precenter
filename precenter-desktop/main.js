@@ -10,6 +10,7 @@ const log = require('./lib/log');
 const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 const appUpdate = require('./lib/appupdate');
+const linkBridge = require('./lib/linkbridge');
  
 // The bundled app is served from its own address (dsc://app/) instead of file://, so storage,
 // BroadcastChannel between windows, file pickers and sign-in behave as they do on the web.
@@ -337,6 +338,7 @@ function showAbout() {
  
 // ---------- IPC from the page ----------
 function setupIpc() {
+  linkBridge.create(ipcMain);
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(), configPath: cfgResult.path, dataPath: app.getPath('userData'),
     mode: cfg.mode, ndiEnabled: !!cfg.ndi.enabled, ndiAvailable: ndiSender.available()

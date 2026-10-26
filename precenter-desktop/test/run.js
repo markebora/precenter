@@ -249,6 +249,50 @@ test('every file the installer needs is present', () => {
   assert.strictEqual(pkg.build.npmRebuild, false);
 });
  
+// ---- stream link bridge ----
+const linkBridge = require('../lib/linkbridge');
+function fakeIpc() {
+  const h = {}, o = {};
+  return { handle: (c, f) => { h[c] = f; }, on: (c, f) => { o[c] = f; }, call: (c, ...a) => h[c](...a), emit: (c, ...a) => o[c](...a) };
+}
+class FakeWS {
+  constructor(u) { this.url = u; this.readyState = 0; this.sent = []; this.l = {}; FakeWS.last = this; }
+  addEventListener(t, f) { this.l[t] = f; }
+  send(x) { this.sent.push(x); }
+  close() { this.readyState = 3; }
+  fire(t, ev) { if (t === 'open') this.readyState = 1; this.l[t] && this.l[t](ev || {}); }
+}
+test('the link bridge only opens ws://host/link addresses', () => {
+  assert.ok(linkBridge.validUrl('ws://192.168.1.105:3000/link?role=remote&code=ABC'));
+  assert.ok(linkBridge.validUrl('wss://stream.example.com/link?code=1'));
+  assert.strictEqual(linkBridge.validUrl('http://192.168.1.105:3000/link'), null);
+  assert.strictEqual(linkBridge.validUrl('ws://192.168.1.105:3000/other'), null);
+  assert.strictEqual(linkBridge.validUrl('file:///etc/passwd'), null);
+  assert.strictEqual(linkBridge.validUrl('nonsense'), null);
+});
+test('the link bridge opens, relays text both ways and closes', async () => {
+  const ipc = fakeIpc(), got = [], sender = { id: 7, send: (c, m) => got.push(m), once() {}, isDestroyed: () => false };
+  const b = linkBridge.create(ipc, FakeWS), e = { sender };
+  assert.deepStrictEqual(await ipc.call('link:open', e, 'a', 'ws://192.168.1.105:3000/link?code=X'), { ok: true });
+  FakeWS.last.fire('open');
+  ipc.emit('link:send', e, 'a', '{"t":"slide"}');
+  assert.deepStrictEqual(FakeWS.last.sent, ['{"t":"slide"}']);
+  ipc.emit('link:send', e, 'a', { not: 'text' });
+  assert.strictEqual(FakeWS.last.sent.length, 1);
+  FakeWS.last.fire('close', { code: 4001 });
+  assert.deepStrictEqual(got.map(m => m.type + (m.code || '')), ['open', 'close4001']);
+  assert.strictEqual(b.count(), 0);
+});
+test('the link bridge refuses a bad address and a missing WebSocket', async () => {
+  const ipc = fakeIpc(), e = { sender: { id: 1, send() {}, once() {} } };
+  linkBridge.create(ipc, FakeWS);
+  assert.strictEqual((await ipc.call('link:open', e, 'a', 'http://x/link')).ok, false);
+  const ipc2 = fakeIpc(); linkBridge.create(ipc2, null);
+  const saved = globalThis.WebSocket; globalThis.WebSocket = undefined;
+  try { const ipc3 = fakeIpc(); linkBridge.create(ipc3); assert.strictEqual((await ipc3.call('link:open', e, 'a', 'ws://h:1/link')).ok, false); }
+  finally { globalThis.WebSocket = saved; }
+});
+
 (async () => {
   for (const [name, fn] of queue) {
     try { await fn(); pass++; console.log('PASS ' + name); }
