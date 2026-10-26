@@ -10120,7 +10120,7 @@ function reuseMenu(ev){
 /* ---------- ribbon ---------- */
 const H=document.getElementById('sedHome');
 const FS=[['Poppins','']];
-H.innerHTML=`<div class="hm"><button data-h="tabHome" id="tabHome" title="Home: clipboard, font, paragraph, drawing, slides">Home</button><button data-h="tabIns" id="tabIns" title="Insert: text, pictures, tables, charts, media">Insert</button><button data-h="tabDes" id="tabDes" title="Design: themes, colors, fonts, background, design ideas">Design</button><button data-h="tabTr" id="tabTr" title="Transitions: slide transitions, sound, duration, timing">Transitions</button><button data-h="tabAn" id="tabAn" title="Animations: entrance, emphasis, exit and motion-path effects for objects">Animations</button><button data-h="tabSh" id="tabSh" title="Slide Show: start the show, hide slides, rehearse, record, custom shows, set up">Slide Show</button><button data-h="tabRv" id="tabRv" title="Review: spelling, thesaurus, accessibility, translate">Review</button><button data-h="tabVw" id="tabVw" title="View: outline, slide sorter, notes page, ruler, grid, guides, zoom, windows">View</button><button data-h="tabPic" id="tabPic" class="ctx" title="Picture Format: crop, corrections, color, effects, styles">Picture Format</button><button data-h="tabShp" id="tabShp" class="ctx" title="Shape Format: change shape, edit points, merge, fill, outline, effects">Shape Format</button><button data-h="tabMed" id="tabMed" class="ctx" title="Video and Audio Format: trim, fade, volume, start, poster, captions">Media Format</button><button data-h="tabTxt" id="tabTxt" class="ctx" title="Text Box: wrap, autofit, direction, columns, typography, effects, links">Text Box</button><button data-h="tabTbl" id="tabTbl" class="ctx" title="Table: rows, columns, merge, size, alignment, styles, shading, borders">Table</button><button data-h="tog" id="hmTog" title="Show or hide the ribbon">&#9662;</button><span id="hmInfo" class="hint" style="margin:0"></span></div>
+H.innerHTML=`<div class="hm"><button data-h="tabHome" id="tabHome" title="Home: clipboard, font, paragraph, drawing, slides">Home</button><button data-h="tabIns" id="tabIns" title="Insert: text, pictures, tables, charts, media">Insert</button><button data-h="tabDes" id="tabDes" title="Design: themes, colors, fonts, background, design ideas">Design</button><button data-h="tabTr" id="tabTr" title="Transitions: slide transitions, sound, duration, timing">Transitions</button><button data-h="tabAn" id="tabAn" title="Animations: entrance, emphasis, exit and motion-path effects for objects">Animations</button><button data-h="tabSh" id="tabSh" title="Slide Show: start the show, hide slides, rehearse, record, custom shows, set up">Slide Show</button><button data-h="tabRv" id="tabRv" title="Review: spelling, thesaurus, accessibility, translate">Review</button><button data-h="tabVw" id="tabVw" title="View: outline, slide sorter, notes page, ruler, grid, guides, zoom, windows">View</button><button data-h="tabPic" id="tabPic" class="ctx" title="Picture Format: crop, corrections, color, effects, styles">Picture Format</button><button data-h="tabShp" id="tabShp" class="ctx" title="Shape Format: change shape, edit points, merge, fill, outline, effects">Shape Format</button><button data-h="tabMed" id="tabMed" class="ctx" title="Video and Audio Format: trim, fade, volume, start, poster, captions">Media Format</button><button data-h="tabTxt" id="tabTxt" class="ctx" title="Text Box: wrap, autofit, direction, columns, typography, effects, links">Text Box</button><button data-h="tabTbl" id="tabTbl" class="ctx" title="Table: rows, columns, merge, size, alignment, styles, shading, borders">Table</button><button data-h="tabCht" id="tabCht" class="ctx" title="Chart: type, data, elements, styles, axes, series">Chart</button><button data-h="tabSmt" id="tabSmt" class="ctx" title="SmartArt: shapes, levels, layouts, colors, convert">SmartArt</button><button data-h="tog" id="hmTog" title="Show or hide the ribbon">&#9662;</button><span id="hmInfo" class="hint" style="margin:0"></span></div>
 <div class="hbody" id="hbHome">
 <div class="hg"><div class="hr"><button data-h="paste" title="Paste (Ctrl+V). Menu: keep formatting, text only, in place, picture">Paste &#9662;</button><button data-h="cut" title="Cut (Ctrl+X)">Cut</button><button data-h="copy" title="Copy (Ctrl+C)">Copy</button><button data-h="fp" id="hFP" title="Format Painter (Ctrl+Shift+C / V). Double-click to keep it on">Painter</button><button data-h="dup" title="Duplicate selection (Ctrl+D)">Duplicate</button></div><small>Clipboard</small></div>
 <div class="hg"><div class="hr"><select id="hFont" title="Font" style="width:118px">${fontOpts('')}</select><input type="number" id="hSize" min="8" max="600" title="Font size" style="width:54px"><button data-h="big" title="Increase font size (Ctrl+Shift+&gt;)">A&#9650;</button><button data-h="small" title="Decrease font size (Ctrl+Shift+&lt;)">A&#9660;</button><button data-h="case" title="Change case">Aa &#9662;</button></div>
@@ -10156,6 +10156,8 @@ css.textContent=`#sedHome{background:var(--panel);border-bottom:1px solid var(--
 #sedHome:not([data-tab=med]) #hbMed{display:none}
 #sedHome:not([data-tab=txt]) #hbTxt{display:none}
 #sedHome:not([data-tab=tbl]) #hbTbl{display:none}
+#sedHome:not([data-tab=cht]) #hbCht{display:none}
+#sedHome:not([data-tab=smt]) #hbSmt{display:none}
 #sedHome .ctx{display:none;color:#6dd59a}#sedHome .ctx.on{display:inline-block}
 .slide.shd{opacity:.42}.slide.shd .lab::after{content:'  \\1F6AB hidden'}
 #sedFilm .fs.shd{opacity:.42}
@@ -10204,12 +10206,12 @@ sa('#hFill','input',e=>shapeColor('fill',e.target.value));
 sa('#hLine','input',e=>shapeColor('line',e.target.value));
 H.addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault()});
 
-function setTab(t){if(H.dataset.tab===t&&!H.classList.contains('col')){HA.tog();return}H.dataset.tab=t;H.classList.remove('col');try{localStorage.setItem('hmCol','0')}catch(e){}[['home','tabHome'],['ins','tabIns'],['des','tabDes'],['tr','tabTr'],['an','tabAn'],['sh','tabSh'],['rv','tabRv'],['vw','tabVw'],['pic','tabPic'],['shp','tabShp'],['med','tabMed'],['txt','tabTxt'],['tbl','tabTbl']].forEach(([k,id])=>{const b=document.getElementById(id);if(b)b.classList.toggle('on',t===k)})}
+function setTab(t){if(H.dataset.tab===t&&!H.classList.contains('col')){HA.tog();return}H.dataset.tab=t;H.classList.remove('col');try{localStorage.setItem('hmCol','0')}catch(e){}[['home','tabHome'],['ins','tabIns'],['des','tabDes'],['tr','tabTr'],['an','tabAn'],['sh','tabSh'],['rv','tabRv'],['vw','tabVw'],['pic','tabPic'],['shp','tabShp'],['med','tabMed'],['txt','tabTxt'],['tbl','tabTbl'],['cht','tabCht'],['smt','tabSmt']].forEach(([k,id])=>{const b=document.getElementById(id);if(b)b.classList.toggle('on',t===k)})}
 const menuAt=(ev,items)=>{const r=ev.currentTarget.getBoundingClientRect();showMenu(r.left,r.bottom+2,items)};
 const ck=(on,t)=>(on?'✓ ':'    ')+t;
 const HA={
   tog:()=>{H.classList.toggle('col');try{localStorage.setItem('hmCol',H.classList.contains('col')?'1':'0')}catch(e){}},
-  tabHome:()=>setTab('home'),tabIns:()=>setTab('ins'),tabDes:()=>setTab('des'),tabTr:()=>setTab('tr'),tabAn:()=>setTab('an'),tabSh:()=>setTab('sh'),tabRv:()=>setTab('rv'),tabVw:()=>setTab('vw'),tabPic:()=>setTab('pic'),tabShp:()=>setTab('shp'),tabMed:()=>setTab('med'),tabTxt:()=>setTab('txt'),tabTbl:()=>setTab('tbl'),
+  tabHome:()=>setTab('home'),tabIns:()=>setTab('ins'),tabDes:()=>setTab('des'),tabTr:()=>setTab('tr'),tabAn:()=>setTab('an'),tabSh:()=>setTab('sh'),tabRv:()=>setTab('rv'),tabVw:()=>setTab('vw'),tabPic:()=>setTab('pic'),tabShp:()=>setTab('shp'),tabMed:()=>setTab('med'),tabTxt:()=>setTab('txt'),tabTbl:()=>setTab('tbl'),tabCht:()=>setTab('cht'),tabSmt:()=>setTab('smt'),
   paste:ev=>menuAt(ev,[{t:'Paste  (Ctrl+V)',fn:()=>pasteObjs(false)},{t:'Keep source formatting',fn:()=>pasteObjs(false)},{t:'Paste in place',fn:()=>pasteObjs(true)},{t:'Paste text only',fn:pasteTextOnly},{t:'Paste picture from clipboard',fn:pasteImgClip}]),
   cut:()=>copyObjs(true),copy:()=>copyObjs(false),
   fp:ev=>{if(ev.detail>=2){if(E.fp)fpOff();fpArm(true)}else fpArm(false)},
@@ -10436,76 +10438,292 @@ function decTable(ob,o){
 /* ---------- chart ---------- */
 function parseData(txt){return String(txt||'').split('\n').map(l=>l.split(/[,\t;]/).map(x=>x.trim())).filter(r=>r[0]!==''||r.length>1).map(r=>({l:r[0],v:r.slice(1).map(x=>+x||0)}))}
 function niceMax(m){if(m<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(m))),f=m/p;return(f<=1?1:f<=2?2:f<=5?5:10)*p}
-function chartSvg(o){
-  const W=Math.round(o.w),Hh=Math.round(o.h),fs=o.fs||34,tc=o.tc||'#ffffff',rows=parseData(o.data),ns=Math.max(1,...rows.map(r=>r.v.length)),pal=(o.pal&&o.pal.length?o.pal:PAL),names=String(o.sn||'').split(',').map(x=>x.trim()),type=o.ct||'column';
-  let s=`<svg xmlns="${NS}" viewBox="0 0 ${W} ${Hh}" style="position:absolute;inset:0;width:100%;height:100%" font-family="'${o.font||'Poppins'}',sans-serif" font-size="${fs}" fill="${tc}">`;
-  let top=14;if(o.title){s+=`<text x="${W/2}" y="${fs*1.15}" text-anchor="middle" font-size="${fs*1.3}" font-weight="700">${esc(o.title)}</text>`;top=fs*1.9}
-  const showLeg=(ns>1||type==='pie'||type==='donut')&&o.leg!==false,legW=showLeg&&(type==='pie'||type==='donut')?Math.min(W*.3,380):0;
-  if(!rows.length)return s+`<text x="${W/2}" y="${Hh/2}" text-anchor="middle" opacity=".6">Add data in the panel</text></svg>`;
-  if(type==='pie'||type==='donut'){
-    const vals=rows.map(r=>Math.max(0,r.v[0]||0)),tot=vals.reduce((a,b)=>a+b,0)||1,cx=(W-legW)/2,cy=top+(Hh-top)/2,R=Math.min((W-legW)/2,(Hh-top)/2)-10;let a0=-Math.PI/2;
-    vals.forEach((v,i)=>{const a1=a0+v/tot*Math.PI*2,lg=a1-a0>Math.PI?1:0,x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0),x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1);
-      s+=v/tot>.9999?`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${pal[i%pal.length]}"/>`:`<path d="M${cx} ${cy}L${x0} ${y0}A${R} ${R} 0 ${lg} 1 ${x1} ${y1}Z" fill="${pal[i%pal.length]}" stroke="#00000033" stroke-width="2"/>`;
-      if(o.vals!==false&&v/tot>.04){const am=(a0+a1)/2;s+=`<text x="${cx+R*.68*Math.cos(am)}" y="${cy+R*.68*Math.sin(am)+fs*.35}" text-anchor="middle" font-weight="700" fill="#fff" stroke="#00000066" stroke-width="3" paint-order="stroke">${Math.round(v/tot*100)}%</text>`}
-      a0=a1});
-    if(type==='donut')s+=`<circle cx="${cx}" cy="${cy}" r="${R*.5}" fill="${o.bg||'#0b1730'}"/>`;
-    rows.forEach((r,i)=>{const y=top+i*fs*1.5+10;s+=`<rect x="${W-legW+10}" y="${y}" width="${fs*.7}" height="${fs*.7}" fill="${pal[i%pal.length]}"/><text x="${W-legW+10+fs}" y="${y+fs*.65}" font-size="${fs*.85}">${esc(r.l)}</text>`});
-    return s+'</svg>';
-  }
-  const bottom=Hh-fs*1.8-(showLeg?fs*1.2:0),left=fs*2.6,right=W-24,mx=niceMax(Math.max(...rows.flatMap(r=>r.v),1));
-  const horiz=type==='bar';
-  const gx=left,gy=top,gw=right-left,gh=bottom-top;
-  for(let k=0;k<=4;k++){const f=k/4;
-    if(horiz){const x=gx+gw*f;s+=`<line x1="${x}" y1="${gy}" x2="${x}" y2="${gy+gh}" stroke="${tc}" opacity=".18"/><text x="${x}" y="${gy+gh+fs}" text-anchor="middle" font-size="${fs*.75}" opacity=".8">${+(mx*f).toFixed(2)}</text>`}
-    else{const y=gy+gh-gh*f;s+=`<line x1="${gx}" y1="${y}" x2="${gx+gw}" y2="${y}" stroke="${tc}" opacity=".18"/><text x="${gx-8}" y="${y+fs*.3}" text-anchor="end" font-size="${fs*.75}" opacity=".8">${+(mx*f).toFixed(2)}</text>`}}
-  const n=rows.length;
-  if(type==='line'){
-    for(let j=0;j<ns;j++){const pts=rows.map((r,i)=>[gx+gw*(n>1?i/(n-1):.5)*.94+gw*.03,gy+gh-gh*((r.v[j]||0)/mx)]);
-      s+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${pal[j%pal.length]}" stroke-width="6" stroke-linejoin="round"/>`;
-      pts.forEach((p,i)=>{s+=`<circle cx="${p[0]}" cy="${p[1]}" r="9" fill="${pal[j%pal.length]}"/>`;if(o.vals)s+=`<text x="${p[0]}" y="${p[1]-14}" text-anchor="middle" font-size="${fs*.75}">${rows[i].v[j]||0}</text>`})}
-    rows.forEach((r,i)=>{s+=`<text x="${gx+gw*(n>1?i/(n-1):.5)*.94+gw*.03}" y="${gy+gh+fs*1.1}" text-anchor="middle" font-size="${fs*.8}">${esc(r.l)}</text>`});
-  }else{
-    const slot=(horiz?gh:gw)/n,bw=slot*.72/ns;
-    rows.forEach((r,i)=>{
-      for(let j=0;j<ns;j++){const v=r.v[j]||0,len=(horiz?gw:gh)*(v/mx),off=slot*.14+j*bw+i*slot;
-        if(horiz){const y=gy+off;s+=`<rect x="${gx}" y="${y}" width="${len}" height="${bw}" rx="4" fill="${pal[j%pal.length]}"/>`;if(o.vals)s+=`<text x="${gx+len+8}" y="${y+bw/2+fs*.3}" font-size="${fs*.75}">${v}</text>`}
-        else{const x=gx+off;s+=`<rect x="${x}" y="${gy+gh-len}" width="${bw}" height="${len}" rx="4" fill="${pal[j%pal.length]}"/>`;if(o.vals)s+=`<text x="${x+bw/2}" y="${gy+gh-len-8}" text-anchor="middle" font-size="${fs*.75}">${v}</text>`}}
-      if(horiz)s+=`<text x="${gx-10}" y="${gy+i*slot+slot/2+fs*.3}" text-anchor="end" font-size="${fs*.8}">${esc(r.l)}</text>`;
-      else s+=`<text x="${gx+i*slot+slot/2}" y="${gy+gh+fs*1.1}" text-anchor="middle" font-size="${fs*.8}">${esc(r.l)}</text>`});
-  }
-  if(showLeg){for(let j=0;j<ns;j++){const x=gx+j*fs*7;s+=`<rect x="${x}" y="${Hh-fs*.95}" width="${fs*.6}" height="${fs*.6}" fill="${pal[j%pal.length]}"/><text x="${x+fs*.85}" y="${Hh-fs*.4}" font-size="${fs*.75}">${esc(names[j]||'Series '+(j+1))}</text>`}}
-  return s+'</svg>';
+function numFmt(f){
+  f=f||{};const d=f.d,t=f.t||'gen';
+  return v=>{
+    if(!isFinite(v))return '';let s;
+    if(t==='pct')s=(v*100).toFixed(d==null?0:d)+'%';
+    else if(t==='sci')s=v.toExponential(d==null?2:d);
+    else if(t==='num'||t==='cur'){s=Math.abs(v).toFixed(d==null?(t==='cur'?2:0):d);if(f.th!==false)s=s.replace(/\B(?=(\d{3})+(?!\d))/g,',');if(v<0)s='-'+s}
+    else s=String(+(+v).toFixed(d==null?2:d));
+    if(t==='cur')s=(f.pre||'$')+s;else if(f.pre)s=f.pre+s;
+    return f.suf?s+f.suf:s;
+  };
 }
+function chartSvg(o){
+  const W=Math.round(o.w),Hh=Math.round(o.h),fs=o.fs||34,tc=o.tc||'#ffffff',rows=parseData(o.data),pal=(o.pal&&o.pal.length?o.pal:PAL),type=o.ct||'column',se=o.se||[],nf=numFmt(o.nf);
+  const names=String(o.sn||'').split(',').map(x=>x.trim()),n=rows.length,ns=Math.max(1,...rows.map(r=>r.v.length));
+  const pcol=i=>(se[i]&&se[i].c)||pal[i%pal.length],col=j=>(se[j]&&se[j].c)||pal[j%pal.length],sname=j=>names[j]||('Series '+(j+1)),f1=v=>+(+v).toFixed(2);
+  const cs=o.cs||0,rx=[4,0,16,4,2,4][cs]||0;
+  let s=`<svg xmlns="${NS}" viewBox="0 0 ${W} ${Hh}" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" font-family="'${o.font||'Poppins'}',sans-serif" font-size="${fs}" fill="${tc}">`;
+  s+=`<defs>${cs===3?pal.concat(se.map(x=>x&&x.c)).filter(Boolean).map((c,i)=>`<linearGradient id="cg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".55"/></linearGradient>`).join(''):''}${cs===5?'<filter id="csh" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="3" dy="5" stdDeviation="4" flood-color="#000" flood-opacity=".5"/></filter>':''}</defs>`;
+  const fillOf=j=>cs===3?`url(#cg${pal.indexOf(col(j))>=0?pal.indexOf(col(j)):0})`:col(j),extra=(cs===4?' stroke="#ffffffcc" stroke-width="3"':'')+(cs===5?' filter="url(#csh)"':'');
+  if(o.cbg)s+=`<rect width="${W}" height="${Hh}" fill="${o.cbg}" rx="${rx*2}"/>`;
+  let top=14,bot=14,lft=14,rgt=14;
+  if(o.title){s+=`<text x="${W/2}" y="${fs*1.15}" text-anchor="middle" font-size="${fs*1.3}" font-weight="700">${esc(o.title)}</text>`;if(o.tpos!=='over')top=fs*1.9}
+  const pie=type==='pie'||type==='donut',radar=type==='radar',scat=type==='scatter';
+  if(!rows.length)return s+`<text x="${W/2}" y="${Hh/2}" text-anchor="middle" opacity=".6">Add data with Edit Data</text></svg>`;
+  /* ---- legend ---- */
+  const legN=pie?n:ns,legL=j=>pie?rows[j].l:sname(j),showLeg=o.leg!==false&&(pie||ns>1||/combo/.test(type)),lp=o.lp||(pie?'right':'bottom');
+  const lw=j=>fs*1.1+legL(j).length*fs*.48;
+  let legBox=null;
+  if(showLeg){
+    if(lp==='bottom'||lp==='top'){const tw=Array.from({length:legN},(_,j)=>lw(j)).reduce((a,b)=>a+b,0);legBox={x:(W-tw)/2,y:lp==='top'?top:Hh-bot-fs*1.2,h:fs*1.2,horiz:true};if(lp==='top')top+=fs*1.4;else bot+=fs*1.4}
+    else{const mw=Math.max(...Array.from({length:legN},(_,j)=>lw(j)));legBox={x:lp==='left'?lft:W-rgt-mw,y:top+10,w:mw,horiz:false};if(lp==='left')lft+=mw+10;else rgt+=mw+10}
+  }
+  const drawLegend=()=>{
+    if(!legBox)return'';let o2='',x=legBox.x,y=legBox.y;
+    for(let j=0;j<legN;j++){const c=pie?pcol(j):col(j);o2+=`<rect x="${x}" y="${y+fs*.12}" width="${fs*.6}" height="${fs*.6}" fill="${c}" rx="3"/><text x="${x+fs*.85}" y="${y+fs*.72}" font-size="${fs*.78}">${esc(legL(j))}</text>`;if(legBox.horiz)x+=lw(j);else y+=fs*1.15}
+    return o2;
+  };
+  /* ---- pie / doughnut ---- */
+  if(pie){
+    const vals=rows.map(r=>Math.max(0,r.v[0]||0)),tot=vals.reduce((a,b)=>a+b,0)||1,cx=lft+(W-lft-rgt)/2,cy=top+(Hh-top-bot)/2,R=Math.min((W-lft-rgt)/2,(Hh-top-bot)/2)-10,hole=type==='donut'?(o.hole||50)/100:0;let a0=-Math.PI/2+(o.ang||0)*Math.PI/180;
+    vals.forEach((v,i)=>{const a1=a0+v/tot*Math.PI*2,lg=a1-a0>Math.PI?1:0,am=(a0+a1)/2,ex=((se[i]&&se[i].ex)||0)/100*R,dx=ex*Math.cos(am),dy=ex*Math.sin(am),x0=cx+dx+R*Math.cos(a0),y0=cy+dy+R*Math.sin(a0),x1=cx+dx+R*Math.cos(a1),y1=cy+dy+R*Math.sin(a1);
+      s+=v/tot>.9999?`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${pcol(i)}"${extra}/>`:`<path d="M${cx+dx} ${cy+dy}L${x0} ${y0}A${R} ${R} 0 ${lg} 1 ${x1} ${y1}Z" fill="${pcol(i)}" stroke="${cs===4?'#ffffffcc':'#00000033'}" stroke-width="${cs===4?3:2}"${cs===5?' filter="url(#csh)"':''}/>`;
+      if(o.vals!==false&&v/tot>.03){const rr=o.dlp==='out'?R*1.12:o.dlp==='ctr'?R*(1+hole)/2:R*(.62+hole*.3),txt=o.dlt==='val'?nf(v):o.dlt==='both'?nf(v)+' ('+Math.round(v/tot*100)+'%)':Math.round(v/tot*100)+'%';
+        s+=`<text x="${cx+dx+rr*Math.cos(am)}" y="${cy+dy+rr*Math.sin(am)+fs*.3}" text-anchor="middle" font-weight="700" font-size="${fs*.8}" fill="${o.dlp==='out'?tc:'#fff'}" ${o.dlp==='out'?'':'stroke="#00000066" stroke-width="3" paint-order="stroke"'}>${txt}</text>`}
+      a0=a1});
+    if(hole)s+=`<circle cx="${cx}" cy="${cy}" r="${R*hole}" fill="${o.cbg||o.bg||'#0b1730'}"/>`;
+    return s+drawLegend()+'</svg>';
+  }
+  /* ---- radar ---- */
+  if(radar){
+    const mx0=niceMax(Math.max(...rows.flatMap(r=>r.v),1)),cx=lft+(W-lft-rgt)/2,cy=top+(Hh-top-bot)/2,R=Math.min((W-lft-rgt)/2,(Hh-top-bot)/2)-fs*1.3,ang=i=>-Math.PI/2+i*2*Math.PI/n;
+    for(let k=1;k<=4;k++){s+=`<polygon points="${rows.map((_,i)=>f1(cx+R*k/4*Math.cos(ang(i)))+','+f1(cy+R*k/4*Math.sin(ang(i)))).join(' ')}" fill="none" stroke="${tc}" opacity=".2"/>`}
+    rows.forEach((r,i)=>{s+=`<line x1="${cx}" y1="${cy}" x2="${f1(cx+R*Math.cos(ang(i)))}" y2="${f1(cy+R*Math.sin(ang(i)))}" stroke="${tc}" opacity=".2"/><text x="${f1(cx+(R+fs*.7)*Math.cos(ang(i)))}" y="${f1(cy+(R+fs*.7)*Math.sin(ang(i))+fs*.3)}" text-anchor="middle" font-size="${fs*.75}">${esc(r.l)}</text>`});
+    for(let j=0;j<ns;j++){const pts=rows.map((r,i)=>[cx+R*((r.v[j]||0)/mx0)*Math.cos(ang(i)),cy+R*((r.v[j]||0)/mx0)*Math.sin(ang(i))]);s+=`<polygon points="${pts.map(p=>f1(p[0])+','+f1(p[1])).join(' ')}" fill="${col(j)}" fill-opacity=".28" stroke="${col(j)}" stroke-width="${(se[j]&&se[j].w)||5}" stroke-linejoin="round"/>`;if(o.vals)pts.forEach((p,i)=>{s+=`<text x="${f1(p[0])}" y="${f1(p[1]-10)}" text-anchor="middle" font-size="${fs*.7}">${nf(rows[i].v[j]||0)}</text>`})}
+    return s+drawLegend()+'</svg>';
+  }
+  /* ---- cartesian charts ---- */
+  const horiz=/^bar/.test(type),stackT=/stack|pct/.test(type),pctT=/pct/.test(type),isArea=/^area/.test(type),isLine=type==='line'||isArea,combo=type==='combo';
+  const serT=j=>combo?((se[j]&&se[j].t)||(j===0?'col':'line')):(isLine?(isArea?'area':'line'):'col');
+  const val=(i,j)=>(rows[i].v[j]||0);
+  /* value range */
+  let dmax=0,dmin=0;
+  if(scat){rows.forEach(r=>r.v.forEach(v=>{dmax=Math.max(dmax,v);dmin=Math.min(dmin,v)}))}
+  else if(stackT){rows.forEach((r,i)=>{let p=0,q=0;for(let j=0;j<ns;j++){const v=val(i,j);if(v>=0)p+=v;else q+=v}dmax=Math.max(dmax,p);dmin=Math.min(dmin,q)})}
+  else rows.forEach(r=>r.v.forEach(v=>{dmax=Math.max(dmax,v);dmin=Math.min(dmin,v)}));
+  let vmin,vmax,unit;
+  if(pctT||type==='areapct'){vmin=0;vmax=1;unit=.25}
+  else if(o.ylog){vmin=Math.pow(10,Math.floor(Math.log10(Math.max(o.ymin||Math.min(...rows.flatMap(r=>r.v).filter(v=>v>0),1),1e-6))));vmax=Math.pow(10,Math.ceil(Math.log10(Math.max(o.ymax||dmax,vmin*10))));unit=10}
+  else{vmax=dmax>0?niceMax(dmax):1;vmin=dmin<0?-niceMax(-dmin):0;if(o.ymax!=null)vmax=o.ymax;if(o.ymin!=null)vmin=o.ymin;unit=o.yu||(vmax-vmin)/4;if(!(unit>0))unit=(vmax-vmin)/4||1}
+  const P=v=>{if(o.ylog)return(Math.log10(Math.max(v,vmin))-Math.log10(vmin))/((Math.log10(vmax)-Math.log10(vmin))||1);return(v-vmin)/((vmax-vmin)||1)};
+  const fmtAxis=(pctT?numFmt({t:'pct',d:0}):nf);
+  const ticks=[];if(o.ylog){for(let v=vmin;v<=vmax*1.0001;v*=10)ticks.push(v)}else{for(let v=vmin,g=0;v<=vmax+unit*.001&&g<60;v+=unit,g++)ticks.push(+v.toFixed(8))}
+  /* x range for scatter */
+  const xs=scat?rows.map(r=>parseFloat(r.l)||0):[];const xmin=scat?Math.min(0,...xs):0,xmax=scat?niceMax(Math.max(...xs,1)):1;
+  /* margins for axis labels, axis titles, data table */
+  const axOn=o.ax!==false,vLabW=axOn?Math.max(...ticks.map(t=>fmtAxis(t).length))*fs*.42+14:0;
+  const dtab=!!o.dtab&&!scat&&!horiz,dtH=dtab?(ns+1)*fs*.95:0;
+  const catH=axOn&&!dtab?fs*1.3:0;
+  if(horiz){}
+  let gx=lft+(horiz?0:vLabW)+(o.yt&&!horiz?fs*1.2:0),gy=top,gr=W-rgt,gb=Hh-bot-(horiz?0:catH)-dtH-(o.xt&&!horiz?fs*1.2:0);
+  let catLabW=0;if(horiz){catLabW=Math.max(...rows.map(r=>r.l.length))*fs*.42+14;gx=lft+catLabW+(o.xt?fs*1.2:0);gb=Hh-bot-(axOn?fs*1.3:0)-(o.yt?fs*1.2:0)}
+  const gw=gr-gx,gh=gb-gy,slot=(horiz?gh:gw)/n;
+  if(o.pbg)s+=`<rect x="${gx}" y="${gy}" width="${gw}" height="${gh}" fill="${o.pbg}"/>`;
+  /* gridlines */
+  const gOn=o.gh!==false,gvOn=!!o.gv,gmOn=!!o.gm;
+  const vx=f=>horiz?gx+gw*f:gy+gh-gh*f;
+  ticks.forEach(t=>{const f=P(t),p=vx(f);if(gOn)s+=horiz?`<line x1="${p}" y1="${gy}" x2="${p}" y2="${gy+gh}" stroke="${tc}" opacity=".18"/>`:`<line x1="${gx}" y1="${p}" x2="${gx+gw}" y2="${p}" stroke="${tc}" opacity=".18"/>`});
+  if(gmOn&&!o.ylog)ticks.forEach((t,i)=>{if(i===ticks.length-1)return;for(let k=1;k<5;k++){const p=vx(P(t+(ticks[i+1]-t)*k/5));s+=horiz?`<line x1="${p}" y1="${gy}" x2="${p}" y2="${gy+gh}" stroke="${tc}" opacity=".07"/>`:`<line x1="${gx}" y1="${p}" x2="${gx+gw}" y2="${p}" stroke="${tc}" opacity=".07"/>`}});
+  if(gvOn&&!scat)for(let i=0;i<=n;i++){const p=(horiz?gy:gx)+i*slot;s+=horiz?`<line x1="${gx}" y1="${p}" x2="${gx+gw}" y2="${p}" stroke="${tc}" opacity=".12"/>`:`<line x1="${p}" y1="${gy}" x2="${p}" y2="${gy+gh}" stroke="${tc}" opacity=".12"/>`}
+  /* positions */
+  const cat=i=>(horiz?gy:gx)+(i+.5)*slot;
+  const zero=P(Math.max(vmin,Math.min(0,vmax)));
+  const pctOf=i=>{let t=0;for(let j=0;j<ns;j++)t+=Math.abs(val(i,j));return t||1};
+  const cum=[];   /* running totals for stacking */
+  const stackedTop=(i,j,pos)=>{let a=0;for(let k=0;k<=j;k++){const v=val(i,k);if(pos?v>=0:v<0)a+=v}return a};
+  const colSer=[],lineSer=[];for(let j=0;j<ns;j++)(serT(j)==='col'?colSer:serT(j)==='area'?lineSer:lineSer).push(j);
+  const gapP=(o.gap==null?(stackT?40:40):o.gap)/100,ovl=(o.ovl==null?(stackT?100:0):o.ovl)/100,nCol=Math.max(1,colSer.length);
+  const bw=slot/(nCol-(nCol-1)*ovl+gapP),grpW=bw*(nCol-(nCol-1)*ovl);
+  const lbl=(x,y,text,anchor)=>`<text x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor||'middle'}" font-size="${fs*.72}">${text}</text>`;
+  let labels='',errs='',trend='';
+  /* columns / bars */
+  if(!scat){
+    colSer.forEach((j,ci)=>{
+      rows.forEach((r,i)=>{
+        const v=val(i,j);let a,b;
+        if(stackT){const pos=v>=0,t1=stackedTop(i,j,pos),t0=t1-v,den=pctT?pctOf(i):1;a=P(t0/den);b=P(t1/den)}
+        else{a=zero;b=P(v)}
+        const lo=Math.min(a,b),hi=Math.max(a,b),shownV=pctT?v/pctOf(i):v,off=(slot-grpW)/2+ci*bw*(1-ovl);
+        if(horiz){const x=gx+gw*lo,w=gw*(hi-lo),y=gy+i*slot+off;s+=`<rect x="${f1(x)}" y="${f1(y)}" width="${f1(Math.max(0,w))}" height="${f1(bw)}" rx="${rx}" fill="${fillOf(j)}"${extra}/>`;
+          if(o.vals){const m=o.dlp||(stackT?'ctr':'out');labels+=m==='out'?lbl(x+w+8,y+bw/2+fs*.28,fmtAxisV(shownV),'start'):m==='in'?lbl(x+w-8,y+bw/2+fs*.28,fmtAxisV(shownV),'end'):lbl(x+w/2,y+bw/2+fs*.28,fmtAxisV(shownV))}}
+        else{const y=gy+gh-gh*hi,h=gh*(hi-lo),x=gx+i*slot+off;s+=`<rect x="${f1(x)}" y="${f1(y)}" width="${f1(bw)}" height="${f1(Math.max(0,h))}" rx="${rx}" fill="${fillOf(j)}"${extra}/>`;
+          if(o.vals){const m=o.dlp||(stackT?'ctr':'out');labels+=m==='out'?lbl(x+bw/2,y-8,fmtAxisV(shownV)):m==='in'?lbl(x+bw/2,y+fs*.8,fmtAxisV(shownV)):lbl(x+bw/2,y+h/2+fs*.26,fmtAxisV(shownV))}}
+      });
+    });
+  }
+  function fmtAxisV(v){return pctT?numFmt({t:'pct',d:o.nf&&o.nf.d!=null?o.nf.d:0})(v):nf(v)}
+  /* lines / areas / scatter */
+  const pt=(i,j)=>{const v=val(i,j);let y;if(isArea&&stackT){const den=pctT?pctOf(i):1;y=P(stackedTop(i,j,true)/den)}else y=P(v);return scat?[gx+gw*((xs[i]-xmin)/((xmax-xmin)||1)),gy+gh-gh*P(v)]:horiz?[gx+gw*y,cat(i)]:[cat(i),gy+gh-gh*y]};
+  const smoothPath=pts=>{let d='M'+f1(pts[0][0])+' '+f1(pts[0][1]);for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;d+=` C${f1(p1[0]+(p2[0]-p0[0])/6)} ${f1(p1[1]+(p2[1]-p0[1])/6)} ${f1(p2[0]-(p3[0]-p1[0])/6)} ${f1(p2[1]-(p3[1]-p1[1])/6)} ${f1(p2[0])} ${f1(p2[1])}`}return d};
+  const marker=(x,y,m,sz,c)=>{sz=sz||9;if(m==='none')return'';if(m==='square')return`<rect x="${f1(x-sz)}" y="${f1(y-sz)}" width="${sz*2}" height="${sz*2}" fill="${c}"/>`;if(m==='diamond')return`<polygon points="${f1(x)},${f1(y-sz*1.3)} ${f1(x+sz*1.3)},${f1(y)} ${f1(x)},${f1(y+sz*1.3)} ${f1(x-sz*1.3)},${f1(y)}" fill="${c}"/>`;if(m==='triangle')return`<polygon points="${f1(x)},${f1(y-sz*1.2)} ${f1(x+sz*1.2)},${f1(y+sz)} ${f1(x-sz*1.2)},${f1(y+sz)}" fill="${c}"/>`;return`<circle cx="${f1(x)}" cy="${f1(y)}" r="${sz}" fill="${c}"/>`};
+  const order=isArea&&stackT?lineSer.slice().reverse():lineSer;
+  (scat?Array.from({length:ns},(_,j)=>j):order).forEach(j=>{
+    const c=col(j),cfg=se[j]||{},pts=rows.map((_,i)=>pt(i,j)),w=cfg.w||6;
+    if(!pts.length)return;
+    if(!scat&&(serT(j)==='area')){const base=horiz?gx+gw*zero:gy+gh-gh*zero,ar=horiz?`M${f1(base)} ${f1(pts[0][1])}L`+pts.map(p=>f1(p[0])+' '+f1(p[1])).join('L')+`L${f1(base)} ${f1(pts[pts.length-1][1])}Z`:`M${f1(pts[0][0])} ${f1(base)}L`+pts.map(p=>f1(p[0])+' '+f1(p[1])).join('L')+`L${f1(pts[pts.length-1][0])} ${f1(base)}Z`;s+=`<path d="${ar}" fill="${c}" fill-opacity=".55"/>`}
+    if(!scat&&serT(j)==='area'&&cfg.ln===false){}else if(!scat||cfg.ln){s+=`<path d="${cfg.sm&&pts.length>2?smoothPath(pts):'M'+pts.map(p=>f1(p[0])+' '+f1(p[1])).join('L')}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"${cs===5?' filter="url(#csh)"':''}/>`}
+    if(serT(j)!=='area'||scat){const m=cfg.m||(scat?'circle':(o.mk===false?'none':(serT(j)==='line'||isLine?'circle':'none')));pts.forEach(p=>{s+=marker(p[0],p[1],m,cfg.ms||(scat?10:9),c)})}
+    if(o.vals&&(serT(j)!=='col')){pts.forEach((p,i)=>{const v=pctT?val(i,j)/pctOf(i):val(i,j);labels+=lbl(p[0]+(horiz?18:0),p[1]-(horiz?0:14),fmtAxisV(v),horiz?'start':'middle')})}
+  });
+  /* error bars and trendlines (per series) */
+  for(let j=0;j<ns;j++){
+    const cfg=se[j]||{};
+    if(cfg.eb&&cfg.eb.t&&!pctT){
+      const vs=rows.map((_,i)=>val(i,j)),mean=vs.reduce((a,b)=>a+b,0)/(vs.length||1),sd=Math.sqrt(vs.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(vs.length||1));
+      rows.forEach((_,i)=>{const v=vs[i],e=cfg.eb.t==='fixed'?cfg.eb.v:cfg.eb.t==='pct'?Math.abs(v)*cfg.eb.v/100:sd*(cfg.eb.v||1);if(!(e>0))return;
+        let cx,y0,y1;if(colSer.indexOf(j)>=0&&!scat){const ci=colSer.indexOf(j);cx=(horiz?gy:gx)+i*slot+(slot-grpW)/2+ci*bw*(1-ovl)+bw/2}else cx=scat?pt(i,j)[0]:cat(i);
+        const hi=P(v+e),lo=P(v-e);
+        if(horiz){const yy=colSer.indexOf(j)>=0?cx:cat(i);errs+=`<line x1="${gx+gw*lo}" y1="${yy}" x2="${gx+gw*hi}" y2="${yy}" stroke="${tc}" stroke-width="3"/><line x1="${gx+gw*lo}" y1="${yy-9}" x2="${gx+gw*lo}" y2="${yy+9}" stroke="${tc}" stroke-width="3"/><line x1="${gx+gw*hi}" y1="${yy-9}" x2="${gx+gw*hi}" y2="${yy+9}" stroke="${tc}" stroke-width="3"/>`}
+        else{y0=gy+gh-gh*hi;y1=gy+gh-gh*lo;errs+=`<line x1="${f1(cx)}" y1="${f1(y0)}" x2="${f1(cx)}" y2="${f1(y1)}" stroke="${tc}" stroke-width="3"/><line x1="${f1(cx-9)}" y1="${f1(y0)}" x2="${f1(cx+9)}" y2="${f1(y0)}" stroke="${tc}" stroke-width="3"/><line x1="${f1(cx-9)}" y1="${f1(y1)}" x2="${f1(cx+9)}" y2="${f1(y1)}" stroke="${tc}" stroke-width="3"/>`}
+      });
+    }
+    if(cfg.tr&&cfg.tr.t&&n>1){
+      const X=rows.map((_,i)=>scat?xs[i]:i),Y=rows.map((_,i)=>val(i,j)),m=n,sx=X.reduce((a,b)=>a+b,0),sy=Y.reduce((a,b)=>a+b,0),sxx=X.reduce((a,b)=>a+b*b,0),sxy=X.reduce((a,b,i)=>a+b*Y[i],0),den=(m*sxx-sx*sx)||1,sl=(m*sxy-sx*sy)/den,ic=(sy-sl*sx)/m;
+      let fy;
+      if(cfg.tr.t==='poly'){const S=k=>X.reduce((a,b)=>a+Math.pow(b,k),0),T=k=>X.reduce((a,b,i)=>a+Math.pow(b,k)*Y[i],0),A=[[m,S(1),S(2),T(0)],[S(1),S(2),S(3),T(1)],[S(2),S(3),S(4),T(2)]];
+        for(let c=0;c<3;c++){let p=c;for(let r=c+1;r<3;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];if(Math.abs(A[c][c])<1e-12)continue;for(let r=0;r<3;r++)if(r!==c){const f=A[r][c]/A[c][c];for(let k=c;k<4;k++)A[r][k]-=f*A[c][k]}}
+        const c0=A[0][3]/(A[0][0]||1),c1=A[1][3]/(A[1][1]||1),c2=A[2][3]/(A[2][2]||1);fy=x=>c0+c1*x+c2*x*x}
+      else if(cfg.tr.t==='avg'){const pn=Math.max(2,cfg.tr.n||2);fy=null;const pts2=[];for(let i=pn-1;i<n;i++){let a=0;for(let k=0;k<pn;k++)a+=Y[i-k];pts2.push([i,a/pn])}
+        const pp=pts2.map(([i,v])=>{const p=pt(i,j);const yy=P(v);return scat?[p[0],gy+gh-gh*yy]:horiz?[gx+gw*yy,cat(i)]:[cat(i),gy+gh-gh*yy]});if(pp.length)trend+=`<path d="M${pp.map(p=>f1(p[0])+' '+f1(p[1])).join('L')}" fill="none" stroke="${col(j)}" stroke-width="4" stroke-dasharray="14 10"/>`}
+      else fy=x=>ic+sl*x;
+      if(fy){const steps=cfg.tr.t==='poly'?24:1,xa=X[0],xb=X[X.length-1],pp=[];for(let k=0;k<=steps;k++){const x=xa+(xb-xa)*k/steps,yv=fy(x),yy=P(yv),px=scat?gx+gw*((x-xmin)/((xmax-xmin)||1)):(horiz?0:gx+(x+.5)*slot);pp.push(horiz&&!scat?[gx+gw*yy,gy+(x+.5)*slot]:[px,gy+gh-gh*yy])}trend+=`<path d="M${pp.map(p=>f1(p[0])+' '+f1(p[1])).join('L')}" fill="none" stroke="${col(j)}" stroke-width="4" stroke-dasharray="14 10"/>`}
+    }
+  }
+  s+=errs+trend+labels;
+  /* axes: labels, lines, titles */
+  if(axOn){
+    s+=horiz?`<line x1="${gx}" y1="${gy}" x2="${gx}" y2="${gy+gh}" stroke="${tc}" opacity=".5"/>`:`<line x1="${gx}" y1="${gy+gh}" x2="${gx+gw}" y2="${gy+gh}" stroke="${tc}" opacity=".5"/>`;
+    ticks.forEach(t=>{const p=vx(P(t));s+=horiz?`<text x="${p}" y="${gy+gh+fs}" text-anchor="middle" font-size="${fs*.72}" opacity=".85">${fmtAxis(t)}</text>`:`<text x="${gx-8}" y="${p+fs*.28}" text-anchor="end" font-size="${fs*.72}" opacity=".85">${fmtAxis(t)}</text>`});
+    if(scat){for(let k=0;k<=4;k++){const xv=xmin+(xmax-xmin)*k/4;s+=`<text x="${gx+gw*k/4}" y="${gy+gh+fs}" text-anchor="middle" font-size="${fs*.72}" opacity=".85">${+xv.toFixed(2)}</text>`}}
+    else if(!dtab)rows.forEach((r,i)=>{s+=horiz?`<text x="${gx-10}" y="${cat(i)+fs*.28}" text-anchor="end" font-size="${fs*.78}">${esc(r.l)}</text>`:`<text x="${cat(i)}" y="${gy+gh+fs*1.1}" text-anchor="middle" font-size="${fs*.78}">${esc(r.l)}</text>`});
+  }
+  if(o.xt)s+=`<text x="${gx+gw/2}" y="${Hh-bot-4}" text-anchor="middle" font-size="${fs*.8}" font-weight="600" opacity=".9">${esc(horiz?(o.yt||''):o.xt)}</text>`;
+  if(o.yt)s+=`<text transform="translate(${lft+fs*.7} ${gy+gh/2}) rotate(-90)" text-anchor="middle" font-size="${fs*.8}" font-weight="600" opacity=".9">${esc(horiz?(o.xt||''):o.yt)}</text>`;
+  /* data table under the chart */
+  if(dtab){
+    const ty=gy+gh+4,rh=fs*.95;
+    s+=`<line x1="${gx}" y1="${ty}" x2="${gx+gw}" y2="${ty}" stroke="${tc}" opacity=".4"/>`;
+    rows.forEach((r,i)=>{s+=`<text x="${cat(i)}" y="${ty+rh*.75}" text-anchor="middle" font-size="${fs*.7}" font-weight="700">${esc(r.l)}</text>`});
+    for(let j=0;j<ns;j++){const y=ty+rh*(j+1);s+=`<line x1="${gx-vLabW+6}" y1="${y}" x2="${gx+gw}" y2="${y}" stroke="${tc}" opacity=".18"/><rect x="${gx-vLabW+8}" y="${y+rh*.25}" width="${fs*.4}" height="${fs*.4}" fill="${col(j)}"/><text x="${gx-vLabW+10+fs*.55}" y="${y+rh*.75}" font-size="${fs*.62}">${esc(sname(j).slice(0,10))}</text>`;rows.forEach((_,i)=>{s+=`<text x="${cat(i)}" y="${y+rh*.75}" text-anchor="middle" font-size="${fs*.68}">${fmtAxisV(pctT?val(i,j)/pctOf(i):val(i,j))}</text>`})}
+  }
+  return s+drawLegend()+'</svg>';
+}
+
+window.dscChartSvg=chartSvg;window.dscPAL=PAL;
+window.dscParseData=parseData;
+
 function decChart(ob,o){ob.style.background='none';ob.style.border='0';ob.insertAdjacentHTML('beforeend',chartSvg(o))}
 function addChart(t){addObj({t:'chart',name:'Chart',...center(1300,760),ct:t,title:'Attendance',data:'Week 1, 120, 90\nWeek 2, 150, 110\nWeek 3, 135, 125\nWeek 4, 180, 140',sn:'Sunday, Midweek',fs:34,tc:'#ffffff',vals:true,leg:true,font:'Poppins',pal:window.dscTpal().slice()})}
 
 /* ---------- SmartArt ---------- */
 function wrapTxt(t,max){const w=String(t).split(/\s+/),out=[];let cur='';w.forEach(x=>{if((cur+' '+x).trim().length>max&&cur){out.push(cur);cur=x}else cur=(cur+' '+x).trim()});if(cur)out.push(cur);return out}
-function smartSvg(o){
-  const W=Math.round(o.w),Hh=Math.round(o.h),fs=o.fs||40,tc=o.tc||'#ffffff',items=String(o.items||'').split('\n').map(x=>x.trim()).filter(Boolean),n=items.length||1,pal=(o.pal&&o.pal.length?o.pal:PAL),ly=o.ly||'list';
-  let s=`<svg xmlns="${NS}" viewBox="0 0 ${W} ${Hh}" style="position:absolute;inset:0;width:100%;height:100%" font-family="'${o.font||'Poppins'}',sans-serif" font-size="${fs}" fill="${tc}">`;
-  const box=(x,y,w,h,i,r)=>{const c=pal[i%pal.length],mc=Math.max(3,Math.floor(w/(fs*.55))),ln=wrapTxt(items[i]||'',mc).slice(0,Math.max(1,Math.floor(h/(fs*1.15))));
-    let t=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r==null?18:r}" fill="${c}"/>`;
-    t+=`<text x="${x+w/2}" y="${y+h/2-(ln.length-1)*fs*.58+fs*.33}" text-anchor="middle" font-weight="600" fill="${o.btc||'#10151f'}">`+ln.map((l,k)=>`<tspan x="${x+w/2}" dy="${k?fs*1.15:0}">${esc(l)}</tspan>`).join('')+'</text>';return t};
-  const arrow=(x,y,dir)=>dir==='r'?`<path d="M${x-14} ${y-22}L${x+16} ${y}L${x-14} ${y+22}Z" fill="${tc}" opacity=".7"/>`:`<path d="M${x-22} ${y-14}L${x} ${y+16}L${x+22} ${y-14}Z" fill="${tc}" opacity=".7"/>`;
-  if(ly==='list'){const g=18,h=(Hh-g*(n-1))/n;for(let i=0;i<n;i++)s+=box(0,i*(h+g),W,h,i)}
-  else if(ly==='hlist'){const g=18,w=(W-g*(n-1))/n;for(let i=0;i<n;i++)s+=box(i*(w+g),0,w,Hh,i)}
-  else if(ly==='process'){const g=70,w=(W-g*(n-1))/n,h=Math.min(Hh,w*.9+80),y=(Hh-h)/2;for(let i=0;i<n;i++){s+=box(i*(w+g),y,w,h,i);if(i<n-1)s+=arrow(i*(w+g)+w+g/2,Hh/2,'r')}}
-  else if(ly==='vprocess'){const g=60,h=(Hh-g*(n-1))/n;for(let i=0;i<n;i++){s+=box(W*.15,i*(h+g),W*.7,h,i);if(i<n-1)s+=arrow(W/2,i*(h+g)+h+g/2,'d')}}
+const SMART=[['list','Vertical list'],['hlist','Horizontal list'],['process','Basic process'],['vprocess','Vertical process'],['chevron','Chevron process'],['cycle','Cycle'],['pyramid','Pyramid'],['hierarchy','Hierarchy'],['tree','Organization chart (levels)'],['matrix','Matrix (up to 4)'],['grid','Block list'],['venn','Venn (up to 4)'],['timeline','Timeline'],['stairs','Staircase']];
+/* items: one per line, indented with tabs for sub-levels */
+function smartParse(o){
+  const raw=String(o.items||'').split('\n').filter(l=>l.trim().length),nodes=[],top=[],stack=[];let prev=-1;
+  raw.forEach(l=>{const m=l.match(/^[\t ]*/)[0];let lv=(m.match(/\t/g)||[]).length+Math.floor(m.replace(/\t/g,'').length/2);lv=Math.max(0,Math.min(lv,prev+1,4));nodes.push({t:l.trim(),lv,kids:[]});prev=lv});
+  nodes.forEach((nd,i)=>{nd.i=i;while(stack.length&&stack[stack.length-1].lv>=nd.lv)stack.pop();if(stack.length)stack[stack.length-1].kids.push(nd);else top.push(nd);stack.push(nd)});
+  return{nodes,top};
+}
+function smartPrims(o){
+  const W=Math.round(o.w),Hh=Math.round(o.h),fs=o.fs||40,tcol=o.btc||'#10151f',pal=(o.pal&&o.pal.length?o.pal:PAL),ly=o.ly||'list',bs=o.bs2||'round',ss=o.ss||'flat';
+  const{nodes,top}=smartParse(o),P=[],n=Math.max(1,top.length);
+  const kidTxt=(nd)=>{const out=[];const w=(k,d)=>k.kids.forEach(c=>{out.push((d?'\u2013 ':'\u2022 ')+c.t);w(c,d+1)});w(nd,0);return out};
+  const rr=(w,h)=>bs==='rect'?0:bs==='pill'?Math.min(w,h)/2:Math.min(18,Math.min(w,h)/4);
+  /* a box with a title and optional bullet lines, text scaled to fit */
+  const box=(x,y,w,h,nd,ci,opt)=>{
+    opt=opt||{};const title=nd?nd.t:'',kids=nd&&!opt.noKids?kidTxt(nd):[];let k=1,tl=[],kl=[];
+    const mc=(wd,sz)=>Math.max(3,Math.floor(wd*.88/(sz*.55)));
+    for(let it=0;it<10;it++){const ft=fs*k,fk=fs*.72*k;tl=wrapTxt(title,mc(w,ft));kl=kids.flatMap(t=>wrapTxt(t,mc(w,fk)));if(tl.length*ft*1.15+kl.length*fk*1.15<=h*.92||k<=.4)break;k*=.88}
+    const lines=tl.map(t=>({t,sz:fs*k,b:true})).concat(kl.map(t=>({t,sz:fs*.72*k,b:false})));
+    P.push({k:'box',x,y,w,h,r:rr(w,h),c:opt.nofill?null:pal[ci%pal.length],shape:opt.nofill?'none':(bs==='ellipse'?'ellipse':'rect'),lines,tcol:opt.tcol||tcol,i:nd?nd.i:-1});
+  };
+  const poly=(pts,c,op)=>P.push({k:'poly',pts,c,op:op==null?.7:op});
+  const line=(pts,sw,c,op)=>P.push({k:'line',pts,sw:sw||5,c:c||(o.tc||'#ffffff'),op:op==null?.5:op});
+  const arrowR=(x,y)=>poly([[x-14,y-22],[x+16,y],[x-14,y+22]],o.tc||'#ffffff');
+  const arrowD=(x,y)=>poly([[x-22,y-14],[x,y+16],[x+22,y-14]],o.tc||'#ffffff');
+  const tree=()=>{
+    const depth=Math.max(...nodes.map(z=>z.lv))+1,rowH=Hh/depth,bh=Math.min(rowH*.62,200);let leaf=0;const leaves=nodes.filter(z=>!z.kids.length).length||1,lw=W/leaves,bw=Math.min(lw*.9,380);
+    const place=nd=>{if(!nd.kids.length){nd.cx=(leaf+.5)*lw;leaf++}else{nd.kids.forEach(place);nd.cx=(nd.kids[0].cx+nd.kids[nd.kids.length-1].cx)/2}};top.forEach(place);
+    const link=nd=>{nd.kids.forEach(c=>{const y0=nd.lv*rowH+bh,y1=c.lv*rowH,ym=(y0+y1)/2;line([[nd.cx,y0],[nd.cx,ym],[c.cx,ym],[c.cx,y1]],4);link(c)})};top.forEach(link);
+    nodes.forEach(nd=>box(nd.cx-bw/2,nd.lv*rowH,bw,bh,nd,nd.lv,{noKids:true}));
+  };
+  if(ly==='list'){const g=18,h=(Hh-g*(n-1))/n;top.forEach((nd,i)=>box(0,i*(h+g),W,h,nd,i))}
+  else if(ly==='hlist'){const g=18,w=(W-g*(n-1))/n;top.forEach((nd,i)=>box(i*(w+g),0,w,Hh,nd,i))}
+  else if(ly==='process'){const g=70,w=(W-g*(n-1))/n,h=Math.min(Hh,w*.9+80),y=(Hh-h)/2;top.forEach((nd,i)=>{box(i*(w+g),y,w,h,nd,i);if(i<n-1)arrowR(i*(w+g)+w+g/2,Hh/2)})}
+  else if(ly==='vprocess'){const g=60,h=(Hh-g*(n-1))/n;top.forEach((nd,i)=>{box(W*.15,i*(h+g),W*.7,h,nd,i);if(i<n-1)arrowD(W/2,i*(h+g)+h+g/2)})}
+  else if(ly==='chevron'){const h=Math.min(Hh*.5,Math.max(Hh*.3,200)),d=h*.38,w=(W+d*(n-1))/n;top.forEach((nd,i)=>{const x=i*(w-d);poly([[x,0],[x+w-d,0],[x+w,h/2],[x+w-d,h],[x,h],[x+d,h/2]],pal[i%pal.length],1);
+      const lines=wrapTxt(nd.t,Math.max(3,Math.floor((w-d*2)*.9/(fs*.55)))).slice(0,3);P.push({k:'box',x:x+d*.9,y:0,w:w-d*1.8,h,r:0,c:null,shape:'none',lines:lines.map(t=>({t,sz:fs*.9,b:true})),tcol,i:nd.i});
+      const kt=kidTxt(nd);if(kt.length)P.push({k:'box',x:x+d*.3,y:h+24,w:w-d*.6,h:Hh-h-24,r:0,c:null,shape:'none',lines:kt.flatMap(t=>wrapTxt(t,Math.max(3,Math.floor((w-d)*.9/(fs*.7*.55))))).map(t=>({t,sz:fs*.7,b:false,al:'start'})),tcol:o.tc||'#ffffff',i:nd.i,al:'start'})})}
   else if(ly==='cycle'){const cx=W/2,cy=Hh/2,R=Math.min(W,Hh)/2-Math.min(W,Hh)*.17,bw=Math.min(W*.3,320),bh=Math.min(Hh*.2,150);
-    for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n,b=-Math.PI/2+(i+1)*2*Math.PI/n,am=(a+b)/2;if(n>1)s+=`<path d="M${cx+R*Math.cos(a+.25)} ${cy+R*Math.sin(a+.25)}A${R} ${R} 0 0 1 ${cx+R*Math.cos(b-.25)} ${cy+R*Math.sin(b-.25)}" fill="none" stroke="${tc}" stroke-width="5" opacity=".5"/>`;
-      s+=arrow(cx+R*Math.cos(am),cy+R*Math.sin(am),'r').replace('<path','<path transform="rotate('+(am*180/Math.PI+90)+' '+(cx+R*Math.cos(am))+' '+(cy+R*Math.sin(am))+')"')}
-    for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;s+=box(cx+R*Math.cos(a)-bw/2,cy+R*Math.sin(a)-bh/2,bw,bh,i)}}
-  else if(ly==='pyramid'){const h=Hh/n;for(let i=0;i<n;i++){const t0=i/n,t1=(i+1)/n,xa=W/2-W/2*t0,xb=W/2+W/2*t0,xc=W/2+W/2*t1,xd=W/2-W/2*t1,c=pal[i%pal.length],ln=wrapTxt(items[i]||'',Math.max(3,Math.floor(W*(t0+t1)/2*.8/(fs*.55))));
-    s+=`<path d="M${xa} ${i*h}L${xb} ${i*h}L${xc} ${(i+1)*h-4}L${xd} ${(i+1)*h-4}Z" fill="${c}"/><text x="${W/2}" y="${i*h+h/2-(ln.length-1)*fs*.58+fs*.33}" text-anchor="middle" font-weight="600" fill="${o.btc||'#10151f'}">`+ln.map((l,k)=>`<tspan x="${W/2}" dy="${k?fs*1.15:0}">${esc(l)}</tspan>`).join('')+'</text>'}}
-  else if(ly==='hierarchy'){const kids=Math.max(1,n-1),g=24,w=(W-g*(kids-1))/kids,rh=Hh*.3,rw=Math.min(W*.5,520);
-    s+=box(W/2-rw/2,0,rw,rh,0);
-    for(let i=0;i<n-1;i++){const x=i*(w+g);s+=`<path d="M${W/2} ${rh}V${Hh*.5}H${x+w/2}V${Hh*.62}" fill="none" stroke="${tc}" stroke-width="5" opacity=".5"/>`+box(x,Hh*.62,w,Hh*.38,i+1)}}
-  else if(ly==='matrix'){const g=18,w=(W-g)/2,h=(Hh-g)/2;for(let i=0;i<Math.min(4,n);i++)s+=box((i%2)*(w+g),Math.floor(i/2)*(h+g),w,h,i)}
+    for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n,b=-Math.PI/2+(i+1)*2*Math.PI/n,am=(a+b)/2;
+      if(n>1){const pts=[];for(let k=0;k<=14;k++){const t=a+.25+(b-a-.5)*k/14;pts.push([cx+R*Math.cos(t),cy+R*Math.sin(t)])}line(pts,5)}
+      const ax=cx+R*Math.cos(am),ay=cy+R*Math.sin(am),rot=am+Math.PI/2*0,c=Math.cos(am+Math.PI/2),sn=Math.sin(am+Math.PI/2);
+      poly([[-14,-22],[16,0],[-14,22]].map(([px,py])=>[ax+px*Math.cos(am+Math.PI/2)-py*Math.sin(am+Math.PI/2)+0,ay+px*Math.sin(am+Math.PI/2)+py*Math.cos(am+Math.PI/2)]),o.tc||'#ffffff')}
+    top.forEach((nd,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;box(cx+R*Math.cos(a)-bw/2,cy+R*Math.sin(a)-bh/2,bw,bh,nd,i,{noKids:true})})}
+  else if(ly==='pyramid'){const h=Hh/n;top.forEach((nd,i)=>{const t0=i/n,t1=(i+1)/n,xa=W/2-W/2*t0,xb=W/2+W/2*t0,xc=W/2+W/2*t1,xd=W/2-W/2*t1;poly([[xa,i*h],[xb,i*h],[xc,(i+1)*h-4],[xd,(i+1)*h-4]],pal[i%pal.length],1);
+      const wd=W*(t0+t1)/2*.8,lines=wrapTxt(nd.t,Math.max(3,Math.floor(wd/(fs*.55)))).slice(0,Math.max(1,Math.floor(h/(fs*1.15))));P.push({k:'box',x:W/2-wd/2,y:i*h,w:wd,h,r:0,c:null,shape:'none',lines:lines.map(t=>({t,sz:fs,b:true})),tcol,i:nd.i})})}
+  else if(ly==='hierarchy'){
+    if(nodes.some(z=>z.lv>0))tree();
+    else{const kids=Math.max(1,n-1),g=24,w=(W-g*(kids-1))/kids,rh=Hh*.3,rw=Math.min(W*.5,520);
+      if(top[0])box(W/2-rw/2,0,rw,rh,top[0],0);
+      top.slice(1).forEach((nd,i)=>{const x=i*(w+g);line([[W/2,rh],[W/2,Hh*.5],[x+w/2,Hh*.5],[x+w/2,Hh*.62]],5);box(x,Hh*.62,w,Hh*.38,nd,i+1)})}}
+  else if(ly==='tree')tree();
+  else if(ly==='matrix'){const g=18,w=(W-g)/2,h=(Hh-g)/2;top.slice(0,4).forEach((nd,i)=>box((i%2)*(w+g),Math.floor(i/2)*(h+g),w,h,nd,i))}
+  else if(ly==='grid'){const cols=Math.ceil(Math.sqrt(n)),rows=Math.ceil(n/cols),g=18,w=(W-g*(cols-1))/cols,h=(Hh-g*(rows-1))/rows;top.forEach((nd,i)=>box((i%cols)*(w+g),Math.floor(i/cols)*(h+g),w,h,nd,i))}
+  else if(ly==='venn'){const m=Math.min(4,n),r=Math.min(W,Hh)*(m>2?.3:.38),cx=W/2,cy=Hh/2,pos=m===1?[[0,0]]:m===2?[[-r*.55,0],[r*.55,0]]:m===3?[[0,-r*.55],[-r*.62,r*.45],[r*.62,r*.45]]:[[-r*.55,-r*.55],[r*.55,-r*.55],[-r*.55,r*.55],[r*.55,r*.55]];
+    top.slice(0,4).forEach((nd,i)=>{const c=pal[i%pal.length];P.push({k:'box',x:cx+pos[i][0]-r,y:cy+pos[i][1]-r,w:r*2,h:r*2,r:0,c,shape:'ellipse',op:.62,lines:[],tcol,i:nd.i})});
+    top.slice(0,4).forEach((nd,i)=>{const dx=pos[i][0]*(m>1?1.0:0),dy=pos[i][1]*(m>1?1.0:0),w=r*1.1;const lines=wrapTxt(nd.t,Math.max(3,Math.floor(w/(fs*.55)))).slice(0,3);P.push({k:'box',x:cx+dx-w/2,y:cy+dy-r*.45,w,h:r*.9,r:0,c:null,shape:'none',lines:lines.map(t=>({t,sz:fs*.9,b:true})),tcol,i:nd.i})})}
+  else if(ly==='timeline'){const y=Hh/2;line([[0,y],[W,y]],8,o.tc||'#ffffff',.55);const w=W/n;
+    top.forEach((nd,i)=>{const x=(i+.5)*w,up=i%2===0,bh=Hh/2-60;P.push({k:'box',x:x-24,y:y-24,w:48,h:48,r:0,c:pal[i%pal.length],shape:'ellipse',lines:[],tcol,i:nd.i});
+      line([[x,up?y-24:y+24],[x,up?y-50:y+50]],4);box(Math.max(0,x-w*.48),up?y-60-bh:y+60,w*.96,bh,nd,i)})}
+  else if(ly==='stairs'){const w=W/n;top.forEach((nd,i)=>{const h=Hh*(.3+.7*(i+1)/n);box(i*w+4,Hh-h,w-8,h,nd,i)})}
+  else{const g=18,h=(Hh-g*(n-1))/n;top.forEach((nd,i)=>box(0,i*(h+g),W,h,nd,i))}
+  return P;
+}
+function smartSvg(o){
+  const W=Math.round(o.w),Hh=Math.round(o.h),fs=o.fs||40,tc=o.tc||'#ffffff',ss=o.ss||'flat',P=smartPrims(o);
+  let s=`<svg xmlns="${NS}" viewBox="0 0 ${W} ${Hh}" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" font-family="'${o.font||'Poppins'}',sans-serif" font-size="${fs}" fill="${tc}"><defs>${ss==='shadow'?'<filter id="smsh" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="3" dy="6" stdDeviation="5" flood-color="#000" flood-opacity=".5"/></filter>':''}`;
+  const cols=[...new Set(P.filter(p=>p.k==='box'&&p.c).map(p=>p.c))];
+  if(ss==='grad')cols.forEach((c,i)=>{s+=`<linearGradient id="smg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".5"/></linearGradient>`});
+  s+='</defs>';
+  const fillFor=c=>ss==='grad'?`url(#smg${cols.indexOf(c)})`:ss==='outline'?c:c,extra=c=>ss==='outline'?` fill-opacity=".22" stroke="${c}" stroke-width="5"`:ss==='shadow'?' filter="url(#smsh)"':'';
+  P.forEach(p=>{
+    if(p.k==='poly')s+=`<path d="M${p.pts.map(q=>q[0].toFixed(1)+' '+q[1].toFixed(1)).join('L')}Z" fill="${p.c}" opacity="${p.op}"${p.op===1?extra(p.c):''}/>`;
+    else if(p.k==='line')s+=`<path d="M${p.pts.map(q=>q[0].toFixed(1)+' '+q[1].toFixed(1)).join('L')}" fill="none" stroke="${p.c}" stroke-width="${p.sw}" opacity="${p.op}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    else if(p.k==='box'){
+      if(p.c&&p.shape==='ellipse')s+=`<ellipse cx="${p.x+p.w/2}" cy="${p.y+p.h/2}" rx="${p.w/2}" ry="${p.h/2}" fill="${fillFor(p.c)}"${p.op?` opacity="${p.op}"`:''}${extra(p.c)}/>`;
+      else if(p.c)s+=`<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="${p.r}" fill="${fillFor(p.c)}"${extra(p.c)}/>`;
+      if(p.lines.length){const tot=p.lines.reduce((a,l)=>a+l.sz*1.15,0);let y=p.y+p.h/2-tot/2;const start=p.al==='start',tx=start?p.x:p.x+p.w/2,col=ss==='outline'&&p.c?tc:p.tcol;
+        s+=`<text text-anchor="${start?'start':'middle'}" fill="${col}">`+p.lines.map(l=>{y+=l.sz*1.15;return`<tspan x="${tx}" y="${(y-l.sz*.32).toFixed(1)}" font-size="${l.sz.toFixed(1)}" font-weight="${l.b?600:400}">${esc(l.t)}</tspan>`}).join('')+'</text>'}
+    }
+  });
   return s+'</svg>';
 }
+/* Convert SmartArt into ordinary shapes and text boxes */
+function smartToObjs(o){
+  const P=smartPrims(o),out=[],gid='sm'+Math.random().toString(36).slice(2,7),uid=()=>'o'+Math.random().toString(36).slice(2,9),fn=o.font||'Poppins';
+  const strokePoly=(pts,w)=>{const L=[],R=[];pts.forEach((p,i)=>{const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b[0]-a[0],dy=b[1]-a[1],ln=Math.hypot(dx,dy)||1,nx=-dy/ln*w/2,ny=dx/ln*w/2;L.push([p[0]+nx,p[1]+ny]);R.push([p[0]-nx,p[1]-ny])});return L.concat(R.reverse())};
+  const polyObj=(pts,c,op)=>{const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x0=Math.min(...xs),y0=Math.min(...ys),w=Math.max(4,Math.max(...xs)-x0),h=Math.max(4,Math.max(...ys)-y0);
+    return{id:uid(),t:'shape',sh:'custom',pts:pts.map(p=>(+((p[0]-x0)/w*100).toFixed(2))+','+(+((p[1]-y0)/h*100).toFixed(2))).join(' '),x:Math.round(o.x+x0),y:Math.round(o.y+y0),w:Math.round(w),h:Math.round(h),fill:c,op:Math.round((op==null?1:op)*100),gid}};
+  P.forEach(p=>{
+    if(p.k==='poly')out.push(polyObj(p.pts,p.c,p.op));
+    else if(p.k==='line')out.push(polyObj(strokePoly(p.pts,p.sw),p.c,p.op));
+    else if(p.k==='box'){
+      if(p.c){const ob={id:uid(),t:p.shape==='ellipse'?'ellipse':'rect',x:Math.round(o.x+p.x),y:Math.round(o.y+p.y),w:Math.round(p.w),h:Math.round(p.h),fill:p.c,gid};if(p.shape!=='ellipse'&&p.r)ob.rad=Math.round(p.r);if(p.op)ob.op=Math.round(p.op*100);out.push(ob)}
+      if(p.lines.length){
+        const base=p.lines[0].sz,txt=p.lines.map(l=>l.t).join('\n');let pos=0;const runs=[];
+        p.lines.forEach(l=>{const e=pos+l.t.length;const k=+(l.sz/base).toFixed(3);if(k!==1||!l.b)runs.push({s:pos,e,...(k!==1?{k}:{}),...(!l.b?{b:false}:{})});pos=e+1});
+        out.push({id:uid(),t:'text',x:Math.round(o.x+p.x),y:Math.round(o.y+p.y),w:Math.round(p.w),h:Math.round(p.h),text:txt,font:fn,size:Math.round(base),b:true,i:false,u:false,color:p.tcol,al:p.al==='start'?'left':'center',va:'middle',sc:'none',runs:runs.length?runs:undefined,gid})}
+    }
+  });
+  return out;
+}
 function decSmart(ob,o){ob.style.background='none';ob.style.border='0';ob.insertAdjacentHTML('beforeend',smartSvg(o))}
-const SMART=[['list','Vertical list'],['hlist','Horizontal list'],['process','Basic process'],['vprocess','Vertical process'],['cycle','Cycle'],['pyramid','Pyramid'],['hierarchy','Hierarchy'],['matrix','Matrix (up to 4)']];
+window.dscSmart={parse:smartParse,prims:smartPrims,toObjs:smartToObjs,svg:smartSvg,LAYOUTS:SMART};
 function addSmart(ly){addObj({t:'smart',name:'SmartArt',...center(1500,760),ly,items:ly==='hierarchy'?'Our church\nWorship\nCare\nOutreach':'Pray\nStudy\nShare\nServe',fs:44,tc:'#ffffff',btc:'#10151f',font:'Poppins',pal:window.dscTpal().slice()})}
 
 /* ---------- symbols, equations, tokens ---------- */
@@ -10728,7 +10946,7 @@ const IA={
   shapes:ev=>menuAt(ev,Object.keys(D.SHN).map(k=>({t:D.SHN[k],fn:()=>D.addShape(k)}))),
   icons:ev=>menuAt(ev,Object.keys(ICN).map(k=>({t:ICN[k],fn:()=>addObj({t:'icon',ic:k,icol:'#ffd24a',name:ICN[k],...center(300,300)})}))),
   smart:ev=>menuAt(ev,SMART.map(([k,n])=>({t:n,fn:()=>addSmart(k)}))),
-  chart:ev=>menuAt(ev,[['column','Column'],['bar','Bar'],['line','Line'],['pie','Pie'],['donut','Doughnut']].map(([k,n])=>({t:n,fn:()=>addChart(k)}))),
+  chart:ev=>menuAt(ev,[['column','Clustered Column'],['colstack','Stacked Column'],['colpct','100% Stacked Column'],['bar','Clustered Bar'],['barstack','Stacked Bar'],['line','Line with Markers'],['area','Area'],['areastack','Stacked Area'],['pie','Pie'],['donut','Doughnut'],['scatter','Scatter (X Y)'],['radar','Radar'],['combo','Combo']].map(([k,n])=>({t:n,fn:()=>addChart(k)}))),
   table:ev=>menuAt(ev,[[2,2],[3,2],[3,3],[4,3],[4,4],[5,3],[6,4]].map(([r,c])=>({t:r+' rows × '+c+' columns',fn:()=>addTable(r,c)})).concat([{sep:1},{t:'Custom size…',fn:()=>D.ask('Rows x columns (for example 5x4)','4x3',v=>{const m=/^(\d+)\s*[x×,]\s*(\d+)$/i.exec(v);if(m)addTable(Math.min(20,+m[1]),Math.min(10,+m[2]));else D.info('Type it like 5x4.')})}])),
   date:ev=>menuAt(ev,[{t:'Date (updates automatically)',fn:()=>insertTok('{date}')},{t:'Time (updates automatically)',fn:()=>insertTok('{time}')},{t:'Slide number',fn:()=>insertTok('{slide}')},{t:'Slide number of total',fn:()=>insertTok('{slide} / {total}')},{t:'Item title',fn:()=>insertTok('{title}')},{sep:1},{t:'Today’s date as fixed text',fn:()=>insertText(TOK.date())}]),
   foot:footerDlg,
@@ -13083,6 +13301,321 @@ window.dscDesign={applyDesign,TH,variantPatch};
   const _sp=sedPanel;sedPanel=function(){const r=_sp.apply(this,arguments);try{syncTT()}catch(e){}return r};
   const _sr=sedRender;sedRender=function(){const r=_sr.apply(this,arguments);try{if(E&&E.tsel)requestAnimationFrame(()=>{try{drawSel()}catch(e){}})}catch(e){}return r};
   window.dscText={fitBox,applyLink,syncTT,rows,cols,merge,split,region,setEdges};
+})();
+
+</script>
+<script>
+/* ===== Chart tab: type, spreadsheet data editor, elements, axes, number formats, series, styles, linked data ===== */
+(function(){
+  if(/^#(output|stage|layout)/.test(location.hash))return;
+  const H=document.getElementById('sedHome');if(!H||!window.dscHome||!window.dscReview||!window.dscChartSvg)return;
+  const D=window.dscHome,$i=id=>document.getElementById(id),dlg=dscReview.dlg,lab=dscReview.lab,esc=dscReview.esc;
+  const isCh=o=>o.t==='chart',mark=(c,l)=>(c?'\u2713 ':'    ')+l;
+  const css=document.createElement('style');
+  css.textContent='#hbCht .hc{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:none;margin-right:6px}#hbCht input[type=number]{width:62px}#hbCht input[type=color]{width:34px;padding:0;height:24px}.cgrid{border-collapse:collapse;font-size:13px}.cgrid td,.cgrid th{border:1px solid var(--line,#3a3a40);padding:0}.cgrid input{width:96px;border:0;background:transparent;color:inherit;padding:5px 6px;font:inherit;box-sizing:border-box}.cgrid th input{font-weight:700;background:rgba(255,255,255,.05)}.cgrid td:first-child input{font-weight:600;background:rgba(255,255,255,.05)}.cgrid input:focus{outline:2px solid #e8b923;outline-offset:-2px}';
+  document.head.appendChild(css);
+  function edit(fn){
+    const L=D.sel().filter(isCh);if(!L.length){toast('Select a chart first.');return false}
+    sedSnap();L.forEach(fn);sedRender();sedSync();sedUi();sedPanel();syncCh();return true;
+  }
+  const set=patch=>edit(o=>Object.keys(patch).forEach(k=>{if(patch[k]===undefined||patch[k]===null||patch[k]==='')delete o[k];else o[k]=patch[k]}));
+  const ch=()=>D.sel().find(isCh);
+  const clean=t=>String(t==null?'':t).replace(/[,;\t\n]/g,' ').trim();
+  /* ---------- data <-> grid ---------- */
+  const getGrid=o=>{
+    const rows=dscParseData(o.data),ns=Math.max(1,...rows.map(r=>r.v.length)),names=String(o.sn||'').split(',').map(x=>x.trim());
+    return{head:Array.from({length:ns},(_,j)=>names[j]||'Series '+(j+1)),rows:rows.map(r=>[r.l,...Array.from({length:ns},(_,j)=>r.v[j]==null?'':String(r.v[j]))])};
+  };
+  const putGrid=(o,g)=>{o.sn=g.head.map(clean).join(', ');o.data=g.rows.map(r=>[clean(r[0]),...r.slice(1).map(v=>{const x=parseFloat(String(v).replace(/[^0-9eE.+-]/g,''));return isFinite(x)?x:0})].join(', ')).join('\n')};
+  const transpose=g=>{const n=g.rows.length,ns=g.head.length;return{head:g.rows.map(r=>r[0]||''),rows:Array.from({length:ns},(_,j)=>[g.head[j],...Array.from({length:n},(_,i)=>g.rows[i][j+1])])}};
+  const csvParse=t=>{
+    const d=(t.split('\n')[0].match(/\t/)?'\t':t.split('\n')[0].match(/;/)&&!t.split('\n')[0].match(/,/)?';':',');
+    const out=[];let row=[],cur='',q=false;
+    for(let i=0;i<t.length;i++){const c=t[i];
+      if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+      else if(c==='"')q=true;else if(c===d){row.push(cur);cur=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);out.push(row);row=[];cur=''}else cur+=c}
+    if(cur!==''||row.length){row.push(cur);out.push(row)}
+    return out.filter(r=>r.some(x=>String(x).trim()!==''));
+  };
+  const fromMatrix=(m,hasHead)=>{const w=Math.max(...m.map(r=>r.length));const mm=m.map(r=>Array.from({length:w},(_,i)=>r[i]==null?'':r[i]));
+    if(hasHead)return{head:mm[0].slice(1).map((x,i)=>x||'Series '+(i+1)),rows:mm.slice(1)};
+    return{head:Array.from({length:w-1},(_,i)=>'Series '+(i+1)),rows:mm}};
+  function dataDlg(){
+    const o=ch();if(!o){toast('Select a chart first.');return}
+    let g=getGrid(o),focus=[0,0];const w=document.createElement('div');
+    const draw=()=>{
+      w.innerHTML='<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button data-a="ar">+ Row</button><button data-a="ac">+ Series (column)</button><button data-a="dr">\u2212 Row</button><button data-a="dc">\u2212 Series</button><button data-a="sw" title="Swap rows and columns">Switch Row/Column</button><button data-a="pa" title="Paste cells copied from Excel or Google Sheets">Paste\u2026</button><button data-a="im">Import CSV\u2026</button></div><div style="overflow:auto;max-height:46vh"><table class="cgrid"></table></div><div class="hint" style="margin-top:6px">First column = category names. Other columns = series. Tab / Enter moves between cells.</div>';
+      const t=w.querySelector('table'),hr=document.createElement('tr'),c0=document.createElement('th');c0.innerHTML='<input value="Category" disabled style="opacity:.6">';hr.appendChild(c0);
+      g.head.forEach((h,j)=>{const th=document.createElement('th'),i=document.createElement('input');i.value=h;i.oninput=()=>{g.head[j]=i.value};i.onfocus=()=>{focus=[-1,j+1]};th.appendChild(i);hr.appendChild(th)});t.appendChild(hr);
+      g.rows.forEach((r,ri)=>{const tr=document.createElement('tr');r.forEach((v,ci)=>{const td=document.createElement('td'),i=document.createElement('input');i.value=v;i.oninput=()=>{r[ci]=i.value};i.onfocus=()=>{focus=[ri,ci]};
+        i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const nx=t.rows[ri+2]&&t.rows[ri+2].cells[ci];if(nx)nx.firstChild.focus()}};td.appendChild(i);tr.appendChild(td)});t.appendChild(tr)});
+      w.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a));
+    };
+    const act=a=>{
+      if(a==='ar'){g.rows.splice(Math.max(0,focus[0])+1,0,['New row',...g.head.map(()=>'0')])}
+      else if(a==='ac'){g.head.push('Series '+(g.head.length+1));g.rows.forEach(r=>r.push('0'))}
+      else if(a==='dr'){if(g.rows.length>1)g.rows.splice(Math.max(0,focus[0]),1)}
+      else if(a==='dc'){if(g.head.length>1){const j=Math.max(1,focus[1])-1;g.head.splice(j,1);g.rows.forEach(r=>r.splice(j+1,1))}}
+      else if(a==='sw')g=transpose(g);
+      else if(a==='pa'){
+        const d=dlg('Paste data',(()=>{const x=document.createElement('div');x.innerHTML='<div class="hint" style="margin:0 0 6px">Copy cells in Excel or Google Sheets and paste them here (Ctrl+V).</div><textarea data-t style="width:100%;min-height:150px"></textarea><label style="'+lab+'"><input type="checkbox" data-h style="width:auto" checked> First row has series names</label>';return x})(),[{t:'Cancel'},{t:'Use',pri:1,fn:w2=>{const m=csvParse(w2.querySelector('[data-t]').value);if(m.length){g=fromMatrix(m,w2.querySelector('[data-h]').checked);draw()}}}],520);
+      }
+      else if(a==='im'){const i=document.createElement('input');i.type='file';i.accept='.csv,.tsv,.txt';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const m=csvParse(String(r.result));if(m.length){g=fromMatrix(m,true);draw()}};r.readAsText(f)};i.click()}
+      draw();
+    };
+    draw();
+    dlg('Edit Chart Data',w,[{t:'Cancel'},{t:'OK',pri:1,fn:()=>{edit(x=>putGrid(x,g))}}],700);
+  }
+  function switchRC(){const o=ch();if(!o)return;const g=transpose(getGrid(o));edit(x=>{putGrid(x,g);x.se=undefined;delete x.se});}
+  /* ---------- chart types, layouts, styles ---------- */
+  const TYPES=[['Column',[['column','Clustered Column'],['colstack','Stacked Column'],['colpct','100% Stacked Column']]],['Bar',[['bar','Clustered Bar'],['barstack','Stacked Bar'],['barpct','100% Stacked Bar']]],['Line',[['line','Line with Markers']]],['Area',[['area','Area'],['areastack','Stacked Area'],['areapct','100% Stacked Area']]],['Pie',[['pie','Pie'],['donut','Doughnut']]],['Other',[['scatter','Scatter (X Y)'],['radar','Radar'],['combo','Combo (columns + lines)']]]];
+  const LAYOUTS=[['Layout 1 \u2013 title, legend at bottom, values',{leg:true,lp:'bottom',vals:true,dtab:undefined,xt:undefined,yt:undefined,gh:true}],['Layout 2 \u2013 legend at right, gridlines both ways',{leg:true,lp:'right',vals:false,gh:true,gv:true,dtab:undefined}],['Layout 3 \u2013 data table, no legend',{leg:false,vals:false,dtab:true,gh:true}],['Layout 4 \u2013 axis titles, legend on top',{leg:true,lp:'top',vals:true,xt:'Category',yt:'Value',gh:true,dtab:undefined}],['Layout 5 \u2013 minimal',{leg:false,vals:true,gh:false,gv:false,gm:false,dtab:undefined}]];
+  const PALS=[['Theme',()=>window.dscTpal?dscTpal().slice():dscPAL.slice()],['Colorful',()=>['#e8b923','#5b9bec','#7ab36b','#e07a5f','#9b72cf','#4fc3c3','#f28ab2']],['Blues',()=>['#0b3d91','#1565c0','#1e88e5','#42a5f5','#90caf9','#bbdefb','#64b5f6']],['Greens',()=>['#1b5e20','#2e7d32','#43a047','#66bb6a','#a5d6a7','#c8e6c9','#81c784']],['Warm',()=>['#7f1d1d','#b91c1c','#ea580c','#f59e0b','#fbbf24','#fde68a','#f97316']],['Gold & Slate',()=>['#d4a21f','#8a6a12','#4a4f57','#9aa1ab','#e8c765','#2b2f35','#c9a227']],['Monochrome',()=>['#ffffff','#d0d0d0','#a0a0a0','#707070','#505050','#c0c0c0','#888888']]];
+  function elemMenu(r){
+    const o=ch()||{};
+    showMenu(r.left,r.bottom+2,[
+      {t:mark(o.ax!==false,'Axes'),fn:()=>set({ax:o.ax===false?undefined:false})},
+      {t:'Axis Titles',sub:[{t:mark(!!o.xt,'Horizontal axis title\u2026'),fn:()=>titleDlg('xt','Horizontal Axis Title')},{t:mark(!!o.yt,'Vertical axis title\u2026'),fn:()=>titleDlg('yt','Vertical Axis Title')},{t:'    None',fn:()=>set({xt:undefined,yt:undefined})}]},
+      {t:'Chart Title',sub:[{t:mark(!o.title,'None'),fn:()=>set({title:undefined})},{t:mark(o.title&&o.tpos!=='over','Above Chart\u2026'),fn:()=>titleDlg('title','Chart Title',{tpos:undefined})},{t:mark(o.title&&o.tpos==='over','Overlay\u2026'),fn:()=>titleDlg('title','Chart Title',{tpos:'over'})}]},
+      {t:'Data Labels',sub:[{t:mark(!o.vals,'None'),fn:()=>set({vals:false})}].concat([['ctr','Center'],['in','Inside End'],['out','Outside End']].map(([v,n])=>({t:mark(o.vals&&(o.dlp||'out')===v,n),fn:()=>set({vals:true,dlp:v})}))).concat(/pie|donut/.test(o.ct||'')?[{sep:1},{t:mark((o.dlt||'pct')==='pct','Show percentage'),fn:()=>set({dlt:'pct'})},{t:mark(o.dlt==='val','Show value'),fn:()=>set({dlt:'val'})},{t:mark(o.dlt==='both','Value and percentage'),fn:()=>set({dlt:'both'})}]:[])},
+      {t:mark(!!o.dtab,'Data Table'),fn:()=>set({dtab:o.dtab?undefined:true})},
+      {t:'Error Bars',sub:[['','None'],['fixed','Fixed value (5)'],['pct','Percentage (10%)'],['sd','Standard deviation']].map(([v,n])=>({t:n,fn:()=>edit(x=>{x.se=x.se||[];const ns=Math.max(1,String(x.sn||'').split(',').length);for(let j=0;j<ns;j++){x.se[j]=x.se[j]||{};if(v)x.se[j].eb={t:v,v:v==='fixed'?5:v==='pct'?10:1};else delete x.se[j].eb}})}))},
+      {t:'Gridlines',sub:[{t:mark(o.gh!==false,'Major horizontal'),fn:()=>set({gh:o.gh===false?undefined:false})},{t:mark(!!o.gv,'Major vertical'),fn:()=>set({gv:o.gv?undefined:true})},{t:mark(!!o.gm,'Minor horizontal'),fn:()=>set({gm:o.gm?undefined:true})}]},
+      {t:'Legend',sub:[{t:mark(o.leg===false,'None'),fn:()=>set({leg:false})}].concat([['right','Right'],['top','Top'],['left','Left'],['bottom','Bottom']].map(([v,n])=>({t:mark(o.leg!==false&&(o.lp||(/pie|donut/.test(o.ct||'')?'right':'bottom'))===v,n),fn:()=>set({leg:true,lp:v})})))},
+      {t:'Trendline',sub:[['','None'],['linear','Linear'],['poly','Polynomial (order 2)'],['avg','Moving average (2)']].map(([v,n])=>({t:n,fn:()=>edit(x=>{x.se=x.se||[];const ns=Math.max(1,String(x.sn||'').split(',').length);for(let j=0;j<ns;j++){x.se[j]=x.se[j]||{};if(v)x.se[j].tr={t:v,n:2};else delete x.se[j].tr}})}))}
+    ]);
+  }
+  function titleDlg(k,title,extra){
+    const o=ch();if(!o)return;const w=document.createElement('div');
+    w.innerHTML='<input data-v style="width:100%" placeholder="Type the text" value="'+String(o[k]||'').replace(/"/g,'&quot;')+'">';
+    dlg(title,w,[{t:'Cancel'},{t:'OK',pri:1,fn:()=>{set(Object.assign({[k]:w.querySelector('[data-v]').value.trim()||undefined},extra||{}))}}],420);w.querySelector('input').focus();
+  }
+  /* ---------- axis, number format, series ---------- */
+  function axisDlg(){
+    const o=ch();if(!o)return;const w=document.createElement('div');
+    const num=(k,l,ph)=>'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:120px">'+l+'</span><input type="number" data-k="'+k+'" style="width:110px" placeholder="'+ph+'" value="'+(o[k]==null?'':o[k])+'"></div>';
+    w.innerHTML='<div class="hint" style="margin:0 0 6px">Leave a box empty to let the chart choose automatically.</div>'+num('ymin','Minimum','Auto')+num('ymax','Maximum','Auto')+num('yu','Major unit','Auto')
+      +'<label style="'+lab+'"><input type="checkbox" data-c="ylog" style="width:auto"'+(o.ylog?' checked':'')+'> Logarithmic scale</label><label style="'+lab+'"><input type="checkbox" data-c="ax" style="width:auto"'+(o.ax!==false?' checked':'')+'> Show axes</label><label style="'+lab+'"><input type="checkbox" data-c="gh" style="width:auto"'+(o.gh!==false?' checked':'')+'> Major gridlines</label><label style="'+lab+'"><input type="checkbox" data-c="gm" style="width:auto"'+(o.gm?' checked':'')+'> Minor gridlines</label><label style="'+lab+'"><input type="checkbox" data-c="gv" style="width:auto"'+(o.gv?' checked':'')+'> Vertical gridlines</label>';
+    dlg('Format Axis',w,[{t:'Cancel'},{t:'OK',pri:1,fn:()=>{
+      const p={};['ymin','ymax','yu'].forEach(k=>{const v=w.querySelector('[data-k="'+k+'"]').value;p[k]=v===''?undefined:+v});
+      const c=k=>w.querySelector('[data-c="'+k+'"]').checked;p.ylog=c('ylog')||undefined;p.ax=c('ax')?undefined:false;p.gh=c('gh')?undefined:false;p.gm=c('gm')||undefined;p.gv=c('gv')||undefined;
+      if(p.ymin!=null&&p.ymax!=null&&p.ymax<=p.ymin){toast('The maximum must be larger than the minimum.');return false}
+      set(p)}}],440);
+  }
+  function numDlg(){
+    const o=ch();if(!o)return;const f=o.nf||{},w=document.createElement('div');
+    w.innerHTML='<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:110px">Category</span><select data-t>'+[['gen','General'],['num','Number'],['cur','Currency'],['pct','Percentage'],['sci','Scientific']].map(([v,n])=>'<option value="'+v+'"'+((f.t||'gen')===v?' selected':'')+'>'+n+'</option>').join('')+'</select></div><div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:110px">Decimal places</span><input type="number" min="0" max="8" data-d style="width:70px" value="'+(f.d==null?'':f.d)+'"></div><label style="'+lab+'"><input type="checkbox" data-th style="width:auto"'+(f.th!==false?' checked':'')+'> Use 1,000 separator</label><div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:110px">Prefix</span><input data-p style="width:80px" value="'+(f.pre||'')+'"><span style="width:60px;text-align:right">Suffix</span><input data-s style="width:80px" value="'+(f.suf||'')+'"></div><div class="hint">Applies to value labels and the value axis. Example: Currency with prefix \u20b1.</div>';
+    dlg('Number Format',w,[{t:'Cancel'},{t:'OK',pri:1,fn:()=>{const t=w.querySelector('[data-t]').value,d=w.querySelector('[data-d]').value,nf={t,d:d===''?undefined:+d,th:w.querySelector('[data-th]').checked,pre:w.querySelector('[data-p]').value||undefined,suf:w.querySelector('[data-s]').value||undefined};set({nf:t==='gen'&&nf.d==null&&!nf.pre&&!nf.suf?undefined:nf})}}],440);
+  }
+  function seriesDlg(){
+    const o=ch();if(!o)return;const g=getGrid(o),pie=/pie|donut/.test(o.ct||''),items=pie?g.rows.map(r=>r[0]):g.head,w=document.createElement('div');
+    const se=JSON.parse(JSON.stringify(o.se||[])),pal=(o.pal&&o.pal.length?o.pal:dscPAL);let cur=0;
+    const draw=()=>{
+      const c=se[cur]=se[cur]||{},cc=c.c||pal[cur%pal.length],T=(c.tr&&c.tr.t)||'',E=(c.eb&&c.eb.t)||'';
+      w.innerHTML='<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">'+(pie?'Slice':'Series')+'</span><select data-s style="flex:1">'+items.map((n,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>'
+        +'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">Color</span><input type="color" data-c value="'+(/^#[0-9a-f]{6}$/i.test(cc)?cc:'#e8b923')+'"></div>'
+        +(pie?'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">Explode %</span><input type="number" min="0" max="40" data-ex style="width:70px" value="'+(c.ex||0)+'"></div>'
+        :'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">Line width</span><input type="number" min="1" max="20" data-w style="width:70px" value="'+(c.w||6)+'"><span style="width:60px;text-align:right">Marker</span><select data-m>'+[['','Default'],['none','None'],['circle','Circle'],['square','Square'],['diamond','Diamond'],['triangle','Triangle']].map(([v,n])=>'<option value="'+v+'"'+((c.m||'')===v?' selected':'')+'>'+n+'</option>').join('')+'</select><input type="number" min="3" max="30" data-ms style="width:60px" title="Marker size" value="'+(c.ms||9)+'"></div>'
+          +'<label style="'+lab+'"><input type="checkbox" data-sm style="width:auto"'+(c.sm?' checked':'')+'> Smoothed line</label>'
+          +(o.ct==='combo'?'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">Draw as</span><select data-t>'+[['','Default'],['col','Columns'],['line','Line'],['area','Area']].map(([v,n])=>'<option value="'+v+'"'+((c.t||'')===v?' selected':'')+'>'+n+'</option>').join('')+'</select></div>':'')
+          +'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">Trendline</span><select data-tr>'+[['','None'],['linear','Linear'],['poly','Polynomial (2)'],['avg','Moving average']].map(([v,n])=>'<option value="'+v+'"'+(T===v?' selected':'')+'>'+n+'</option>').join('')+'</select><input type="number" min="2" max="12" data-trn style="width:60px" title="Period" value="'+((c.tr&&c.tr.n)||2)+'"></div>'
+          +'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:90px">Error bars</span><select data-eb>'+[['','None'],['fixed','Fixed value'],['pct','Percentage'],['sd','Std. deviation']].map(([v,n])=>'<option value="'+v+'"'+(E===v?' selected':'')+'>'+n+'</option>').join('')+'</select><input type="number" min="0" step="0.5" data-ebv style="width:70px" title="Amount" value="'+((c.eb&&c.eb.v)||5)+'"></div>')
+        +'<div style="font-weight:600;margin:10px 0 2px">'+(pie?'Pie options':'Chart options')+'</div>'
+        +(pie?'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:120px">First slice angle</span><input type="number" min="0" max="359" data-g="ang" style="width:70px" value="'+(o.ang||0)+'"><span style="width:90px;text-align:right">Hole size %</span><input type="number" min="10" max="85" data-g="hole" style="width:60px" value="'+(o.hole||50)+'"></div>'
+        :'<div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:120px">Gap width %</span><input type="number" min="0" max="300" data-g="gap" style="width:70px" value="'+(o.gap==null?40:o.gap)+'"><span style="width:90px;text-align:right">Overlap %</span><input type="number" min="-100" max="100" data-g="ovl" style="width:60px" value="'+(o.ovl==null?(/stack|pct/.test(o.ct||'')?100:0):o.ovl)+'"></div>');
+      const rd=()=>{const q=se[cur]=se[cur]||{};q.c=w.querySelector('[data-c]').value;
+        if(pie){const v=+w.querySelector('[data-ex]').value||0;if(v)q.ex=v;else delete q.ex}
+        else{q.w=+w.querySelector('[data-w]').value||6;const m=w.querySelector('[data-m]').value;if(m)q.m=m;else delete q.m;q.ms=+w.querySelector('[data-ms]').value||9;q.sm=w.querySelector('[data-sm]').checked||undefined;if(!q.sm)delete q.sm;
+          const tt=w.querySelector('[data-t]');if(tt){if(tt.value)q.t=tt.value;else delete q.t}
+          const tr=w.querySelector('[data-tr]').value;if(tr)q.tr={t:tr,n:+w.querySelector('[data-trn]').value||2};else delete q.tr;
+          const eb=w.querySelector('[data-eb]').value;if(eb)q.eb={t:eb,v:+w.querySelector('[data-ebv]').value||1};else delete q.eb}};
+      w.querySelector('[data-s]').onchange=e=>{rd();cur=+e.target.value;draw()};w._rd=rd;
+    };
+    draw();
+    dlg('Format Data Series',w,[{t:'Cancel'},{t:'OK',pri:1,fn:()=>{w._rd();const p={se:se.some(x=>x&&Object.keys(x).length)?se:undefined};w.querySelectorAll('[data-g]').forEach(i=>{if(i.value!=='')p[i.dataset.g]=+i.value});set(p)}}],520);
+  }
+  /* ---------- linked data (CSV from a web address) ---------- */
+  async function fetchLinked(o,quiet){
+    const url=o.src;if(!url)return false;
+    try{
+      const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);
+      const m=csvParse(await r.text());if(!m.length)throw new Error('empty');
+      const g=fromMatrix(m,o.srh!==false);putGrid(o,g);return true;
+    }catch(e){if(!quiet)toast('The linked data could not be loaded ('+(e&&e.message||'offline')+'). The chart keeps its current data.');return false}
+  }
+  function linkDlg(){
+    const o=ch();if(!o){toast('Select a chart first.');return}const w=document.createElement('div');
+    w.innerHTML='<div class="hint" style="margin:0 0 8px">Link the chart to a table published on the web as CSV, for example Google Sheets: File \u203a Share \u203a Publish to web \u203a CSV. The chart then updates from that sheet.</div><div class="row" style="gap:8px;align-items:center;margin:6px 0"><span style="width:70px">Address</span><input data-u style="flex:1" placeholder="https://\u2026/pub?output=csv" value="'+(o.src||'').replace(/"/g,'&quot;')+'"></div><label style="'+lab+'"><input type="checkbox" data-h style="width:auto"'+(o.srh!==false?' checked':'')+'> First row has series names</label><label style="'+lab+'"><input type="checkbox" data-r style="width:auto"'+(o.sr?' checked':'')+'> Refresh automatically when the slide goes live</label>';
+    dlg('Linked Data',w,[{t:'Unlink',fn:()=>set({src:undefined,sr:undefined,srh:undefined})},{t:'Cancel'},{t:'Save and Refresh',pri:1,fn:()=>{const u=w.querySelector('[data-u]').value.trim();if(!u){toast('Type the web address of the CSV.');return false}
+      (async()=>{const tmp={...o,src:u,srh:w.querySelector('[data-h]').checked};const ok=await fetchLinked(tmp);if(ok){sedSnap();Object.assign(o,{src:u,srh:tmp.srh,sr:w.querySelector('[data-r]').checked||undefined,data:tmp.data,sn:tmp.sn});delete o.se;sedRender();sedSync();sedPanel();toast('Chart linked and updated.')}})()}}],560);
+  }
+  async function refreshNow(){const o=ch();if(!o)return;if(!o.src){linkDlg();return}const ok=await fetchLinked(o);if(ok){sedSnap();sedRender();sedSync();sedPanel();toast('Chart data refreshed.')}}
+  /* charts that are linked refresh when their slide goes live */
+  const _go=go;
+  go=function(i){
+    const r=_go.apply(this,arguments);
+    try{
+      const lay=eff(cur(),idx).lay,sid=cur().id,at=idx;
+      if(lay&&lay.some(o=>o.t==='chart'&&o.src&&o.sr)&&mode!=='edit'){
+        (async()=>{let ch2=false;const L=JSON.parse(JSON.stringify(lay));for(const o of L){if(o.t==='chart'&&o.src&&o.sr)if(await fetchLinked(o,true))ch2=true}
+          if(ch2&&cur().id===sid&&idx===at){ovSet(at,{lay:L});push()}})();
+      }
+    }catch(e){}
+    return r;
+  };
+
+  /* ---------- the Chart tab ---------- */
+  const B=document.createElement('div');B.className='hbody';B.id='hbCht';
+  B.innerHTML=`<div class="hg"><div class="hr"><button data-c="type" title="Column, bar, line, area, pie, scatter, radar or combo">Change Chart Type &#9662;</button></div><div class="hr"><button data-c="sw" title="Swap series and categories">Switch Row/Column</button></div><small>Type</small></div>
+<div class="hg"><div class="hr"><button data-c="data" title="Edit the numbers in a spreadsheet">Edit Data\u2026</button><button data-c="link" title="Link to a CSV on the web, for example a published Google Sheet">Link Data\u2026</button></div><div class="hr"><button data-c="ref" title="Load the latest numbers from the linked sheet">Refresh Data</button></div><small>Data</small></div>
+<div class="hg"><div class="hr"><button data-c="elem" title="Titles, labels, legend, gridlines, trendlines, error bars, data table">Add Chart Element &#9662;</button></div><div class="hr"><button data-c="lay" title="Ready-made arrangements">Quick Layout &#9662;</button></div><small>Chart Layouts</small></div>
+<div class="hg"><div class="hr"><button data-c="sty" title="Flat, sharp, rounded, gradient, outlined, shadow">Chart Styles &#9662;</button><button data-c="col" title="Color sets for the series">Change Colors &#9662;</button></div><div class="hr"><label class="hc">Chart area <input type="color" id="chBg"></label><label class="hc">Plot area <input type="color" id="chPb"></label><button data-c="nobg">No fill</button></div><small>Chart Styles</small></div>
+<div class="hg"><div class="hr"><button data-c="axis" title="Minimum, maximum, major unit, log scale, gridlines">Format Axis\u2026</button><button data-c="num" title="Number, currency, percentage">Number Format\u2026</button></div><div class="hr"><button data-c="ser" title="Series color, line, markers, trendline, error bars, gap width and overlap">Format Data Series\u2026</button></div><small>Format</small></div>
+<div class="hg"><div class="hr"><label class="hc">Text size <input type="number" id="chFs" min="12" max="80"></label><label class="hc">Text color <input type="color" id="chTc"></label></div><div class="hr"><label class="hc">Height <input type="number" id="chH" min="100" max="2160"></label><label class="hc">Width <input type="number" id="chW" min="100" max="3840"></label></div><small>Text and Size</small></div>`;
+  H.appendChild(B);
+  B.addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault()});
+  B.addEventListener('click',e=>{
+    const b=e.target.closest('[data-c]');if(!b)return;e.stopPropagation();const r=b.getBoundingClientRect(),k=b.dataset.c,o=ch()||{},M=items=>showMenu(r.left,r.bottom+2,items);
+    if(k==='type')M(TYPES.map(([g,l])=>({t:g,sub:l.map(([v,n])=>({t:mark((o.ct||'column')===v,n),fn:()=>set({ct:v,se:o.se&&/combo/.test(v)?o.se:o.se})}))})));
+    else if(k==='sw')switchRC();else if(k==='data')dataDlg();else if(k==='link')linkDlg();else if(k==='ref')refreshNow();
+    else if(k==='elem')elemMenu(r);
+    else if(k==='lay')M(LAYOUTS.map(([n,p])=>({t:n,fn:()=>set(p)})));
+    else if(k==='sty')M(['Style 1 \u2013 rounded corners','Style 2 \u2013 sharp edges','Style 3 \u2013 very round','Style 4 \u2013 gradient','Style 5 \u2013 outlined','Style 6 \u2013 shadow'].map((n,i)=>({t:mark((o.cs||0)===i,n),fn:()=>set({cs:i||undefined})})));
+    else if(k==='col')M(PALS.map(([n,f])=>({t:n+'   '+f().slice(0,5).map(()=>'\u25a0').join(''),fn:()=>set({pal:f(),se:undefined})})));
+    else if(k==='nobg')set({cbg:undefined,pbg:undefined});
+    else if(k==='axis')axisDlg();else if(k==='num')numDlg();else if(k==='ser')seriesDlg();
+  });
+  $i('chBg').oninput=e=>set({cbg:e.target.value});$i('chPb').oninput=e=>set({pbg:e.target.value});
+  $i('chFs').onchange=e=>set({fs:Math.max(12,+e.target.value||34)});$i('chTc').oninput=e=>set({tc:e.target.value});
+  $i('chW').onchange=e=>edit(o=>{o.w=Math.max(100,+e.target.value||100)});$i('chH').onchange=e=>edit(o=>{o.h=Math.max(100,+e.target.value||100)});
+  const hex=c=>/^#[0-9a-f]{6}$/i.test(c||'')?c:'#000000';
+  function syncCh(){
+    if(!E||!$i('hbCht'))return;let L=[];try{L=D.sel()}catch(e){}
+    const on=L.length===1&&isCh(L[0]),tb=$i('tabCht');if(tb)tb.classList.toggle('on',on);
+    if(H.dataset.tab==='cht'&&!on){const hb=$i('tabHome');if(hb)hb.click()}
+    if(!on)return;const o=L[0],af=id=>document.activeElement===$i(id);
+    if(!af('chFs'))$i('chFs').value=o.fs||34;$i('chTc').value=hex(o.tc||'#ffffff');$i('chBg').value=hex(o.cbg||'#0b1730');$i('chPb').value=hex(o.pbg||'#0b1730');
+    if(!af('chW'))$i('chW').value=Math.round(o.w);if(!af('chH'))$i('chH').value=Math.round(o.h);
+    $i('hbCht').querySelector('[data-c=ref]').disabled=!o.src;
+  }
+  const _su=sedUi;sedUi=function(){const r=_su.apply(this,arguments);try{syncCh()}catch(e){}return r};
+  const _sp=sedPanel;sedPanel=function(){const r=_sp.apply(this,arguments);try{syncCh()}catch(e){}return r};
+  window.dscChart={dataDlg,switchRC,csvParse,fromMatrix,putGrid,getGrid,transpose,fetchLinked,syncCh};
+})();
+
+</script>
+<script>
+/* ===== SmartArt tab + Text Pane ===== */
+(function(){
+  if(/^#(output|stage|layout)/.test(location.hash))return;
+  const H=document.getElementById('sedHome'),SED=document.getElementById('sed');if(!H||!SED||!window.dscHome||!window.dscSmart||!window.dscReview)return;
+  const D=window.dscHome,$i=id=>document.getElementById(id),mark=(c,l)=>(c?'\u2713 ':'    ')+l,isSm=o=>o.t==='smart';
+  const css=document.createElement('style');
+  css.textContent='#hbSmt .hc{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:none;margin-right:6px}#hbSmt input[type=number]{width:62px}#hbSmt input[type=color]{width:34px;padding:0;height:24px}#smtPane{position:absolute;right:352px;bottom:44px;width:310px;max-height:52%;z-index:40;background:var(--bg2,#17171a);border:1px solid var(--line,#3a3a40);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.55);display:none;flex-direction:column;overflow:hidden;font-size:13px}#smtPane.on{display:flex}#smtPane .ph{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line,#3a3a40)}#smtPane .ph b{flex:1}#smtPane .pl{overflow:auto;padding:6px}#smtPane .pr{display:flex;align-items:center;gap:6px;margin:2px 0}#smtPane .pr i{color:#e8b923;font-style:normal;width:12px;flex:none}#smtPane .pr input{flex:1;min-width:0;background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:4px;color:inherit;padding:4px 6px;font:inherit}#smtPane .pr input:focus{outline:none;border-color:#e8b923}#smtPane .ft{padding:6px 8px;border-top:1px solid var(--line,#3a3a40);opacity:.7;font-size:11px}';
+  document.head.appendChild(css);
+  const pane=document.createElement('div');pane.id='smtPane';pane.innerHTML='<div class="ph"><b>Text Pane</b><button data-p="x" title="Close">&#10005;</button></div><div class="pl"></div><div class="ft">Enter = new shape \u00b7 Tab = demote \u00b7 Shift+Tab = promote \u00b7 Ctrl+\u2191\u2193 = move \u00b7 Backspace on an empty line deletes it</div>';
+  SED.appendChild(pane);
+  const obj=()=>{const L=D.sel();return L.length===1&&isSm(L[0])?L[0]:null};
+  function edit(fn,keepPane){
+    const o=obj();if(!o){toast('Select a SmartArt graphic first.');return false}
+    sedSnap();fn(o);sedRender();sedSync();sedUi();if(!keepPane)drawPane();syncSm();return true;
+  }
+  /* ---- the list of items, with levels ---- */
+  const nodesOf=o=>dscSmart.parse(o).nodes.map(n=>({t:n.t,lv:n.lv}));
+  const put=(o,ns)=>{o.items=ns.map(n=>'\t'.repeat(n.lv)+n.t).join('\n')};
+  const endOf=(ns,i)=>{let j=i+1;while(j<ns.length&&ns[j].lv>ns[i].lv)j++;return j};
+  const cur=o=>{const n=nodesOf(o).length;if(E.smi==null||E.smi>=n)E.smi=Math.max(0,n-1);return E.smi};
+  function op(kind){
+    edit(o=>{
+      const ns=nodesOf(o);let i=cur(o);if(!ns.length){ns.push({t:'Item',lv:0});i=0}
+      const e=endOf(ns,i);
+      if(kind==='after'){ns.splice(e,0,{t:'New item',lv:ns[i].lv});E.smi=e}
+      else if(kind==='before'){ns.splice(i,0,{t:'New item',lv:ns[i].lv});E.smi=i}
+      else if(kind==='child'){if(ns[i].lv>=4){toast('That is as deep as the levels go.');return}ns.splice(e,0,{t:'New item',lv:ns[i].lv+1});E.smi=e}
+      else if(kind==='del'){if(ns.length-(e-i)<1){toast('A graphic needs at least one shape.');return}ns.splice(i,e-i);E.smi=Math.max(0,Math.min(i,ns.length-1))}
+      else if(kind==='promote'){if(ns[i].lv===0){toast('This shape is already at the top level.');return}for(let k=i;k<e;k++)ns[k].lv--}
+      else if(kind==='demote'){if(i===0||ns[i-1].lv<ns[i].lv||ns[i].lv>=4){toast('This shape cannot be demoted (it needs a shape above it at the same level).');return}for(let k=i;k<e;k++)ns[k].lv++}
+      else if(kind==='up'||kind==='down'){
+        const lv=ns[i].lv;
+        if(kind==='up'){let p=i-1;while(p>=0&&ns[p].lv>lv)p--;if(p<0||ns[p].lv<lv){toast('Already first.');return}const chunk=ns.splice(i,e-i);ns.splice(p,0,...chunk);E.smi=p}
+        else{if(e>=ns.length||ns[e].lv<lv){toast('Already last.');return}const e2=endOf(ns,e),chunk=ns.splice(i,e-i);ns.splice(e2-chunk.length,0,...chunk);E.smi=e2-chunk.length}
+      }
+      put(o,ns);
+    });
+  }
+  /* ---- Text Pane ---- */
+  function drawPane(){
+    const o=obj(),L=pane.querySelector('.pl');pane.classList.toggle('on',!!(E&&E.smPane&&o));
+    if(!E||!E.smPane||!o)return;
+    const ns=nodesOf(o),a=document.activeElement,keep=a&&a.dataset&&a.dataset.i!=null?+a.dataset.i:null;L.innerHTML='';
+    ns.forEach((n,i)=>{
+      const r=document.createElement('div');r.className='pr';r.style.paddingLeft=n.lv*18+'px';
+      r.innerHTML='<i>'+(n.lv?'\u2013':'\u2022')+'</i><input data-i="'+i+'">';const inp=r.querySelector('input');inp.value=n.t;
+      inp.onfocus=()=>{E.smi=i};
+      inp.oninput=()=>{const o2=obj();if(!o2)return;const l2=nodesOf(o2);if(!l2[i])return;l2[i].t=inp.value||' ';put(o2,l2);sedRender();sedSync()};
+      inp.onchange=()=>{sedSnap()};
+      inp.onkeydown=e=>{
+        if(e.key==='Enter'){e.preventDefault();E.smi=i;op('after');setTimeout(()=>{const x=pane.querySelector('input[data-i="'+E.smi+'"]');if(x)x.select()},0)}
+        else if(e.key==='Tab'){e.preventDefault();E.smi=i;op(e.shiftKey?'promote':'demote');setTimeout(()=>{const x=pane.querySelector('input[data-i="'+i+'"]');if(x)x.focus()},0)}
+        else if(e.key==='Backspace'&&!inp.value.trim()){e.preventDefault();E.smi=i;op('del');setTimeout(()=>{const x=pane.querySelector('input[data-i="'+Math.max(0,E.smi)+'"]');if(x)x.focus()},0)}
+        else if((e.ctrlKey||e.metaKey)&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();E.smi=i;op(e.key==='ArrowUp'?'up':'down');setTimeout(()=>{const x=pane.querySelector('input[data-i="'+E.smi+'"]');if(x)x.focus()},0)}
+        else if(e.key==='ArrowUp'||e.key==='ArrowDown'){const x=pane.querySelector('input[data-i="'+(i+(e.key==='ArrowUp'?-1:1))+'"]');if(x){e.preventDefault();x.focus()}}
+        else if(e.key==='Escape'){e.stopPropagation()}
+      };
+      L.appendChild(r);
+    });
+    if(keep!=null){const x=pane.querySelector('input[data-i="'+keep+'"]');if(x)x.focus()}
+  }
+  pane.addEventListener('click',e=>{if(e.target.closest('[data-p=x]')){E.smPane=false;drawPane();syncSm()}});
+  /* ---- convert ---- */
+  function toShapes(){
+    const o=obj();if(!o)return;const objs=dscSmart.toObjs(o);if(!objs.length)return;
+    sedSnap();const idx=E.objs.indexOf(o);E.objs.splice(idx,1,...objs);E.sel=objs[0].id;E.ms=objs.map(x=>x.id);E.smPane=false;
+    sedRender();sedSync();sedUi();sedPanel();drawPane();syncSm();toast('Converted into '+objs.length+' shapes and text boxes (grouped). Use Ungroup to edit them one by one.');
+  }
+  function toText(){
+    const o=obj();if(!o)return;const ns=nodesOf(o);
+    sedSnap();const idx=E.objs.indexOf(o),t={id:'o'+Math.random().toString(36).slice(2,9),op:100,t:'text',x:o.x,y:o.y,w:o.w,h:o.h,text:ns.map(n=>'  '.repeat(n.lv)+(n.lv?'\u2022 ':'')+n.t).join('\n'),font:o.font||'Poppins',size:Math.min(60,o.fs||40),b:false,i:false,u:false,color:o.tc||'#ffffff',al:'left',va:'top',sc:'none',shadow:true,sw:4,scol:'#000000'};
+    E.objs.splice(idx,1,t);E.sel=t.id;E.ms=[t.id];E.smPane=false;sedRender();sedSync();sedUi();sedPanel();drawPane();syncSm();toast('Converted to a text box.');
+  }
+  /* ---- the tab ---- */
+  const B=document.createElement('div');B.className='hbody';B.id='hbSmt';
+  B.innerHTML=`<div class="hg"><div class="hr"><button data-m="add" title="Add a shape after, before or under the selected one">Add Shape &#9662;</button><button data-m="del">Delete Shape</button><button data-m="pane" id="smPaneB" title="Type the items in a list">Text Pane</button></div><div class="hr"><button data-m="pro" title="Move the shape up one level">\u2190 Promote</button><button data-m="dem" title="Move the shape down one level">Demote \u2192</button><button data-m="up">\u25b2 Move Up</button><button data-m="down">\u25bc Move Down</button></div><small>Create Graphic</small></div>
+<div class="hg"><div class="hr"><button data-m="lay" id="smLay" title="Choose another layout" style="min-width:160px">Change Layout &#9662;</button></div><div class="hr"><button data-m="rst" title="Remove colors and styles, keep the text">Reset Graphic</button></div><small>Layouts</small></div>
+<div class="hg"><div class="hr"><button data-m="col" title="Color sets for the shapes">Change Colors &#9662;</button><button data-m="sty" title="Flat, outline, gradient or shadow">Styles &#9662;</button><button data-m="shp" title="Rounded, square, pill or oval shapes">Shape &#9662;</button></div><div class="hr"><label class="hc">Text size <input type="number" id="smFs" min="12" max="120"></label><label class="hc">Text <input type="color" id="smBt" title="Text color inside the shapes"></label><label class="hc">Lines <input type="color" id="smTc" title="Color of arrows and lines"></label></div><small>SmartArt Styles</small></div>
+<div class="hg"><div class="hr"><button data-m="c2s" title="Turn the graphic into ordinary shapes and text boxes you can edit freely">Convert to Shapes</button><button data-m="c2t">Convert to Text</button></div><div class="hr"><label class="hc">Height <input type="number" id="smH" min="100" max="2160"></label><label class="hc">Width <input type="number" id="smW" min="100" max="3840"></label></div><small>Convert and Size</small></div>`;
+  H.appendChild(B);
+  const PALS=[['Theme',()=>window.dscTpal?dscTpal().slice():dscPAL.slice()],['Colorful',()=>['#e8b923','#5b9bec','#7ab36b','#e07a5f','#9b72cf','#4fc3c3','#f28ab2']],['Blues',()=>['#0b3d91','#1565c0','#1e88e5','#42a5f5','#90caf9','#bbdefb','#64b5f6']],['Greens',()=>['#1b5e20','#2e7d32','#43a047','#66bb6a','#a5d6a7','#c8e6c9','#81c784']],['Warm',()=>['#7f1d1d','#b91c1c','#ea580c','#f59e0b','#fbbf24','#fde68a','#f97316']],['Gold & Slate',()=>['#d4a21f','#8a6a12','#4a4f57','#9aa1ab','#e8c765','#2b2f35','#c9a227']],['Monochrome',()=>['#ffffff','#d0d0d0','#a0a0a0','#707070','#505050','#c0c0c0','#888888']]];
+  B.addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault()});
+  B.addEventListener('click',e=>{
+    const b=e.target.closest('[data-m]');if(!b)return;e.stopPropagation();const r=b.getBoundingClientRect(),k=b.dataset.m,o=obj()||{},M=items=>showMenu(r.left,r.bottom+2,items);
+    if(k==='add')M([{t:'Add Shape After',fn:()=>op('after')},{t:'Add Shape Before',fn:()=>op('before')},{t:'Add Bullet (shape below)',fn:()=>op('child')}]);
+    else if(k==='del')op('del');else if(k==='pro')op('promote');else if(k==='dem')op('demote');else if(k==='up')op('up');else if(k==='down')op('down');
+    else if(k==='pane'){if(!obj()){toast('Select a SmartArt graphic first.');return}E.smPane=!E.smPane;drawPane();syncSm()}
+    else if(k==='lay')M(dscSmart.LAYOUTS.map(([v,n])=>({t:mark((o.ly||'list')===v,n),fn:()=>edit(x=>{x.ly=v},true)})));
+    else if(k==='rst')edit(x=>{['pal','ss','bs2','btc','fs','tc'].forEach(z=>delete x[z]);x.fs=44;x.tc='#ffffff';x.btc='#10151f';x.pal=window.dscTpal?dscTpal().slice():dscPAL.slice()},true);
+    else if(k==='col')M(PALS.map(([n,f])=>({t:n+'   '+f().slice(0,5).map(()=>'\u25a0').join(''),fn:()=>edit(x=>{x.pal=f()},true)})));
+    else if(k==='sty')M([['flat','Flat'],['outline','Outline'],['grad','Gradient'],['shadow','Shadow']].map(([v,n])=>({t:mark((o.ss||'flat')===v,n),fn:()=>edit(x=>{if(v==='flat')delete x.ss;else x.ss=v},true)})));
+    else if(k==='shp')M([['round','Rounded rectangle'],['rect','Rectangle'],['pill','Pill'],['ellipse','Oval']].map(([v,n])=>({t:mark((o.bs2||'round')===v,n),fn:()=>edit(x=>{if(v==='round')delete x.bs2;else x.bs2=v},true)})));
+    else if(k==='c2s')toShapes();else if(k==='c2t')toText();
+  });
+  $i('smFs').onchange=e=>edit(o=>{o.fs=Math.max(12,+e.target.value||44)},true);
+  $i('smBt').oninput=e=>edit(o=>{o.btc=e.target.value},true);$i('smTc').oninput=e=>edit(o=>{o.tc=e.target.value},true);
+  $i('smW').onchange=e=>edit(o=>{o.w=Math.max(100,+e.target.value||100)},true);$i('smH').onchange=e=>edit(o=>{o.h=Math.max(100,+e.target.value||100)},true);
+  const hex=c=>/^#[0-9a-f]{6}$/i.test(c||'')?c:'#000000';
+  function syncSm(){
+    if(!E||!$i('hbSmt'))return;let L=[];try{L=D.sel()}catch(e){}
+    const on=L.length===1&&isSm(L[0]),tb=$i('tabSmt');if(tb)tb.classList.toggle('on',on);
+    if(H.dataset.tab==='smt'&&!on){const hb=$i('tabHome');if(hb)hb.click()}
+    $i('smPaneB').classList.toggle('on',!!E.smPane&&on);
+    if(!on){pane.classList.remove('on');return}
+    const o=L[0],af=id=>document.activeElement===$i(id);
+    const nm=(dscSmart.LAYOUTS.find(x=>x[0]===(o.ly||'list'))||[0,'Layout'])[1];$i('smLay').innerHTML=nm+' &#9662;';
+    if(!af('smFs'))$i('smFs').value=o.fs||40;$i('smBt').value=hex(o.btc||'#10151f');$i('smTc').value=hex(o.tc||'#ffffff');if(!af('smW'))$i('smW').value=Math.round(o.w);if(!af('smH'))$i('smH').value=Math.round(o.h);
+  }
+  const _su=sedUi;sedUi=function(){const r=_su.apply(this,arguments);try{syncSm();if(pane.classList.contains('on')!==!!(E&&E.smPane&&obj()))drawPane()}catch(e){}return r};
+  const _sp=sedPanel;sedPanel=function(){const r=_sp.apply(this,arguments);try{syncSm()}catch(e){}return r};
+  window.dscSmartUi={op,toShapes,toText,drawPane,syncSm};
 })();
 
 </script>
