@@ -32,8 +32,17 @@ function deliverFile(doc, f) {
 const linkListeners = new Map();
 ipcRenderer.on('link:ev', (_e, m) => { const f = m && linkListeners.get(m.id); if (f) f(m); });
 
+// Live mirror: the page hands each audience slide to the app, which relays it to other devices.
+let mirrorOn = false;
+ipcRenderer.on('mirror:state', (_e, v) => { mirrorOn = !!v; });
+ipcRenderer.invoke('mirror:status').then(v => { mirrorOn = !!v; }).catch(() => {});
+
 contextBridge.exposeInMainWorld('dscNative', {
   isDesktop: true,
+  mirror: {
+    isOn: () => mirrorOn,
+    publish: text => { if (mirrorOn) ipcRenderer.send('mirror:publish', String(text)); }
+  },
   link: {
     open: (id, url, cb) => {
       linkListeners.set(String(id), cb);

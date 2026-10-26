@@ -1346,8 +1346,32 @@ if(/^#stage/.test(location.hash)){
   o.addEventListener('click',()=>{try{document.documentElement.requestFullscreen()}catch(e){}});
   {const h=document.createElement('div');h.id='fsHint';h.textContent='Click once to go fullscreen';h.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#e8c766;font:13px system-ui,sans-serif;padding:6px 14px;border-radius:14px;z-index:99;pointer-events:none;transition:opacity .4s';document.body.appendChild(h);
    const hide=()=>{h.style.opacity='0';setTimeout(()=>h.remove(),500)};o.addEventListener('click',hide,{once:true});setTimeout(hide,7000)}
+}else if(/^#view/.test(location.hash)){
+  /* Mirror viewer: any device on the network. Same slide data the audience window gets, over /events instead of BroadcastChannel. */
+  document.body.className='out';
+  document.body.innerHTML='<div class="stage" id="o"></div>';
+  const o=$('#o');let lastP=null;
+  const isText=/mode=text/.test(location.hash);
+  const draw=()=>{const m=lastP;if(!m)return;
+    if(isText){o.style.cssText='position:fixed;inset:0;overflow:auto;box-sizing:border-box;padding:5vw;background:#111;color:#fff;white-space:pre-wrap;display:flex;flex-direction:column;justify-content:center;font:600 clamp(22px,6.5vw,44px)/1.4 system-ui,sans-serif';
+      o.textContent=(m.black||m.clear)?'':String(m.text||'');if(m.black)o.style.background='#000'}
+    else paint(o,applyLook(m,'a'))};
+  const ui=document.createElement('div');
+  ui.style.cssText='position:fixed;right:10px;bottom:10px;z-index:99;display:flex;gap:8px;align-items:center;font:12px system-ui,sans-serif;color:#e8c766;opacity:.45';
+  ui.innerHTML='<span id="vst">Connecting\u2026</span><button id="vtg" style="font:inherit;padding:4px 10px;border-radius:12px;border:1px solid #e8c766;background:#000;color:#e8c766"></button>';
+  document.body.appendChild(ui);
+  const tg=ui.querySelector('#vtg');tg.textContent=isText?'Full view':'Text only';
+  tg.onclick=()=>{location.hash=isText?'#view':'#view&mode=text';location.reload()};
+  const es=new EventSource('/events?code='+encodeURIComponent(new URLSearchParams(location.search).get('code')||''));
+  es.onopen=()=>{ui.querySelector('#vst').textContent='Live'};
+  es.onerror=()=>{ui.querySelector('#vst').textContent='Reconnecting\u2026'};
+  es.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}
+    if(!m||!m.d)return;m.u='';lastP=m;draw()};
 }
-if(/^#(output|stage|layout)/.test(location.hash)){throw new Error('Output/stage window: main app not started')}
+if(/^#(output|stage|layout|view)/.test(location.hash)){throw new Error('Output/stage window: main app not started')}
+/* Mirror: copy every slide the audience screens receive to other devices (desktop app, when sharing is on). */
+{const _bp=bc.postMessage;bc.postMessage=function(m){try{if(m&&m.d&&!m.tgt&&m.only!=='s'&&window.dscNative&&dscNative.mirror&&dscNative.mirror.isOn())dscNative.mirror.publish(JSON.stringify(m))}catch(e){}return _bp.apply(this,arguments)};
+ let was=false;setInterval(()=>{try{const on=!!(window.dscNative&&dscNative.mirror&&dscNative.mirror.isOn());if(on&&!was){was=true;push()}else if(!on)was=false}catch(e){}},2000)}
 
 /* ---------- state ---------- */
 const sample=`Verse 1
