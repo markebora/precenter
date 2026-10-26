@@ -52,7 +52,6 @@ get a fresh copy.
 | `singleInstance` | A second launch brings the first window forward (and opens a file you double-clicked). |
 | `devTools` | Allows F12 developer tools. Leave off for church use. |
 | `ndi` | See "Turning on NDI". |
-| `mirror` | `autoStart` (default true): starts the live view for other devices every time the app opens; set `false` to share only when you choose File > Share live view. Links are in File > Share live view, and in `mirror-links.txt` in the data folder. The code stays the same between runs (file `mirror-code.txt`). |
 
 Logs are in `%APPDATA%\Disciples PreCenter\logs\main.log`.
 

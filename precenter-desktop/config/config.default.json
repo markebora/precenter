@@ -67,10 +67,5 @@
   "devTools": false,
  
   // NDI video output. Needs the NDI add-on described in README.md. Off by default.
-  "ndi": { "enabled": false },
-
-  // Live view for other devices on the same network (File > Share live view to other devices).
-  // true (default) = sharing starts by itself every time the app opens, so saved links always work.
-  // Set false if you do not want the app to open a port on your network.
-  "mirror": { "autoStart": true }
+  "ndi": { "enabled": false }
 }

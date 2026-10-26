@@ -1346,39 +1346,8 @@ if(/^#stage/.test(location.hash)){
   o.addEventListener('click',()=>{try{document.documentElement.requestFullscreen()}catch(e){}});
   {const h=document.createElement('div');h.id='fsHint';h.textContent='Click once to go fullscreen';h.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#e8c766;font:13px system-ui,sans-serif;padding:6px 14px;border-radius:14px;z-index:99;pointer-events:none;transition:opacity .4s';document.body.appendChild(h);
    const hide=()=>{h.style.opacity='0';setTimeout(()=>h.remove(),500)};o.addEventListener('click',hide,{once:true});setTimeout(hide,7000)}
-}else if(/^#view/.test(location.hash)){
-  /* Mirror viewer: any device on the network. Same slide data the audience window gets, over /events instead of BroadcastChannel. */
-  document.body.className='out';
-  document.body.innerHTML='<div class="stage" id="o"></div>';
-  const o=$('#o');let lastP=null;
-  const isText=/mode=text/.test(location.hash);
-  const draw=()=>{const m=lastP;if(!m)return;
-    if(isText){o.style.cssText='position:fixed;inset:0;overflow:auto;box-sizing:border-box;padding:5vw;background:#111;color:#fff;white-space:pre-wrap;display:flex;flex-direction:column;justify-content:center;font:600 clamp(22px,6.5vw,44px)/1.4 system-ui,sans-serif';
-      o.textContent=(m.black||m.clear)?'':String(m.text||'');if(m.black)o.style.background='#000'}
-    else paint(o,applyLook(m,'a'))};
-  const ui=document.createElement('div');
-  ui.style.cssText='position:fixed;right:10px;bottom:10px;z-index:99;display:flex;gap:8px;align-items:center;font:12px system-ui,sans-serif;color:#e8c766;opacity:.45';
-  ui.innerHTML='<span id="vst">Connecting\u2026</span><button id="vtg" style="font:inherit;padding:4px 10px;border-radius:12px;border:1px solid #e8c766;background:#000;color:#e8c766"></button>';
-  document.body.appendChild(ui);
-  const tg=ui.querySelector('#vtg');tg.textContent=isText?'Full view':'Text only';
-  tg.onclick=()=>{location.hash=isText?'#view':'#view&mode=text';location.reload()};
-  const es=new EventSource('/events?code='+encodeURIComponent(new URLSearchParams(location.search).get('code')||''));
-  es.onopen=()=>{ui.querySelector('#vst').textContent='Live'};
-  es.onerror=()=>{ui.querySelector('#vst').textContent='Reconnecting\u2026'};
-  const code=new URLSearchParams(location.search).get('code')||'';
-  /* Library media comes from the sharing computer: any file name maps to /blob/<name>. */
-  const libO=window.__libO=new Proxy({},{get:(t,k)=>typeof k==='string'?'/blob/'+encodeURIComponent(k)+'?code='+encodeURIComponent(code):undefined});
-  es.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}
-    if(!m||!m.d)return;m.u=m.d.lib?libO[m.d.lib]:'';lastP=m;draw()};
 }
-if(/^#(output|stage|layout|view)/.test(location.hash)){throw new Error('Output/stage window: main app not started')}
-/* Mirror: copy every slide the audience screens receive to other devices (desktop app, when sharing is on). */
-{const _bp=bc.postMessage,up={};let q=Promise.resolve();
- const need=m=>{const a=[];try{if(m.d&&m.d.lib)a.push(m.d.lib);(m.d&&m.d.lay||[]).forEach(x=>{if(x&&x.lib)a.push(x.lib)});if(m.mc&&m.mc.name)a.push(m.mc.name)}catch(e){}return a};
- /* Slides go out in order: first any library file the slide uses (once per file), then the slide itself. */
- bc.postMessage=function(m){try{if(m&&m.d&&!m.tgt&&m.only!=='s'&&window.dscNative&&dscNative.mirror&&dscNative.mirror.isOn()){const s=JSON.stringify(m),names=need(m);
-   q=q.then(async()=>{for(const n of names){const f=libFile[n];if(!f)continue;const k=f.size+':'+f.lastModified;if(up[n]===k)continue;up[n]=k;try{dscNative.mirror.blob(n,f.type||'',await f.arrayBuffer())}catch(e){delete up[n]}}dscNative.mirror.publish(s)}).catch(()=>{})}}catch(e){}return _bp.apply(this,arguments)};
- let was=false;setInterval(()=>{try{const on=!!(window.dscNative&&dscNative.mirror&&dscNative.mirror.isOn());if(on&&!was){was=true;for(const k in up)delete up[k];push()}else if(!on){was=false;for(const k in up)delete up[k]}}catch(e){}},2000)}
+if(/^#(output|stage|layout)/.test(location.hash)){throw new Error('Output/stage window: main app not started')}
 
 /* ---------- state ---------- */
 const sample=`Verse 1
@@ -5196,7 +5165,7 @@ const info=(title,rows)=>{
   w.onclick=x;document.addEventListener('keydown',k,true);w.appendChild(b);document.body.appendChild(w)};
 const setView=v=>()=>{gview=v;try{localStorage.setItem('lp-view',v)}catch(e){}drawGrid()};
 const MENUS=window.dscMENUS={
- File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')},...(window.dscNative&&dscNative.mirror?[{sep:1},{t:'Share live view to other devices\u2026',fn:()=>dscNative.mirror.share()}]:[])],
+ File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  'Slide Show':()=>window.dscShowMenu?dscShowMenu():[],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
