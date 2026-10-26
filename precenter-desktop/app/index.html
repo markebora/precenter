@@ -4621,7 +4621,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   start();
 })();
 
-const DSC_VERSION='1.0.16',DSC_RELEASED='October 2026';
+const DSC_VERSION='1.0.17',DSC_RELEASED='October 2026';
 window.DSC_VERSION=DSC_VERSION;
 /* Profile: account, settings, screens, shortcuts, credits */
 (function dscProfile(){
@@ -13690,6 +13690,201 @@ window.dscDesign={applyDesign,TH,variantPatch};
   };
   /* the menu is closed by any other path (item picked, Esc, click elsewhere): forget the owner */
   document.addEventListener('click',function(){if(typeof cmEl==='undefined'||!cmEl)owner=null});
+})();
+</script>
+<style id="ribbonCompact">
+/* ===== Compact ribbon (PowerPoint style): one slim tab bar + one short categorized strip ===== */
+#sed.rbn .sedtop{position:absolute;top:34px;left:330px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;padding:0;border:0}
+#sed.rbn #sedHome{padding:0;max-height:none;overflow:visible;background:var(--panel);border-bottom:1px solid var(--line);font-size:11px;flex:none}
+/* tab bar: title, tabs, actions in one row */
+#sed.rbn #sedHome .hm{display:flex;align-items:center;gap:6px;height:34px;margin:0;padding:0 8px 0 12px;border-bottom:1px solid var(--line)}
+#sed.rbn #sedHome .hmTitle{flex:none;max-width:210px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:10px;border-right:1px solid var(--line);line-height:20px}
+#sed.rbn #sedHome .hmt{display:flex;align-items:stretch;align-self:stretch;min-width:0;flex:0 1 auto;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+#sed.rbn #sedHome .hmt::-webkit-scrollbar{display:none}
+#sed.rbn #sedHome .hmt>button{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;padding:0 10px;min-height:0;height:100%;font-size:12px;color:var(--mute);white-space:nowrap;flex:none;box-shadow:none}
+#sed.rbn #sedHome .hmt>button:hover{color:var(--ink);background:var(--chip)}
+#sed.rbn #sedHome .hmt>button.on{background:transparent;color:var(--ink);font-weight:700;border-bottom-color:var(--acc)}
+#sed.rbn #sedHome .hmt>button.ctx{color:var(--accT)}
+#sed.rbn #sedHome .hmt>button.ctx.on{color:var(--accT);border-bottom-color:var(--acc)}
+#sed.rbn #sedHome #hmTog{background:transparent;border:0;min-height:0;height:24px;padding:0 6px;color:var(--mute);flex:none}
+#sed.rbn #sedHome #hmInfo{flex:0 1 auto;min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accT)}
+#sed.rbn #sedHome .hmr{margin-left:auto;display:flex;align-items:center;gap:3px;flex:none}
+#sed.rbn #sedHome .hmr button{min-height:0;height:24px;padding:0 9px;font-size:11px;white-space:nowrap}
+#sed.rbn #sedHome .hmr button[data-a]{background:transparent;border-color:transparent;padding:0 7px}
+#sed.rbn #sedHome .hmr button[data-a]:hover{background:var(--chip);border-color:var(--line)}
+#sed.rbn #sedHome .hmr .sedvs{height:16px;align-self:center;margin:0 3px}
+/* ribbon strip */
+#sed.rbn #sedHome .hbody{flex-wrap:nowrap;gap:0;padding:4px 6px 2px;height:92px;align-items:stretch;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+#sed.rbn #sedHome .hbody::-webkit-scrollbar{height:6px}
+#sed.rbn #sedHome .hg{flex:none;display:flex;flex-direction:column;justify-content:space-between;gap:0;padding:0 8px;border-right:1px solid var(--line);min-width:0}
+#sed.rbn #sedHome .hg:last-child{border-right:0}
+#sed.rbn #sedHome .hg>small{order:9;display:block;margin:0;padding:1px 0 0;text-align:center;font-size:10px;line-height:13px;letter-spacing:0;text-transform:none;color:var(--mute);white-space:nowrap}
+#sed.rbn #sedHome .gb{flex:1;min-height:0;display:flex;align-items:stretch;gap:4px}
+#sed.rbn #sedHome .gbig{display:flex;align-items:stretch;gap:1px}
+#sed.rbn #sedHome .gst{display:flex;flex-direction:column;justify-content:center;gap:3px}
+#sed.rbn #sedHome .ggrid{display:grid;grid-auto-flow:column;align-content:center;gap:2px 2px}
+#sed.rbn #sedHome .hr{display:flex;flex-wrap:nowrap;align-items:center;gap:2px}
+/* controls: flat, 22px */
+#sed.rbn #sedHome .hg button,#sed.rbn #sedHome .hg select,#sed.rbn #sedHome .hg input[type=number]{min-height:22px;height:22px;padding:0 6px;font-size:11px;line-height:1;border-radius:4px}
+#sed.rbn #sedHome .hg button{background:transparent;border:1px solid transparent;color:var(--ink);white-space:nowrap;box-shadow:none}
+#sed.rbn #sedHome .hg button:hover{background:var(--chip);border-color:var(--line)}
+#sed.rbn #sedHome .hg button.on{background:var(--glow);border-color:var(--acc);color:var(--ink)}
+#sed.rbn #sedHome .hg select,#sed.rbn #sedHome .hg input[type=number]{background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+#sed.rbn #sedHome .hg input[type=color]{width:24px;height:22px;border-radius:4px}
+#sed.rbn #sedHome .hc{font-size:11px;gap:4px}
+/* big icon-over-label buttons */
+#sed.rbn #sedHome .hg button.big{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;height:auto;min-height:0;align-self:stretch;min-width:48px;max-width:78px;padding:4px 5px 2px;white-space:normal;text-align:center;line-height:1.1;font-size:11px}
+#sed.rbn #sedHome .hg button.big::before{content:'';flex:none;width:28px;height:28px;background:currentColor;opacity:.9;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+#sed.rbn #sedHome .hg button.big:hover::before{background:var(--accT)}
+/* dialogs the ribbon opens keep their normal look; side panel gets tighter */
+#sed.rbn #sedSide{width:268px}
+#sed.rbn #sedSide .tabs button{padding:5px 8px;font-size:11px}
+#sed.rbn #sedPanel{padding:8px;gap:6px;font-size:11px}
+#sed.rbn #sedPanel input,#sed.rbn #sedPanel select{font-size:11px}
+#sed.rbn #sedPanel input:not([type=checkbox]):not([type=color]):not([type=range]),#sed.rbn #sedPanel select{min-height:24px;padding:2px 6px}
+#sed.rbn #sedFilm{width:112px}
+#sed.rbn #sedWrap{padding:12px}
+/* tighter fixed-width controls so more of each tab fits without scrolling */
+#sed.rbn #sedHome #hFont{width:104px!important}
+#sed.rbn #sedHome #hSize{width:44px!important}
+#sed.rbn #sedHome #hLH{width:56px!important}
+#sed.rbn #sedHome #hCols{width:66px!important}
+#sed.rbn #sedHome #hDir{width:58px!important}
+#sed.rbn #sedHome #hPb,#sed.rbn #sedHome #hPa{width:44px!important}
+#sed.rbn #sedHome .hg{padding:0 6px}
+#sed.rbn #sedHome .hg button{padding:0 5px}
+</style>
+<script>
+/* ===== Compact ribbon: re-groups the existing ribbon into big icon buttons + small grids, merges the old toolbar into the tab bar ===== */
+(function(){
+  const SED=document.getElementById('sed'),H=document.getElementById('sedHome');
+  if(!SED||!H)return;
+  const hm=H.querySelector('.hm');if(!hm)return;
+  const I={
+    clip:'M9 4h6v3H9z M7 5.5H6a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1h-1',
+    newslide:'M3 5h14v11H3z M19 13v7 M15.5 16.5h7',
+    layout:'M4 5h16v14H4z M4 10h16 M10 10v9',
+    shapes:'M3 20h9v-8H3z M17 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
+    arrange:'M12 3l9 5-9 5-9-5z M3 13l9 5 9-5',
+    brush:'M4 20c3 0 4-1 4-3a2 2 0 0 1 4 0c0 3-3 3-8 3z M11 14L20 4',
+    selpane:'M4 5h16v14H4z M9 5v14 M12 9h5 M12 13h5',
+    textbox:'M4 5h16v14H4z M8 9h8 M12 9v7',
+    wordart:'M5 19L12 4l7 15 M8 14h8',
+    omega:'M6 19h4v-2a6 6 0 1 1 4 0v2h4',
+    pi:'M5 8h14 M9 8v11 M15 8v8a3 3 0 0 0 3 3',
+    image:'M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4 M15 9.5h.01',
+    star:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+    smartart:'M9 3h6v5H9z M3 16h6v5H3z M15 16h6v5h-6z M12 8v4 M6 16v-4h12v4',
+    chart:'M4 20V4 M4 20h16 M8 16v-5 M12 16V8 M16 16v-3',
+    table:'M3 5h18v14H3z M3 10h18 M3 15h18 M9 5v14 M15 5v14',
+    hf:'M4 4h16v16H4z M4 8h16 M4 16h16',
+    cal:'M4 6h16v14H4z M4 11h16 M8 3v4 M16 3v4',
+    video:'M3 6h14v12H3z M17 10l4-2v8l-4-2',
+    audio:'M4 10v4h4l5 4V6L8 10z M16 9a4 4 0 0 1 0 6',
+    rec:'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+    palette:'M12 3a9 9 0 1 0 0 18c1.500 0 2-1 1.500-2-.500-1 0-2 1.500-2H17a4 4 0 0 0 4-4c0-5-4-10-9-10z M7.500 11h.01 M10 7h.01 M15 7h.01',
+    swatch:'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
+    bulb:'M9 18h6 M10 21h4 M12 3a6 6 0 0 0-4 10.500c.800.800 1 1.500 1 2.500h6c0-1 .200-1.700 1-2.500A6 6 0 0 0 12 3z',
+    resize:'M4 4h6 M4 4v6 M20 20h-6 M20 20v-6 M4 4l16 16',
+    bucket:'M5 11l7-7 7 7-7 7z M19 15c1 1.500 1.500 2.500 1.500 3.500a1.500 1.500 0 0 1-3 0c0-1 .500-2 1.500-3.500z',
+    play:'M7 4l13 8-13 8z',
+    playfrom:'M4 4v16 M9 4l11 8-11 8z',
+    list:'M9 6h11 M9 12h11 M9 18h11 M4 6h.01 M4 12h.01 M4 18h.01',
+    gear:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M19 5l-2 2 M7 17l-2 2',
+    clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2',
+    monitor:'M3 4h18v12H3z M8 20h8 M12 16v4',
+    slides:'M3 4h14v10H3z M7 18h14V8',
+    abc:'M4 15l3-8 3 8 M5 13h4 M13 15l2.500 2.500L21 11',
+    book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M5 17a3 3 0 0 1 3-3h11',
+    access:'M10 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M3 20a7 7 0 0 1 14 0 M16 15l2 2 4-4',
+    translate:'M4 5h9 M8 3v2 M6 5c0 4 3 7 6 8 M12 5c0 4-3 7-7 8 M13 20l4-9 4 9 M14.500 17h5',
+    globe:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18',
+    normal:'M3 5h18v14H3z M9 5v14',
+    outline:'M4 6h16 M8 12h12 M8 18h12 M4 12h.01 M4 18h.01',
+    notes:'M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h5',
+    read:'M12 6c-2-2-5-2-8-2v14c3 0 6 0 8 2 2-2 5-2 8-2V4c-3 0-6 0-8 2z M12 6v14',
+    master:'M4 4h16v9H4z M4 17h6v3H4z M14 17h6v3h-6z',
+    zoom:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l5 5 M8 11h6 M11 8v6',
+    fit:'M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5'
+  };
+  const MAP={
+    'paste':'clip','new slide':'newslide','layout':'layout','shapes':'shapes','arrange':'arrange','quick styles':'brush','selection pane':'selpane',
+    'text box':'textbox','wordart':'wordart','ω symbol':'omega','π equation':'pi','pictures':'image','icons':'star','smartart':'smartart','chart':'chart','table':'table',
+    'date & slide no.':'cal','header & footer':'hf','video & web':'video','audio':'audio','record screen':'rec',
+    'themes':'palette','variants':'swatch','design ideas':'bulb','slide size':'resize','format background':'bucket',
+    'preview':'play','add animation':'star','animation pane':'list',
+    'from beginning':'playfrom','from current slide':'play','custom slide show':'slides','set up slide show':'gear','rehearse timings':'clock','record slide show':'rec','presenter view':'monitor','monitors':'monitor',
+    'spelling':'abc','thesaurus':'book','check accessibility':'access','translate':'translate','language settings':'globe',
+    'normal':'normal','outline view':'outline','slide sorter':'swatch','notes page':'notes','reading view':'read','slide show view':'play',
+    'slide master':'master','handout master':'master','notes master':'notes','zoom':'zoom','fit slide to window':'fit'
+  };
+  const URI=d=>'url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>')+'")';
+  const key=b=>b.textContent.replace(/[▾▼…]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+  const iconOf=b=>b.tagName==='BUTTON'&&!b.classList.contains('big')&&MAP[key(b)]?I[MAP[key(b)]]:null;
+
+  /* 1. one bar: title | tabs | info ... undo redo | apply reset | cancel done */
+  SED.classList.add('rbn');
+  const title=document.getElementById('sedT');
+  const tabs=document.createElement('div');tabs.className='hmt';
+  [...hm.children].filter(e=>e.id&&/^tab/.test(e.id)).forEach(b=>tabs.appendChild(b));
+  hm.insertBefore(tabs,hm.firstChild);
+  if(title){title.classList.add('hmTitle');hm.insertBefore(title,tabs)}
+  const R=document.createElement('div');R.className='hmr';
+  const grab=s=>SED.querySelector(s);
+  const und=grab('[data-a=undo]'),red=grab('[data-a=redo]');
+  if(und){und.textContent='↶ Undo';und.title='Undo (Ctrl+Z)';R.appendChild(und)}
+  if(red){red.textContent='↷ Redo';red.title='Redo (Ctrl+Y)';R.appendChild(red)}
+  const sep=()=>{const s=document.createElement('span');s.className='sedvs';return s};
+  R.appendChild(sep());
+  const all=document.getElementById('sedAll'),rst=document.getElementById('sedReset'),can=document.getElementById('sedCancel'),don=document.getElementById('sedDone');
+  if(all){all.textContent='Apply to all';R.appendChild(all)}
+  if(rst){R.appendChild(rst)}
+  R.appendChild(sep());
+  if(can)R.appendChild(can);if(don)R.appendChild(don);
+  hm.appendChild(R);
+
+  /* 2. bring the useful old-toolbar buttons into their ribbon groups (same elements, so their handlers stay) */
+  function groupByLabel(bodyId,label){const b=document.getElementById(bodyId);return b&&[...b.querySelectorAll(':scope>.hg')].find(g=>{const s=g.querySelector(':scope>small');return s&&s.textContent.trim()===label})}
+  const slides=groupByLabel('hbHome','Slides'),clip=groupByLabel('hbHome','Clipboard');
+  const addTo=(g,sel,txt)=>{const b=grab(sel);if(!g||!b)return;if(txt)b.textContent=txt;const r=g.querySelector(':scope>.hr:last-of-type')||g.querySelector('.hr');r.appendChild(b)};
+  addTo(slides,'[data-a=dupSlide]','Duplicate slide');addTo(slides,'[data-a=delSlide]','Delete slide');addTo(slides,'[data-a=master]','Master ▾');addTo(slides,'[data-a=copyDesign]','Copy design to…');
+  addTo(clip,'[data-a=del]','Delete');
+
+  /* 3. pack every group: big icon buttons first, the rest in a compact grid */
+  function pack(g){
+    if(g.dataset.pk)return;g.dataset.pk='1';
+    const rows=[...g.querySelectorAll(':scope>.hr')];if(!rows.length)return;
+    const kids=r=>[...r.children];
+    const isBig=e=>!!iconOf(e);
+    const bigRows=rows.filter(r=>r.children.length&&kids(r).every(isBig));
+    let bigItems=bigRows.flatMap(kids);
+    let other=rows.filter(r=>!bigRows.includes(r));
+    let restItems=null;
+    if(bigItems.length>6){bigItems=[];other=rows}
+    if(!bigItems.length&&rows.length===1){
+      const k=kids(rows[0]),lead=[];
+      for(const e of k){if(isBig(e)&&lead.length<3)lead.push(e);else break}
+      if(lead.length&&lead.length<k.length){bigItems=lead;restItems=k.slice(lead.length);other=[]}
+    }
+    const gb=document.createElement('div');gb.className='gb';
+    if(bigItems.length){
+      const bb=document.createElement('div');bb.className='gbig';
+      bigItems.forEach(b=>{if(b.childNodes.length===1&&b.firstChild.nodeType===3)b.firstChild.nodeValue=b.firstChild.nodeValue.replace(/ \u25be$/,'\u00a0\u25be');b.classList.add('big');b.style.setProperty('--ic',URI(I[MAP[key(b)]]));bb.appendChild(b)});
+      gb.appendChild(bb);
+    }
+    const grid=items=>{const n=items.length;if(!n)return;const d=document.createElement('div');d.className='ggrid';const R=n>6?3:(n>2?2:n);d.style.gridTemplateRows='repeat('+R+',22px)';items.forEach(e=>d.appendChild(e));gb.appendChild(d)};
+    if(restItems)grid(restItems);
+    else if(other.length===1)grid(kids(other[0]));
+    else if(other.length>1){const st=document.createElement('div');st.className='gst';other.forEach(r=>st.appendChild(r));gb.appendChild(st)}
+    rows.forEach(r=>{if(!r.children.length)r.remove()});
+    g.insertBefore(gb,g.firstChild);
+  }
+  const packAll=()=>H.querySelectorAll('.hbody>.hg').forEach(pack);
+  packAll();
+  /* mouse wheel scrolls the ribbon sideways when a tab is wider than the window */
+  H.addEventListener('wheel',e=>{const b=e.target.closest&&e.target.closest('.hbody');if(!b||b.scrollWidth<=b.clientWidth||e.target.closest('select'))return;b.scrollLeft+=e.deltaY||e.deltaX;e.preventDefault()},{passive:false});
+  /* groups added later by other parts of the editor get the same treatment */
+  try{new MutationObserver(()=>packAll()).observe(H,{childList:true,subtree:true})}catch(e){}
 })();
 </script>
 </body>
