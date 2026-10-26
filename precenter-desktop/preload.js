@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('dscNative', {
   isDesktop: true,
   mirror: {
     isOn: () => mirrorOn,
+    share: () => ipcRenderer.send('mirror:share'),
     publish: text => { if (mirrorOn) ipcRenderer.send('mirror:publish', String(text)); },
     blob: (name, type, data) => { if (mirrorOn) ipcRenderer.send('mirror:blob', String(name), String(type || ''), data); }
   },

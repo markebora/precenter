@@ -372,6 +372,7 @@ function setupIpc() {
   linkBridge.create(ipcMain);
   ipcMain.on('mirror:publish', (_e, text) => { if (mirrorSrv) mirrorSrv.publish(text); });
   ipcMain.on('mirror:blob', (_e, name, type, data) => { if (mirrorSrv && !mirrorSrv.putBlob(name, type, data)) log.warn('mirror: a media file was too big or not accepted: ' + String(name).slice(0, 80)); });
+  ipcMain.on('mirror:share', () => { shareMirror(); });
   ipcMain.handle('mirror:status', () => !!mirrorSrv);
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(), configPath: cfgResult.path, dataPath: app.getPath('userData'),
