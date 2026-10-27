@@ -1898,7 +1898,7 @@ function showMenu(x,y,items){
 }
 const ITEMDEF={song:['New song',''],announce:['Announcements','Announcements\n\nWelcome to church\n\nThis week'],countdown:['Countdown','Service starts in'],present:['Sermon','Sermon title\n\nPoint 1\n\nPoint 2\n\nPoint 3']};
 /* ---------- PowerPoint (.pptx) renderer: draws every slide to an image ---------- */
-async function renderPptx(file,prog){
+async function renderPptx(file,prog,opt){
   if(typeof JSZip==='undefined')throw new Error('JSZip is not loaded. Connect to the internet once and reload the page.');
   const z=await JSZip.loadAsync(await file.arrayBuffer()),dp=new DOMParser();
   const NS_R='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -2323,23 +2323,41 @@ async function renderPptx(file,prog){
     drawTree(g,P(sx,'cSld','spTree'),{...base,part:'slide'},T);
     return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
   }
-  const out=[];let hidden=0;
+  const out=[],texts=[],notes=[];let hidden=0;
+  const paras=root=>{const o=[];const walk=e=>{if(!e)return;for(const c of L(e)){const tb=(c.localName==='sp'||c.localName==='tc')?F(c,'txBody'):null;
+      if(tb){const ph=c.localName==='sp'?P(c,'nvSpPr','nvPr','ph'):null,pt=ph?(ph.getAttribute('type')||'body'):'';
+        L(tb,'p').forEach(pp=>{let t='';const rd=n=>{for(const k of L(n)){if(k.localName==='r'||k.localName==='fld'){const tt=F(k,'t');if(tt)t+=tt.textContent}else if(k.localName==='br')t+='\n'}};rd(pp);t=t.trim();if(t)o.push({t,ph:pt})})}
+      else walk(c)}};walk(root);return o};
   for(let i=0;i<slideIds.length;i++){
     const sx=await getX(slideIds[i]);
     if(sx&&sx.getAttribute('show')==='0'){hidden++;continue}
+    {let tx='',nt='';try{const rl=await getRels(slideIds[i]);
+      tx=paras(P(sx,'cSld','spTree')).filter(q=>!/^(sldNum|dt|ftr)$/.test(q.ph)).map(q=>q.t).join('\n');
+      const nr=relByType(rl,/notesSlide$/);if(nr&&nr.path){const nx=await getX(nr.path);nt=paras(nx).filter(q=>q.ph==='body').map(q=>q.t).join('\n')}}catch(e){}
+      texts.push(tx);notes.push(nt)}
+    if(opt&&opt.textOnly)continue;
     if(prog)prog(i+1,slideIds.length);
     await new Promise(r=>setTimeout(r,0));
     const blob=await renderSlide(slideIds[i],i+1);
     out.push(new File([blob],'Slide'+String(i+1).padStart(3,'0')+'.png',{type:'image/png'}));
   }
-  return{files:out,hidden,ratio:W+'x'+H};
+  return{files:out,hidden,ratio:W+'x'+H,texts,notes};
 }
-async function importPptxFile(f,sec){
+async function importPptxFile(f,sec,mode){
   const name=f.name.replace(/\.pptx$/i,'');
+  if(!mode)mode=confirm('Import "'+name+'" as pictures?\n\nOK = pictures that look exactly like the PowerPoint. Its text and speaker notes are saved in each slide note.\nCancel = editable text only (no pictures), which you can change here.')?'pic':'txt';
   try{
-    const r=await renderPptx(f,(i,n)=>toast('Drawing slide '+i+' of '+n+'\u2026'));
+    const r=await renderPptx(f,(i,n)=>toast('Drawing slide '+i+' of '+n+'\u2026'),{textOnly:mode==='txt'});
+    if(mode==='txt'){
+      if(!r.texts.length){toast('No visible slides were found in that file.');return false}
+      const lyr=r.texts.map(t=>t.trim()?t:'\u200b').join('\n\n'),nt={};
+      r.notes.forEach((n,i)=>{if(n.trim())nt[i]={n:n.trim()}});
+      addSec=sec||'Presentation';addItem(name,lyr,{type:'present',nt});
+      toast(r.texts.length+' slides added as editable text'+(r.hidden?' ('+r.hidden+' hidden skipped)':'')+'. Pictures, shapes and fonts from PowerPoint are not included.');
+      return true;
+    }
     if(!r.files.length){toast('No visible slides were found in that file.');return false}
-    makeDeck(r.files,name,sec);
+    makeDeck(r.files,name,sec,r.texts,r.notes);
     toast(r.files.length+' slides added'+(r.hidden?' ('+r.hidden+' hidden slide'+(r.hidden>1?'s':'')+' skipped)':'')+'. Check them before service.');
     return true;
   }catch(e){console.error(e);toast(/zip|central directory|signature/i.test(String(e&&e.message))?'That is not a .pptx file. Older .ppt files: open them in PowerPoint and Save As .pptx first.':'Could not open that PowerPoint file: '+(e&&e.message||e));return false}
@@ -2360,7 +2378,7 @@ function importPptxSlides(sec){
   inp.click();
 }
 
-function makeDeck(files,name,sec){
+function makeDeck(files,name,sec,texts,notes){
   files=[...files].filter(f=>/\.(jpe?g|png|webp|gif|avif)$/i.test(f.name)).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
   if(!files.length)return 0;
   let deck=name.replace(/[\/\\]/g,'-'),k=2;
@@ -2368,7 +2386,8 @@ function makeDeck(files,name,sec){
   const ov={};
   files.forEach((f,i)=>{const n=deck+'/'+f.name;lib[n]=URL.createObjectURL(f);libFile[n]=f;libList.push({name:n,type:'image',deck:true});ov[i]={bg:'Image',lib:n,img:'',fit:'contain'}});
   addSec=sec||'Presentation';
-  addItem(name,files.map(()=>'\u200b').join('\n\n'),{type:'present',ov,deck:true});
+  const nt={};files.forEach((_,i)=>{const t=((texts||[])[i]||'').trim(),n=((notes||[])[i]||'').trim(),v=(t?'SLIDE TEXT\n'+t:'')+(t&&n?'\n\n':'')+(n?'SPEAKER NOTES\n'+n:'');if(v)nt[i]={n:v}});
+  addItem(name,files.map(()=>'\u200b').join('\n\n'),{type:'present',ov,deck:true,nt});
   setMode('show');drawTray();
   return files.length;
 }
