@@ -3263,7 +3263,7 @@ function sedAct(a){
   else if(a==='addRect'){E.tab='S';add({t:'rect',x:660,y:340,w:600,h:400,fill:'#e8b923',rad:0});sedPanel()}
   else if(a==='addEll'){E.tab='S';add({t:'ellipse',x:660,y:340,w:600,h:400,fill:'#e8b923'});sedPanel()}
   else if(a==='addImg'){E.repl=false;$('#sedFile').click()}
-  else if(a==='layout'){const r=(document.querySelector('#sed [data-h=lay]')||document.querySelector('#sedBox')).getBoundingClientRect();showMenu(r.left,r.bottom+2,[{t:'Full text',fn:()=>sedLayout('full')},{t:'Title at top',fn:()=>sedLayout('title')},{t:'Lower third (over video)',fn:()=>sedLayout('lower')},{sep:1},{t:'Text left, picture right\u2026',fn:()=>sedLayout('picR')},{t:'Picture left, text right\u2026',fn:()=>sedLayout('picL')},{sep:1},{t:'Blank (no text)',fn:()=>sedLayout('blank')}])}else if(a==='addSlide')sedSlide('add');else if(a==='dupSlide')sedSlide('dup');else if(a==='delSlide')sedSlide('del');else if(a==='undo')sedUndo();else if(a==='redo')sedRedo();
+  else if(a==='layout'){const lb=document.querySelector('#sed [data-h=lay]'),r=((lb&&lb.offsetWidth)?lb:document.querySelector('#sedBox')).getBoundingClientRect();showMenu(r.left,r.bottom+2,[{t:'Full text',fn:()=>sedLayout('full')},{t:'Title at top',fn:()=>sedLayout('title')},{t:'Lower third (over video)',fn:()=>sedLayout('lower')},{sep:1},{t:'Text left, picture right\u2026',fn:()=>sedLayout('picR')},{t:'Picture left, text right\u2026',fn:()=>sedLayout('picL')},{sep:1},{t:'Blank (no text)',fn:()=>sedLayout('blank')}])}else if(a==='addSlide')sedSlide('add');else if(a==='dupSlide')sedSlide('dup');else if(a==='delSlide')sedSlide('del');else if(a==='undo')sedUndo();else if(a==='redo')sedRedo();
   else if(!o)return;
   else if(a==='dup'){sedSnap();const n={...JSON.parse(JSON.stringify(o)),id:uid(),linked:false,x:o.x+40,y:o.y+40};if(o.linked&&o.t==='text')n.text=E.text;E.objs.push(n);E.sel=n.id;sedRender();sedPanel()}
   else if(a==='del'){sedSnap();E.objs=E.objs.filter(x=>!msel().includes(x.id));E.sel=null;sedRender();sedPanel()}
@@ -6310,7 +6310,7 @@ async function camItems(){
   const r=[mk('','Default video input')];devs.forEach((d,i)=>{if(d.deviceId)r.push(mk(d.deviceId,d.label||('Video input '+(i+1))))});return r;
 }
 if(b)b.onclick=async e=>{
-  e.stopPropagation();if(!E)return;const r=b.getBoundingClientRect(),cams=await camItems();
+  e.stopPropagation();if(!E)return;const r=(e.anchor||b).getBoundingClientRect(),cams=await camItems();
   const bin=(libList||[]).filter(x=>x.type==='video').slice(0,12).map(x=>({t:x.name.split('/').pop(),fn:()=>{E.tab='S';add({t:'video',lib:x.name,x:480,y:270,w:960,h:540,fit:'cover',loop:true,mute:false})}}));
   showMenu(r.left,r.bottom+2,[
     {t:'Text',sub:[
@@ -11019,7 +11019,7 @@ const IA={
   table:ev=>menuAt(ev,[[2,2],[3,2],[3,3],[4,3],[4,4],[5,3],[6,4]].map(([r,c])=>({t:r+' rows × '+c+' columns',fn:()=>addTable(r,c)})).concat([{sep:1},{t:'Custom size…',fn:()=>D.ask('Rows x columns (for example 5x4)','4x3',v=>{const m=/^(\d+)\s*[x×,]\s*(\d+)$/i.exec(v);if(m)addTable(Math.min(20,+m[1]),Math.min(10,+m[2]));else D.info('Type it like 5x4.')})}])),
   date:ev=>menuAt(ev,[{t:'Date (updates automatically)',fn:()=>insertTok('{date}')},{t:'Time (updates automatically)',fn:()=>insertTok('{time}')},{t:'Slide number',fn:()=>insertTok('{slide}')},{t:'Slide number of total',fn:()=>insertTok('{slide} / {total}')},{t:'Item title',fn:()=>insertTok('{title}')},{sep:1},{t:'Today’s date as fixed text',fn:()=>insertText(TOK.date())}]),
   foot:footerDlg,
-  vid:()=>{const b=document.querySelector('#sed [data-ins]');if(b)b.click()},
+  vid:ev=>{const b=document.querySelector('#sed [data-ins]');if(b&&b.onclick)b.onclick({stopPropagation(){},anchor:ev&&ev.currentTarget})},
   aud:ev=>menuAt(ev,[{t:'Audio from file…',fn:audioFile},{t:'Record audio…',fn:()=>record('audio')}]),
   scr:()=>record('screen')
 };
