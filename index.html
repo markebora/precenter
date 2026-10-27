@@ -617,7 +617,7 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
       </div>
       <div id="clrRow" role="toolbar" aria-label="Clear layers"><span class="cl">CLEAR</span><button data-c="all" title="Clear everything except audio, or bring the slide back (F1)">All</button><button data-c="slide" title="Clear or restore the slide text (F2)">Text</button><button data-c="media" title="Clear or restore the background media (F3)">Media</button><button data-c="prop" title="Clear props (F4)">Props</button><button data-c="msg" title="Clear messages (F5)">Messages</button><button data-c="audio" title="Stop the audio (F6)">Audio</button><button data-c="ann" title="Clear the announcement banner (F7)">Announcement</button><button data-c="cam" title="Clear the live video input">Video input</button><button data-c="test" title="Test patterns for the screens">Test &#9662;</button></div>
       <div class="opn" id="opn"><span class="opl">NOTE</span><span class="opt ph" id="opnT"></span><button id="opnA" hidden title="Timed auto-advance. Click to stop it for this slide."></button><button id="opnE" title="Add or edit the note and auto-advance for this slide">Edit</button></div>
-      <div id="vtr" role="toolbar" aria-label="Video"><span class="opl">VIDEO</span><button id="vtBk" title="Back 10 seconds">&#9198;</button><button id="vtPl" class="pri" title="Play or pause the video on the live slide">&#9654;</button><button id="vtSt" title="Stop and go back to the start">&#9632;</button><button id="vtFw" title="Forward 10 seconds">&#9197;</button><span class="vtT" id="vtT">no video on this slide</span><input type="range" id="vtSc" min="0" max="1000" value="0" aria-label="Video position"></div>
+      <div id="vtr" role="toolbar" aria-label="Video"><span class="opl">VIDEO</span><button id="vtBk" title="Back 10 seconds">&#9198;</button><button id="vtPl" class="pri" title="Play or pause the video on the live slide">&#9654;</button><button id="vtSt" title="Stop and go back to the start">&#9632;</button><button id="vtFw" title="Forward 10 seconds">&#9197;</button><span class="vtT" id="vtT">no video on this slide</span><input type="range" id="vtSc" min="0" max="1000" value="0" aria-label="Video position"><div class="hint" id="vtS" style="flex:1 0 100%;margin:0"></div></div>
       <div class="lyr" role="group" aria-label="Layers">
         <div class="lyH"><span>LAYERS<span id="lyCnt"></span></span><span class="lyHR"><button id="lyLook" title="Switch look">Look</button><button id="lyMin" aria-expanded="true" aria-controls="lyList" title="Minimize the layers list to make room for the tabs below">&#9662;</button></span></div>
         <div id="lyList"></div>
@@ -1226,14 +1226,14 @@ function paint(stage,p){
   if(stage.dataset.k!==k){
     stage.dataset.k=k;
     let h;
-    if(d.bg==='Video'&&u){const mp=p.mp||{},snd=/^#output/.test(location.hash)&&!/key/.test(location.hash)&&!mp.mute;h=`<video src="${u}" autoplay loop playsinline data-snd="${snd?1:0}"${snd?'':' muted'}></video>`}
+    if(d.bg==='Video'&&u){const mp=p.mp||{},el=!mp.mute;h=`<video src="${u}" autoplay loop playsinline data-snd="${el?1:0}" data-vol="${mp.vol==null?100:mp.vol}"${el&&window.dscIsAud()?'':' muted'}></video>`}
     else if(d.bg==='Image'&&(u||d.img))h=`<div class="bg" style="background-image:url('${u||d.img}')${d.fit==='contain'?';background-size:contain;background-repeat:no-repeat;background-color:#000':''}${d.tile?`;background-size:${d.tile/19.2}cqw;background-repeat:repeat`:''}"></div>`;
     else if(d.bg==='Pattern'&&d.pat&&window.patCss)h=`<div class="bg" style="${window.patCss(d.pat)}"></div>`;
     else if(d.bg==='Texture'&&d.tex&&window.texCss)h=`<div class="bg" style="${window.texCss(d.tex,d.color)}"></div>`;
     else{let c=G[d.bg]||G.Midnight;if(d.bg==='Color')c=d.color;else if(d.bg==='Gradient'&&d.grad)c=d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`;
       h=`<div class="bg${d.bg==='Aurora'?' anim':''}" style="background:${c}"></div>`}
     stage.innerHTML=h+(d.dim?`<div class="dim" style="opacity:${d.dim/100}"></div>`:'');
-    {const be=stage.querySelector(':scope>.bg,:scope>video');if(be&&d.bgop)be.style.opacity=String(1-d.bgop/100)}{const bv=stage.querySelector(':scope>video[data-snd="1"]');if(bv&&!bv.dataset.on){bv.dataset.on='1';vidSound(bv,p.mp||{})}}
+    {const be=stage.querySelector(':scope>.bg,:scope>video');if(be&&d.bgop)be.style.opacity=String(1-d.bgop/100)}{const bv=stage.querySelector(':scope>video[data-snd="1"]');if(bv&&!bv.dataset.on){bv.dataset.on='1';if(window.dscIsAud())vidSound(bv,p.mp||{})}}
   }
   stage.querySelectorAll(':scope>.tx,:scope>.ov,:scope>.tm,:scope>.pp,:scope>.cdx').forEach(e=>e.remove());
   const j={Top:'flex-start',Middle:'center',Bottom:'flex-end'}[d.pos];
@@ -1265,6 +1265,8 @@ function paint(stage,p){
 }
 
 /* video transport, applied to every video element we can reach */
+window.dscIsAud=()=>/^#output/.test(location.hash)&&!/key/.test(location.hash);
+window.dscSndHere=()=>{if(window.dscIsAud())return true;if(/^#(output|stage|layout)/.test(location.hash))return false;return!(window.dscAudOpen&&window.dscAudOpen())};
 function sndGesture(){if(window.__sndL)return;window.__sndL=1;const fix=()=>{if(!window.__needClick)return;window.__needClick=0;document.querySelectorAll('video[data-snd="1"]').forEach(x=>{x.muted=false;if(x.paused)x.play().catch(()=>{})})};['pointerdown','keydown'].forEach(ev=>addEventListener(ev,fix,{passive:true}))}
 function sndBlocked(v){v.muted=true;window.__needClick=1;sndGesture();try{bc.postMessage({sndBlocked:1})}catch(e){}v.play().catch(()=>{})}
 function vidSound(v,mp){v.volume=mp.vol==null?1:Math.max(0,Math.min(1,mp.vol/100));v.muted=false;sndGesture();const q=v.play();if(q&&q.catch)q.catch(()=>sndBlocked(v))}
@@ -2808,6 +2810,7 @@ let lib={},libList=[],gsel=0,libFile={},sent={},bgScope='song';
 const libUrl=d=>(d.lib&&lib[d.lib])||(d.bg==='Video'?vurl:'');
 let mode='show',stgWins=[];
 function setMode(m){mode=m;$('#mShow').classList.toggle('on',m==='show');$('#mEdit').classList.toggle('on',m==='edit');$('#editSec').hidden=m!=='edit';if(m==='edit'){$('#editSec').classList.remove('min');drawEditor()}updBot();drawSlideEd(true)}
+window.dscAudOpen=()=>!!(outWin&&!outWin.closed)||Object.values(outW||{}).some(w=>w&&!w.closed)||!!(window.dscNdiOn&&window.dscNdiOn('a'));
 function dots(){const a=!!(outWin&&!outWin.closed)||!!(window.dscNdiOn&&window.dscNdiOn('a')),s=stgWins.some(w=>w&&!w.closed)||!!(window.dscNdiOn&&window.dscNdiOn('s'));$('#dA').classList.toggle('on',a);$('#dS').classList.toggle('on',s);$('#openOut').classList.toggle('on',a);$('#stgB').classList.toggle('on',s);$('#openOut').setAttribute('aria-pressed',a);$('#stgB').setAttribute('aria-pressed',s)}
 setInterval(dots,1500);
 function updBot(){
@@ -3781,11 +3784,13 @@ $('#auVol').oninput=e=>{aud.el.volume=e.target.value/100};
 $('#auLp').onchange=e=>{aud.loop=e.target.checked;aud.el.loop=aud.loop};
 $('#vdPl').onclick=()=>{const v=vidEl();if(v)vidCtl(v.paused?'play':'pause')};
 $('#vdBk').onclick=()=>vidSkip(-10);$('#vdFw').onclick=()=>vidSkip(10);
-function vtTick(){const v=vidEl(),sc=$('#vtSc');if(!sc)return;['vtBk','vtPl','vtSt','vtFw'].forEach(i=>$('#'+i).disabled=!v);sc.disabled=!v;if(!v){$('#vtT').textContent='no video on this slide';$('#vtPl').innerHTML='&#9654;';return}$('#vtT').textContent=fmtT(v.currentTime)+' / '+fmtT(v.duration);$('#vtPl').innerHTML=v.paused?'&#9654;':'&#9208;';if(!sc._d)sc.value=v.duration?Math.round(v.currentTime/v.duration*1000):0}
+function vtTick(){const v=vidEl(),sc=$('#vtSc');if(!sc)return;['vtBk','vtPl','vtSt','vtFw'].forEach(i=>$('#'+i).disabled=!v);sc.disabled=!v;if(!v){$('#vtT').textContent='no video on this slide';$('#vtPl').innerHTML='&#9654;';$('#vtS').textContent='';return}
+  $('#vtS').textContent=v.dataset.snd==='0'?'Sound is off: this video is set to Muted. Untick Muted in its settings.':(window.dscAudOpen&&window.dscAudOpen()?'Sound plays on the audience screen.':'No audience screen is open, so the sound plays here.');$('#vtT').textContent=fmtT(v.currentTime)+' / '+fmtT(v.duration);$('#vtPl').innerHTML=v.paused?'&#9654;':'&#9208;';if(!sc._d)sc.value=v.duration?Math.round(v.currentTime/v.duration*1000):0}
 $('#vtPl').onclick=()=>{const v=vidEl();if(v)vidCtl(v.paused?'play':'pause')};$('#vtBk').onclick=()=>vidSkip(-10);$('#vtFw').onclick=()=>vidSkip(10);
 $('#vtSt').onclick=()=>{const v=vidEl();if(!v)return;vidCtl('pause');vidCtl('seek',+(mpGet((cur()&&eff(cur(),idx).lib)||'').start)||0)};
 $('#vtSc').oninput=e=>{const v=vidEl();if(!v||!v.duration)return;e.target._d=1;vidCtl('seek',v.duration*e.target.value/1000)};$('#vtSc').onchange=e=>{e.target._d=0};
 setInterval(vtTick,300);
+setInterval(()=>{const h=window.dscSndHere();document.querySelectorAll('#preview video[data-snd="1"]').forEach(v=>{if(v.muted===h){if(h&&v.dataset.vol)v.volume=Math.max(0,Math.min(1,+v.dataset.vol/100));v.muted=!h}})},800);
 $('#vdSc').oninput=e=>{const v=vidEl();if(!v||!v.duration)return;e.target._drag=1;vidCtl('seek',v.duration*e.target.value/1000)};
 $('#vdSc').onchange=e=>{e.target._drag=0};
 
@@ -6218,14 +6223,14 @@ function decShape(ob,o){
 function decVideo(ob,o){
   const u=o.lib?mediaUrl(o.lib):'';if(!u)return;
   const click=o.sm==='click',started=!click||(window.__mst||[]).indexOf(o.id)>=0;
-  const v=document.createElement('video');v.src=u;const outA=/^#output/.test(location.hash)&&!/key/.test(location.hash);v.muted=!outA||o.mute!==false;v.dataset.snd=v.muted?'0':'1';if(!v.muted)sndGesture();v.loop=o.loop!==false;v.autoplay=started;v.playsInline=true;
+  const v=document.createElement('video');v.src=u;const el=o.mute===false;v.muted=!(el&&window.dscIsAud());v.dataset.snd=el?'1':'0';v.dataset.vol=o.vol==null?100:o.vol;if(!v.muted)sndGesture();v.loop=o.loop!==false;v.autoplay=started;v.playsInline=true;
   if(o.poster)v.poster=o.poster;
   v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:'+(o.fit==='fill'?'fill':o.fit==='contain'?'contain':'cover');
   if((o.tr0||o.tr1||o.vol!=null||o.fi||o.fo||(o.spd&&o.spd!==1))&&window.dscWireMedia)window.dscWireMedia(v,{start:o.tr0,end:o.tr1,vol:o.vol,fi:o.fi,fo:o.fo,speed:o.spd},{loop:o.loop!==false});
   if(o.cap){try{const t=document.createElement('track');t.kind='captions';t.label='Captions';t.default=true;t.src=URL.createObjectURL(new Blob([o.cap],{type:'text/vtt'}));v.appendChild(t);v.addEventListener('loadedmetadata',()=>{try{v.textTracks[0].mode=o.capOff?'hidden':'showing'}catch(e){}})}catch(e){}}
   if(o.hidew){ob.style.visibility=started?'':'hidden';const hide=()=>{ob.style.visibility='hidden'};v.addEventListener('ended',hide);v.addEventListener('mcend',hide)}
   if(o.full&&started){ob.style.left='0';ob.style.top='0';ob.style.width='100%';ob.style.height='100%';ob.style.zIndex='50';v.style.objectFit='contain'}
-  ob.appendChild(v);if(started){const p=v.play();if(p&&p.catch)p.catch(()=>{if(v.dataset.snd==='1')sndBlocked(v)})}
+  ob.appendChild(v);if(started){const p=v.play();if(p&&p.catch)p.catch(()=>{if(!v.muted)sndBlocked(v)})}
 }
 const camP={};
 window.dscGetCam=dev=>getCam(dev);
@@ -6963,7 +6968,7 @@ paint=function(stage,p){
     if(c.type==='image'){el=document.createElement('img');el.src=u;el.className='mcL'}
     else{
       el=document.createElement('video');el.className='mcL';el.src=u;el.playsInline=true;el.autoplay=true;
-      wireMedia(el,c,{loop:!!c.loop,forceMute:!isOutWin||!!c.mute});
+      wireMedia(el,c,{loop:!!c.loop,forceMute:!isOutWin||!!c.mute});el.dataset.snd=c.mute?'0':'1';el.dataset.vol=c.vol==null?100:c.vol;
       const go=()=>{const q=el.play();if(q&&q.catch)q.catch(()=>{el.muted=true;const q2=el.play();if(q2&&q2.catch)q2.catch(()=>{})})};go();
     }
     el.dataset.id=String(c.id);
