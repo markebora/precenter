@@ -2491,121 +2491,198 @@ function bbSlides(V,o){
 function openBible(sec){
   let saved={};try{saved=JSON.parse(localStorage.getItem('lp-bible')||'{}')}catch(e){}
   const ok=id=>BIBLES.some(b=>b[0]===id);
-  const tr0=ok(saved.tr)?saved.tr:'kjv',tr20=ok(saved.tr2)?saved.tr2:(tr0==='nkrv'?'niv':'nkrv');
+  let tr1=ok(saved.tr)?saved.tr:'kjv',tr2=ok(saved.tr2)?saved.tr2:(tr1==='nkrv'?'niv':'nkrv'),dual=!!saved.dual;
   const w=document.createElement('div');w.className='qe';
-  const opts=BIBLES.map(b=>`<option value="${b[0]}">${b[1]}</option>`).join('');
-  w.innerHTML=`<div class="qb" style="width:min(720px,94vw);max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:8px">
-    <div class="row" style="justify-content:space-between;align-items:center"><b>Bible &ndash; make scripture slides</b><button class="x" title="Close">✕</button></div>
-    <div class="row" style="align-items:flex-end">
-      <label style="flex:2;min-width:200px">Version<select id="bbTr">${opts}</select></label>
-      <label style="flex:none;flex-direction:row;align-items:center;gap:6px;min-width:0"><input type="checkbox" id="bbDual" style="width:auto">2 versions</label>
-      <label id="bbTr2L" style="flex:2;min-width:200px;display:none">Second version<select id="bbTr2">${opts}</select></label>
+  w.innerHTML=`<style>
+.bbx{width:min(1120px,96vw);height:min(90vh,860px);display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.bbx .bbrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bbx .bbl{font:700 10px Poppins,Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.bbx .bbbig{font-size:13px;font-weight:600;padding:7px 14px;border-radius:10px;min-height:36px}
+.bbx .bbpop,.bbx .bbpick{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px;max-height:34vh;overflow:auto}
+.bbx .bbg{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w,64px),1fr));gap:6px}
+.bbx .bbg button{padding:8px 4px;font-size:13px;border-radius:9px;min-height:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bbx .bbg.bk{--w:118px}.bbx .bbg.vs{--w:150px}
+.bbx .bbg button.rng{background:rgba(232,185,35,.28);border-color:var(--acc)}
+.bbx .bbtabs{display:flex;gap:6px;margin-bottom:8px}
+.bbx .bbtabs button{border-radius:999px;padding:4px 14px}
+.bbx .bbmain{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.bbx .bbsplit{display:grid;gap:0}
+.bbx .bbsplit.d1{grid-template-columns:1fr}.bbx .bbsplit.d2{grid-template-columns:1fr 1fr}
+.bbx .bbhd{position:sticky;top:0;z-index:2;background:var(--panel);padding:8px 14px;font:700 12px Poppins,Inter,sans-serif;border-bottom:1px solid var(--line)}
+.bbx .bbhd+.bbhd{border-left:1px solid var(--line)}
+.bbx .bbc{padding:8px 14px;font-size:14px;line-height:1.5;border-bottom:1px solid var(--line)}
+.bbx .bbc:nth-child(even):not(.bbch){}
+.bbx .bbsplit.d2 .bbc.c2{border-left:1px solid var(--line)}
+.bbx .bbc sup{color:var(--accT);font-weight:700;margin-right:6px}
+.bbx .bbch{grid-column:1/-1;padding:6px 14px;font:700 11px Poppins,Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;background:var(--chip);color:var(--mute)}
+.bbx .bbpv{padding:10px}
+@media (max-width:760px){.bbx .bbsplit.d2{grid-template-columns:1fr}.bbx .bbsplit.d2 .bbc.c2{border-left:0}}
+</style>
+  <div class="qb bbx">
+    <div class="bbrow" style="justify-content:space-between"><b>Bible &ndash; make scripture slides</b><button class="x" title="Close">✕</button></div>
+    <div class="bbrow">
+      <span class="bbl">Version</span><button id="bbT1" class="bbbig" title="Choose the Bible version"></button>
+      <button id="bbDualB" class="bbbig" title="Show a second version next to the first. Navigation stays shared."></button>
+      <button id="bbT2" class="bbbig" title="Choose the second version" hidden></button>
     </div>
-    <div class="row" style="align-items:flex-end">
-      <label style="flex:3;min-width:190px">Passage<input id="bbRef" placeholder="e.g. John 3:16-18, Psalm 23, John 3:16-4:2" autocomplete="off"></label>
-      <label style="flex:2;min-width:130px">Book<select id="bbBook"></select></label>
-      <label style="flex:none;width:84px;min-width:0">Chapter<select id="bbCh"></select></label>
-      <label style="flex:none;width:76px;min-width:0">From verse<select id="bbV1"></select></label>
-      <label style="flex:none;width:76px;min-width:0">To verse<select id="bbV2"></select></label>
+    <div id="bbVPop" class="bbpop" hidden></div>
+    <div class="bbrow">
+      <span class="bbl">Passage</span>
+      <button id="bbBkB" class="bbbig"></button><button id="bbChB" class="bbbig"></button><button id="bbVB" class="bbbig"></button>
+      <input id="bbRef" placeholder="or type: John 3:16-18" autocomplete="off" style="flex:1;min-width:180px;max-width:300px">
     </div>
-    <div class="row" style="align-items:center;gap:10px">
-      <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none">Verses per slide<input type="number" id="bbPer" min="1" max="40" placeholder="auto" style="width:74px"></label>
-      <span class="row" style="gap:4px;flex:none"><button type="button" data-p="1">1</button><button type="button" data-p="2">2</button><button type="button" data-p="3">3</button><button type="button" data-p="4">4</button><button type="button" data-p="">Auto</button></span>
-      <span class="hint" style="margin:0;flex:1;min-width:140px">Type any number. Empty = fit by length.</span>
-    </div>
-    <div class="row" style="align-items:center;gap:12px">
+    <div id="bbPick" class="bbpick" hidden></div>
+    <div class="bbrow" style="gap:6px"><div class="bbtabs" style="margin:0"><button id="bbTabR" class="act">Read</button><button id="bbTabS">Slides</button></div><span id="bbMsg" class="hint" style="margin:0;flex:1;min-width:140px"></span></div>
+    <div class="bbmain"><div id="bbRead"></div><div id="bbPrev" class="bbpv" hidden></div></div>
+    <div class="bbrow">
+      <span class="bbl">Verses per slide</span>
+      <span class="bbrow" style="gap:4px"><button type="button" data-p="1">1</button><button type="button" data-p="2">2</button><button type="button" data-p="3">3</button><button type="button" data-p="4">4</button><button type="button" data-p="">Auto</button></span>
+      <input type="number" id="bbPer" min="1" max="40" placeholder="auto" style="width:70px" title="Type any number. Empty = fit by length.">
       <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none"><input type="checkbox" id="bbNums" style="width:auto">Verse numbers</label>
       <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none"><input type="checkbox" id="bbRefOn" style="width:auto">Reference on each slide</label>
       <label style="flex-direction:row;align-items:center;gap:6px;min-width:0;flex:none"><input type="checkbox" id="bbNote" style="width:auto">Copyright slide at the end</label>
+      <span style="flex:1"></span><button class="x2">Cancel</button><button id="bbAdd" class="pri bbbig" disabled>Add to Presentation</button>
     </div>
-    <div id="bbMsg" class="hint" style="margin:0;min-height:14px"></div>
-    <div id="bbPrev" style="max-height:260px;overflow:auto"></div>
-    <div class="row" style="justify-content:flex-end"><button class="x2">Cancel</button><button id="bbAdd" class="pri" disabled>Add to Presentation</button></div>
   </div>`;
   const q=id=>w.querySelector('#'+id);
-  q('bbTr').value=tr0;q('bbTr2').value=tr20;q('bbDual').checked=!!saved.dual;q('bbRef').value=saved.ref||'';
+  q('bbRef').value=saved.ref||'';
   q('bbPer').value=saved.per&&saved.per!=='auto'?saved.per:'';
   q('bbNums').checked=saved.nums!==false;q('bbRefOn').checked=saved.refOn!==false;q('bbNote').checked=saved.note!==false;
-  let d1=null,d2=null,V=[],book='',book2='',slides=[],notice='',gen=0;
+  let d1=null,d2=null,V=[],book='',book2='',slides=[],notice='',gen=0,P=null,pick='',vFirst=0,tab='R';
   const done=()=>{document.removeEventListener('keydown',kd,true);w.remove()};
   const kd=e=>{if(e.key==='Escape'){e.stopPropagation();done()}};
   document.addEventListener('keydown',kd,true);
   const msg=t=>{q('bbMsg').textContent=t};
+  const labOf=id=>(BIBLES.find(b=>b[0]===id)||[])[1]||id;
   const tagOf=id=>(BIBLES.find(b=>b[0]===id)||[])[2]||'';
   const noteOf=id=>(BIBLES.find(b=>b[0]===id)||[])[3]||'';
-  function fillBooks(){
-    const bs=q('bbBook'),keep=bs.value;bs.innerHTML='';
-    if(d1)d1.books.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.n;bs.appendChild(o)});
-    bs.value=keep!==''&&d1&&d1.books[+keep]?keep:'0';fillCh();
+  const mk=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e};
+  function top(){
+    q('bbT1').textContent=tagOf(tr1)+' ▾';q('bbT1').title=labOf(tr1);
+    q('bbT2').textContent=tagOf(tr2)+' ▾';q('bbT2').title=labOf(tr2);q('bbT2').hidden=!dual;
+    q('bbDualB').textContent=dual?'✓ Two versions':'+ Add 2nd version';q('bbDualB').classList.toggle('act',dual);
   }
-  function fillCh(){
-    const cs=q('bbCh'),keep=cs.value;cs.innerHTML='';
-    const bk=d1&&d1.books[+q('bbBook').value];if(!bk)return;
-    for(let i=1;i<=bk.c.length;i++){const o=document.createElement('option');o.value=i;o.textContent=i;cs.appendChild(o)}
-    cs.value=keep&&+keep<=bk.c.length?keep:'1';
+  function crumbs(){
+    const bk=P&&d1&&d1.books[P.bi];
+    q('bbBkB').textContent=bk?bk.n:'Book';
+    q('bbChB').textContent=P?(P.c1===P.c2?'Chapter '+P.c1:'Ch. '+P.c1+'–'+P.c2):'Chapter';
+    q('bbVB').textContent=P?(P.c1===P.c2?'Verses '+P.v1+(P.v2>P.v1?'–'+P.v2:''):'Verses'):'Verses';
+    ['bbBkB:book','bbChB:chapter','bbVB:verse'].forEach(x=>{const [id,s]=x.split(':');q(id).classList.toggle('act',pick===s)});
   }
-  function fillV(p){
-    const v1=q('bbV1'),v2=q('bbV2'),bk=d1&&d1.books[p.bi];v1.innerHTML='';v2.innerHTML='';if(!bk)return;
-    const n=bk.c[p.c1-1].length,multi=p.c1!==p.c2;
-    for(let i=1;i<=n;i++){[v1,v2].forEach(sel=>{const o=document.createElement('option');o.value=i;o.textContent=i;sel.appendChild(o)})}
-    v1.value=p.v1;v2.value=multi?n:p.v2;v1.disabled=v2.disabled=multi;
+  function showPop(which){
+    const pop=q('bbVPop');if(!pop.hidden&&pop.dataset.w===which){pop.hidden=true;return}
+    pop.dataset.w=which;pop.hidden=false;pop.innerHTML='';
+    const g=mk('div','bbg');g.style.setProperty('--w','230px');
+    BIBLES.forEach(b=>{const x=mk('button','',b[1]);x.title=b[1];if(b[0]===(which==='1'?tr1:tr2))x.classList.add('act');
+      x.onclick=()=>{if(which==='1')tr1=b[0];else tr2=b[0];pop.hidden=true;top();load()};g.appendChild(x)});
+    pop.appendChild(g);
   }
-  function verseSel(){
-    let a=+q('bbV1').value,b=+q('bbV2').value;if(b<a){b=a;q('bbV2').value=b}
-    q('bbRef').value=d1.books[+q('bbBook').value].n+' '+q('bbCh').value+':'+a+(b>a?'-'+b:'');render();
+  function setRef(t){q('bbRef').value=t;render()}
+  function openPick(step){
+    const el=q('bbPick');
+    if(!d1||(!el.hidden&&pick===step)){pick='';el.hidden=true;crumbs();return}
+    pick=step;el.hidden=false;el.innerHTML='';crumbs();
+    if(step==='book'){
+      const n=d1.books.length,split=n===66;let part=P&&split&&P.bi>=39?1:0;
+      const draw=()=>{
+        el.innerHTML='';
+        if(split){const t=mk('div','bbtabs');['Old Testament','New Testament'].forEach((l,i)=>{const b=mk('button',i===part?'act':'',l);b.onclick=()=>{part=i;draw()};t.appendChild(b)});el.appendChild(t)}
+        const g=mk('div','bbg bk');
+        d1.books.forEach((b,i)=>{if(split&&((i>=39)!==(part===1)))return;const x=mk('button','',b.n);x.title=b.n;if(P&&P.bi===i)x.classList.add('act');
+          x.onclick=()=>{vFirst=0;setRef(b.n+' 1');openPick('chapter')};g.appendChild(x)});
+        el.appendChild(g);
+      };draw();
+    }else if(step==='chapter'){
+      const bk=d1.books[P?P.bi:0];el.appendChild(mk('div','hint',bk.n+' – choose a chapter'));
+      const g=mk('div','bbg');
+      for(let i=1;i<=bk.c.length;i++){const x=mk('button','',String(i));if(P&&P.c1===i&&P.c2===i)x.classList.add('act');x.onclick=()=>{vFirst=0;setRef(bk.n+' '+i);openPick('verse')};g.appendChild(x)}
+      el.appendChild(g);
+    }else{
+      const bk=d1.books[P.bi],ch=P.c1,n=bk.c[ch-1].length;
+      const h=mk('div','bbrow');h.append(mk('span','hint',bk.n+' '+ch+' – tap the first verse, then the last verse'));
+      const wc=mk('button','','Whole chapter');wc.onclick=()=>{vFirst=0;setRef(bk.n+' '+ch);openPick('verse');pick='';q('bbPick').hidden=true;crumbs()};h.appendChild(wc);
+      el.appendChild(h);
+      const g=mk('div','bbg');
+      for(let i=1;i<=n;i++){const x=mk('button','',String(i));if(P.c1===P.c2&&i>=P.v1&&i<=P.v2)x.classList.add('rng');
+        x.onclick=()=>{
+          if(!vFirst||i<vFirst){vFirst=i;setRef(bk.n+' '+ch+':'+i);openPick('verse');pick='verse';el.hidden=false;crumbs();return}
+          setRef(bk.n+' '+ch+':'+vFirst+(i>vFirst?'-'+i:''));vFirst=0;pick='';el.hidden=true;crumbs();
+        };g.appendChild(x)}
+      el.appendChild(g);
+    }
   }
   async function load(){
-    const my=++gen,dual=q('bbDual').checked;q('bbTr2L').style.display=dual?'':'none';
-    try{const a=await bbLoad(q('bbTr').value),b=dual?await bbLoad(q('bbTr2').value):null;if(my!==gen)return;d1=a;d2=b}
-    catch(e){if(my!==gen)return;d1=d2=null;V=[];slides=[];msg('Could not load the Bible files. Make sure the bible folder is published next to index.html.');drawPrev();return}
-    fillBooks();render();
+    const my=++gen;
+    try{const a=await bbLoad(tr1),b=dual?await bbLoad(tr2):null;if(my!==gen)return;d1=a;d2=b}
+    catch(e){if(my!==gen)return;d1=d2=null;V=[];slides=[];msg('Could not load the Bible files. Make sure the bible folder is published next to index.html.');drawRead();drawPrev();return}
+    render();
+  }
+  function drawRead(){
+    const R=q('bbRead');R.innerHTML='';
+    const dd=dual&&!!d2;
+    const g=mk('div','bbsplit '+(dd?'d2':'d1'));
+    g.appendChild(mk('div','bbhd',labOf(tr1)));if(dd)g.appendChild(mk('div','bbhd',labOf(tr2)));
+    if(!V.length){const e=mk('div','bbc','');e.style.gridColumn='1/-1';e.textContent=P?'No verses found for that passage.':'Click Book above to choose a book.';e.style.color='var(--mute)';g.appendChild(e)}
+    let lastCh=0;
+    V.forEach(x=>{
+      if(P&&P.c1!==P.c2&&x.ch!==lastCh){g.appendChild(mk('div','bbch',book+' '+x.ch));lastCh=x.ch}
+      const c=mk('div','bbc c1');const s=mk('sup','',String(x.v));c.append(s,document.createTextNode(x.t1));g.appendChild(c);
+      if(dd){const c2=mk('div','bbc c2');const s2=mk('sup','',String(x.v));c2.append(s2,document.createTextNode(x.t2));g.appendChild(c2)}
+    });
+    R.appendChild(g);
   }
   function drawPrev(){
-    const P=q('bbPrev');P.innerHTML='';
-    slides.forEach((t,i)=>{const d=document.createElement('div');d.style.cssText='border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin:4px 0;font-size:12px;white-space:pre-wrap';d.textContent=(i+1)+'.  '+t;P.appendChild(d)});
-    if(notice&&slides.length){const d=document.createElement('div');d.style.cssText='border:1px dashed var(--line);border-radius:6px;padding:6px 8px;margin:4px 0;font-size:11px;color:var(--mute)';d.textContent='Last slide: '+notice;P.appendChild(d)}
+    const E=q('bbPrev');E.innerHTML='';
+    slides.forEach((t,i)=>{const d=mk('div','');d.style.cssText='border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px;white-space:pre-wrap;background:var(--panel)';d.textContent=(i+1)+'.  '+t;E.appendChild(d)});
+    if(notice&&slides.length){const d=mk('div','');d.style.cssText='border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:11px;color:var(--mute)';d.textContent='Last slide: '+notice;E.appendChild(d)}
+    if(!slides.length)E.appendChild(mk('div','hint','No slides yet.'));
     const n=slides.length+(notice?1:0);
     q('bbAdd').disabled=!slides.length;
     q('bbAdd').textContent=slides.length?'Add '+n+' slide'+(n>1?'s':'')+' to Presentation':'Add to Presentation';
+    q('bbTabS').textContent='Slides'+(n?' ('+n+')':'');
   }
+  function setTab(t){tab=t;q('bbRead').hidden=t!=='R';q('bbPrev').hidden=t!=='S';q('bbTabR').classList.toggle('act',t==='R');q('bbTabS').classList.toggle('act',t==='S')}
   function render(){
-    V=[];slides=[];notice='';
-    if(!d1){drawPrev();return}
-    const dual=q('bbDual').checked&&!!d2,ref=q('bbRef').value.trim();
-    if(!ref){msg('Type a passage, for example John 3:16-18, or pick book, chapter and verses.');drawPrev();return}
+    V=[];slides=[];notice='';P=null;
+    if(!d1){crumbs();drawRead();drawPrev();return}
+    const dd=dual&&!!d2,ref=q('bbRef').value.trim();
+    if(!ref){msg('Pick a book, chapter and verses, or type a passage like John 3:16-18.');crumbs();drawRead();drawPrev();return}
     const p=bbParse(ref,d1);
-    if(p.err){msg(p.err);drawPrev();return}
-    q('bbBook').value=p.bi;fillCh();q('bbCh').value=p.c1;fillV(p);
-    V=bbCollect(p,d1,dual?d2:null);
-    book=d1.books[p.bi].n;book2=dual?d2.books[p.bi].n:'';
-    const per=Math.max(0,parseInt(q('bbPer').value,10)||0),t1=tagOf(q('bbTr').value),t2=dual?tagOf(q('bbTr2').value):'';
-    slides=V.length?bbSlides(V,{per,nums:q('bbNums').checked,ref:q('bbRefOn').checked,dual,book,book2,tag:t1,tag2:t2}):[];
+    if(p.err){msg(p.err);crumbs();drawRead();drawPrev();return}
+    P=p;
+    V=bbCollect(p,d1,dd?d2:null);
+    book=d1.books[p.bi].n;book2=dd?d2.books[p.bi].n:'';
+    const per=Math.max(0,parseInt(q('bbPer').value,10)||0),t1=tagOf(tr1),t2=dd?tagOf(tr2):'';
+    slides=V.length?bbSlides(V,{per,nums:q('bbNums').checked,ref:q('bbRefOn').checked,dual:dd,book,book2,tag:t1,tag2:t2}):[];
     if(q('bbNote').checked&&slides.length){
-      const ids=[q('bbTr').value].concat(dual&&q('bbTr2').value!==q('bbTr').value?[q('bbTr2').value]:[]);
+      const ids=[tr1].concat(dd&&tr2!==tr1?[tr2]:[]);
       notice=ids.map(noteOf).filter(Boolean).join('\n');
     }
     msg(V.length?bbLabel(V[0],V[V.length-1],book,'')+' – '+V.length+' verse'+(V.length>1?'s':'')+' → '+slides.length+' slide'+(slides.length>1?'s':''):'No verses found for that passage.');
-    drawPrev();
+    crumbs();drawRead();drawPrev();
   }
-  q('bbTr').onchange=load;q('bbTr2').onchange=load;q('bbDual').onchange=load;
+  q('bbT1').onclick=()=>showPop('1');q('bbT2').onclick=()=>showPop('2');
+  q('bbDualB').onclick=()=>{dual=!dual;q('bbVPop').hidden=true;top();load()};
+  q('bbBkB').onclick=()=>openPick('book');
+  q('bbChB').onclick=()=>{if(!P){openPick('book');return}openPick('chapter')};
+  q('bbVB').onclick=()=>{if(!P){openPick('book');return}if(P.c1!==P.c2){setRef(d1.books[P.bi].n+' '+P.c1)}openPick('verse')};
+  q('bbTabR').onclick=()=>setTab('R');q('bbTabS').onclick=()=>setTab('S');
   q('bbRef').oninput=render;q('bbRef').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();render()}};
-  q('bbBook').onchange=()=>{q('bbCh').innerHTML='';fillCh();q('bbRef').value=d1.books[+q('bbBook').value].n+' 1';render()};
-  q('bbV1').onchange=verseSel;q('bbV2').onchange=verseSel;
-  q('bbCh').onchange=()=>{q('bbRef').value=d1.books[+q('bbBook').value].n+' '+q('bbCh').value;render()};
   ['bbPer','bbNums','bbRefOn','bbNote'].forEach(id=>{q(id).oninput=render;q(id).onchange=render});
   w.querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{q('bbPer').value=b.dataset.p;render()});
   q('bbAdd').onclick=()=>{
     if(!slides.length)return;
-    const dual=q('bbDual').checked&&!!d2,t1=tagOf(q('bbTr').value),t2=tagOf(q('bbTr2').value);
-    const title=bbLabel(V[0],V[V.length-1],book,'')+' ('+t1+(dual?' + '+t2:'')+')';
+    const dd=dual&&!!d2,t1=tagOf(tr1),t2=tagOf(tr2);
+    const title=bbLabel(V[0],V[V.length-1],book,'')+' ('+t1+(dd?' + '+t2:'')+')';
     const lyrics=slides.concat(notice?[notice]:[]).join('\n\n');
-    try{localStorage.setItem('lp-bible',JSON.stringify({ref:q('bbRef').value,tr:q('bbTr').value,tr2:q('bbTr2').value,dual:q('bbDual').checked,per:q('bbPer').value||'auto',nums:q('bbNums').checked,refOn:q('bbRefOn').checked,note:q('bbNote').checked}))}catch(e){}
+    try{localStorage.setItem('lp-bible',JSON.stringify({ref:q('bbRef').value,tr:tr1,tr2:tr2,dual:dual,per:q('bbPer').value||'auto',nums:q('bbNums').checked,refOn:q('bbRefOn').checked,note:q('bbNote').checked}))}catch(e){}
     const n=slides.length+(notice?1:0);
     done();addSec=sec||'Presentation';addItem(title,lyrics,{type:'scripture'});setMode('show');
     toast(n+' slide'+(n>1?'s':'')+' added. Click a slide, then use Space or the arrow keys.');
   };
   w.querySelector('.x').onclick=done;w.querySelector('.x2').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
-  document.body.appendChild(w);load();q('bbRef').focus();
+  document.body.appendChild(w);top();crumbs();setTab('R');
+  load();
 }
 function newItem(sec,type){const [t,l]=ITEMDEF[type];addItem(t,l,{sec,type,...(type==='countdown'?{cd:{mode:'min',min:10,at:'09:00'}}:{})})}
 function newBlankPres(sec){
