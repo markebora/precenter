@@ -545,6 +545,12 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
 #bot.allmin::before{display:none}
 .ptabs{flex-wrap:nowrap}.ptabs button{flex:1 1 0;min-width:0;padding:8px 0;font-size:17px}.ptabs button span{display:none}
 #ptabs [data-p=pSl]{display:none}
+#nextUp{display:grid;grid-template-columns:44% 1fr;gap:10px;align-items:center;margin:6px 0;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--chip)}
+#nextUp.none{display:none}
+#nextPrev{width:100%;aspect-ratio:16/9;border-radius:4px;overflow:hidden}
+#nextUp .nuI{display:flex;flex-direction:column;gap:3px;min-width:0}
+#nextUp .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute)}
+#nextUp b{font-size:13px}#nextUp #nuT{font-size:11.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #clrRow{display:grid!important;grid-template-columns:repeat(3,1fr);gap:5px;align-items:stretch}
 #clrRow .cl{grid-column:1/-1;margin:0 0 1px}
 #clrRow button,#clrRow #gotoN{width:100%;min-width:0;box-sizing:border-box;padding:4px 6px;font-size:11.5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -618,6 +624,7 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
           <button id="bBlack" title="Black out (B)">&#9632;</button>
         </div>
       </div>
+      <div id="nextUp" class="none"><div class="stage" id="nextPrev" aria-label="Next slide"></div><div class="nuI"><span class="opl">UP NEXT</span><b id="nuL"></b><span id="nuT"></span></div></div>
       <div id="clrRow" role="toolbar" aria-label="Clear layers"><span class="cl">CLEAR</span><button data-c="all" title="Clear everything except audio, or bring the slide back (F1)">All</button><button data-c="slide" title="Clear or restore the slide text (F2)">Text</button><button data-c="media" title="Clear or restore the background media (F3)">Media</button><button data-c="prop" title="Clear props (F4)">Props</button><button data-c="msg" title="Clear messages (F5)">Messages</button><button data-c="audio" title="Stop the audio (F6)">Audio</button><button data-c="ann" title="Clear the announcement banner (F7)">Announcement</button><button data-c="cam" title="Clear the live video input">Video input</button><button data-c="test" title="Test patterns for the screens">Test &#9662;</button></div>
       <div class="opn" id="opn"><span class="opl">NOTE</span><span class="opt ph" id="opnT"></span><button id="opnA" hidden title="Timed auto-advance. Click to stop it for this slide."></button><button id="opnE" title="Add or edit the note and auto-advance for this slide">Edit</button></div>
       <div id="vtr" role="toolbar" aria-label="Video"><span class="opl">VIDEO</span><button id="vtBk" title="Back 10 seconds">&#9198;</button><button id="vtPl" class="pri" title="Play or pause the video on the live slide">&#9654;</button><button id="vtSt" title="Stop and go back to the start">&#9632;</button><button id="vtFw" title="Forward 10 seconds">&#9197;</button><span class="vtT" id="vtT">no video on this slide</span><input type="range" id="vtSc" min="0" max="1000" value="0" aria-label="Video position"><div class="hint" id="vtS" style="flex:1 0 100%;margin:0"></div></div>
@@ -14017,6 +14024,35 @@ window.dscDesign={applyDesign,TH,variantPatch};
   H.addEventListener('wheel',e=>{const b=e.target.closest&&e.target.closest('.hbody');if(!b||b.scrollWidth<=b.clientWidth||e.target.closest('select'))return;b.scrollLeft+=e.deltaY||e.deltaX;e.preventDefault()},{passive:false});
   /* groups added later by other parts of the editor get the same treatment */
   try{new MutationObserver(()=>packAll()).observe(H,{childList:true,subtree:true})}catch(e){}
+})();
+
+/* ---- Up Next thumbnail in the right panel ---- */
+(function(){
+  const box=document.getElementById('nextUp'),pv=document.getElementById('nextPrev'),pr=document.getElementById('preview');
+  if(!box||!pv||!pr)return;let t=0;
+  const draw=()=>{try{
+    const s=cur(),a=expand(s)[idx+1],p=payload(),nt=p.next||'';
+    box.classList.toggle('none',!nt);
+    document.getElementById('nuL').textContent=(a&&a.label)||'';
+    document.getElementById('nuT').textContent=a?'':nt;
+    if(!nt){pv.innerHTML='';return}
+    const q=Object.assign({},p,{text:nt,note:'',sm:'',props:[]});
+    try{q.d=eff(s,idx+1)||p.d}catch(e){}
+    paint(pv,applyLook(q,'a'));
+  }catch(e){}};
+  new MutationObserver(()=>{clearTimeout(t);t=setTimeout(draw,60)}).observe(pr,{childList:true,subtree:true});
+  setTimeout(draw,1200);
+})();
+/* ---- clicking a button again closes the menu it opened ---- */
+(function(){
+  let anchor=null,pend=null;
+  document.addEventListener('click',e=>{
+    const b=e.target.closest&&e.target.closest('button');let open=false;
+    try{open=!!cmEl}catch(_){return}
+    if(open&&b&&b===anchor){closeCm();anchor=null;e.stopImmediatePropagation();e.preventDefault();return}
+    anchor=null;pend=b;
+    setTimeout(()=>{try{if(cmEl&&pend)anchor=pend}catch(_){}pend=null},0);
+  },true);
 })();
 </script>
 </body>
