@@ -834,6 +834,14 @@ function buildLay(host,objs,tx,spans){
 }
 function fitStage(st){st.querySelectorAll('.ob[data-fit]').forEach(ob=>{if(!ob.clientHeight)return;let f=+ob.dataset.base,n=0;ob.style.fontSize=f+'cqw';while(ob.scrollHeight>ob.clientHeight+1&&n++<40){f*=.94;ob.style.fontSize=f+'cqw'}})}
 setInterval(tick,250);
+window.rtStrip=t=>String(t||'').replace(/\u27e6[^|\u27e7]*\|([^\u27e7]*)\u27e7/g,'$1');
+window.rtSet=function(el,tx){tx=String(tx||'');if(tx.indexOf('\u27e6')<0){el.textContent=tx;return}
+  el.textContent='';const re=/\u27e6([^|\u27e7]*)\|([^\u27e7]*)\u27e7/g;let i=0,m;
+  while((m=re.exec(tx))){if(m.index>i)el.appendChild(document.createTextNode(tx.slice(i,m.index)));
+    const sp=document.createElement('span');sp.textContent=m[2];const st=sp.style;
+    m[1].split(';').forEach(f=>{if(f==='b')st.fontWeight='700';else if(f==='i')st.fontStyle='italic';else if(f==='u')st.textDecoration='underline';else if(f==='k')st.textTransform='uppercase';else if(f[0]==='c')st.color=f.slice(1);else if(f[0]==='h'){st.backgroundColor=f.slice(1);st.borderRadius='.12em';st.padding='0 .08em'}else if(f[0]==='f'){try{ensureFont(f.slice(1))}catch(e){}st.fontFamily="'"+f.slice(1)+"',sans-serif"}});
+    el.appendChild(sp);i=re.lastIndex}
+  if(i<tx.length)el.appendChild(document.createTextNode(tx.slice(i)))};
 function animText(sp,d,dur){
   const ta=d.ta||'Fade';if(ta==='None'||!dur)return;
   if(ta==='Fade')sp.animate([{opacity:0},{opacity:1}],{duration:dur,easing:'ease-out'});
@@ -1254,7 +1262,7 @@ function paint(stage,p){
   else{
     el=document.createElement('div');el.className='tx';
   el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'');
-    if(tx){const sp=document.createElement('span');sp.textContent=tx;if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
+    if(tx){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
   }
   stage.appendChild(el);if(stage.isConnected)fitStage(stage);
   if(p.ast!=null&&d.lay&&d.lay.length)animApply(stage,el,d.lay,p,chg?dur:0);
@@ -1338,9 +1346,9 @@ if(/^#stage/.test(location.hash)){
     document.querySelector('.card.live').hidden=lay==='clock';
     document.querySelector('.card.nx').hidden=lay==='live'||lay==='clock';
     document.querySelector('.card.nt').hidden=lay!=='notes';
-    const live=(p.black||p.hideLive)?'':(p.clear?'':(p.text||''));
+    const live=(p.black||p.hideLive)?'':(p.clear?'':rtStrip(p.text||''));
     $('#sc').textContent=live;$('#sc').style.opacity=p.black?.3:1;$('#ss').textContent=p.black?'BLACK':(p.clear?'TEXT CLEARED':'');
-    $('#sn').textContent=p.hideNext?'':(p.next||'— end —');
+    $('#sn').textContent=p.hideNext?'':rtStrip(p.next||'— end —');
     $('#snt').textContent=p.note||'';
     if(lay!=='clock'){fitT($('#sc'),z[0],z[1]);if(lay!=='live')fitT($('#sn'),z[2],z[3]);if(lay==='notes')fitT($('#snt'),3.2,1.2)}
     const mt=[p.sm,p.msgS===undefined?p.msg:p.msgS].filter(Boolean).join('   |   ');
@@ -2487,7 +2495,7 @@ function bbSlides(V,o){
     if(!o.per){j=i+1;let len=V[i].t1.length+V[i].t2.length;while(j<V.length&&len+V[j].t1.length+V[j].t2.length<=lim){len+=V[j].t1.length+V[j].t2.length;j++}}
     else j=Math.min(V.length,i+o.per);
     const part=V.slice(i,j),a=part[0],b=part[part.length-1];
-    const jn=k=>part.map(x=>x[k]?(o.nums?supN(x.v)+' ':'')+x[k]:'').filter(Boolean).join(' ');
+    const jn=k=>part.map(x=>x[k]?(o.nums?supN(x.v)+' ':'')+(x[k+'m']||x[k]):'').filter(Boolean).join(' ');
     const lines=[jn('t1')];if(o.dual)lines.push(jn('t2'));
     if(o.ref)lines.push('— '+bbLabel(a,b,o.book,o.tag)+(o.dual?'  |  '+bbLabel(a,b,o.book2,o.tag2):''));
     out.push(lines.filter(Boolean).join('\n'));
@@ -2523,6 +2531,12 @@ function openBible(sec){
 .bbx .bbc sup{color:var(--accT);font-weight:700;margin-right:6px}
 .bbx .bbch{grid-column:1/-1;padding:6px 14px;font:700 11px Poppins,Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;background:var(--chip);color:var(--mute)}
 .bbx .bbpv{padding:10px}
+.bbx .bbei{margin-left:6px;padding:0 5px;min-width:0;font-size:11px;line-height:1.4;border:0;background:none;opacity:.35;cursor:pointer}.bbx .bbc:hover .bbei{opacity:1}
+.bbx .bbed2{margin-top:6px;border:1px solid var(--acc);border-radius:10px;padding:8px;background:var(--panel)}
+.bbx .bbce{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:44px;outline:none;font-size:14px;line-height:1.5}
+.bbx .bbed2 .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.bbx .bbed2 .tb button{padding:3px 10px;min-width:30px}.bbx .bbed2 .tb .sw{width:18px;height:18px;min-width:0;padding:0;border-radius:50%;border:2px solid var(--line);font-size:10px;line-height:1}
+.bbx .bbed2 select{max-width:140px}
 .bbx #bbPick,.bbx #bbBkB,.bbx #bbChB,.bbx #bbVB{display:none!important}
 .bbx .bbcols{display:grid;grid-template-columns:210px 128px 150px minmax(0,1fr);gap:8px;flex:1;min-height:0}
 .bbx .bbcol{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden}
@@ -2537,7 +2551,7 @@ function openBible(sec){
 .bbx .bbcol button.on{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:700}
 .bbx .bbcol button.on i{color:inherit}
 .bbx .bbright{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
-.bbx .bbqe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--chip)}
+.bbx .bbqe{display:none!important;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--chip)}
 .bbx .bbqe button{padding:3px 10px;min-width:30px}.bbx .bbqe button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 .bbx .bbqe select{max-width:150px}.bbx .bbqe .sw{width:18px;height:18px;min-width:0;padding:0;border-radius:50%;border:2px solid var(--line)}.bbx .bbqe .sw.on{border-color:var(--acc)}
 .bbx .bbqe input[type=color]{width:30px;height:24px;padding:0;border:0;background:none}
@@ -2575,7 +2589,7 @@ function openBible(sec){
   q('bbRef').value=saved.ref||'';
   q('bbPer').value=saved.per&&saved.per!=='auto'?saved.per:'';
   q('bbNums').checked=saved.nums!==false;q('bbRefOn').checked=saved.refOn!==false;q('bbNote').checked=saved.note!==false;
-  let d1=null,d2=null,V=[],book='',book2='',slides=[],notice='',gen=0,P=null,pick='',vFirst=0,tab='R';
+  let ed={},editing=null,d1=null,d2=null,V=[],book='',book2='',slides=[],notice='',gen=0,P=null,pick='',vFirst=0,tab='R';
   const done=()=>{document.removeEventListener('keydown',kd,true);w.remove()};
   const kd=e=>{if(e.key==='Escape'){e.stopPropagation();done()}};
   document.addEventListener('keydown',kd,true);
@@ -2653,14 +2667,16 @@ function openBible(sec){
     let lastCh=0;
     V.forEach(x=>{
       if(P&&P.c1!==P.c2&&x.ch!==lastCh){g.appendChild(mk('div','bbch',book+' '+x.ch));lastCh=x.ch}
-      const c=mk('div','bbc c1');const s=mk('sup','',String(x.v));c.append(s,document.createTextNode(x.t1));g.appendChild(c);
+      const c=mk('div','bbc c1'),ek=tr1+'|'+x.ch+':'+x.v;c.append(mk('sup','',String(x.v)));
+       if(editing===ek)openEd(c,x,ek);else{const t=mk('span');window.rtSet(t,ed[ek]||x.t1);c.append(t);const eb=mk('button','bbei','✎');eb.type='button';eb.title='Edit this verse: font, color, highlight, bold, italic, underline';eb.onclick=()=>{editing=ek;drawRead()};c.append(eb)}
+       g.appendChild(c);
       if(dd){const c2=mk('div','bbc c2');const s2=mk('sup','',String(x.v));c2.append(s2,document.createTextNode(x.t2));g.appendChild(c2)}
     });
     R.appendChild(g);
   }
   function drawPrev(){
     const E=q('bbPrev');E.innerHTML='';
-    slides.forEach((t,i)=>{const d=mk('div','');d.style.cssText='border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px;white-space:pre-wrap;background:var(--panel)';d.textContent=(i+1)+'.  '+t;E.appendChild(d)});
+    slides.forEach((t,i)=>{const d=mk('div','');d.style.cssText='border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px;white-space:pre-wrap;background:var(--panel)';window.rtSet(d,(i+1)+'.  '+t);E.appendChild(d)});
     if(notice&&slides.length){const d=mk('div','');d.style.cssText='border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:11px;color:var(--mute)';d.textContent='Last slide: '+notice;E.appendChild(d)}
     if(!slides.length)E.appendChild(mk('div','hint','No slides yet.'));
     const n=slides.length+(notice?1:0);
@@ -2678,7 +2694,7 @@ function openBible(sec){
     const p=bbParse(ref,d1);
     if(p.err){msg(p.err);crumbs();drawRead();drawPrev();return}
     P=p;
-    V=bbCollect(p,d1,dd?d2:null);
+    V=bbCollect(p,d1,dd?d2:null);V.forEach(x=>{x.t1m=ed[tr1+'|'+x.ch+':'+x.v]||''});
     book=d1.books[p.bi].n;book2=dd?d2.books[p.bi].n:'';
     const per=Math.max(0,parseInt(q('bbPer').value,10)||0),t1=tagOf(tr1),t2=dd?tagOf(tr2):'';
     slides=V.length?bbSlides(V,{per,nums:q('bbNums').checked,ref:q('bbRefOn').checked,dual:dd,book,book2,tag:t1,tag2:t2}):[];
@@ -2708,8 +2724,53 @@ function openBible(sec){
     done();addSec=sec||'Presentation';addItem(title,lyrics,{type:'scripture'});try{Object.assign(cur().d,qeD());save();drawGrid();push()}catch(e){}setMode('show');
     toast(n+' slide'+(n>1?'s':'')+' added. Click a slide, then use Space or the arrow keys.');
   };
+  /* ---- per-verse quick edit ---- */
+  const EDF=['Poppins','Montserrat','Inter','Lato','Oswald','Playfair Display','Merriweather','Libre Baskerville','Lora','Cormorant Garamond','Nunito','Raleway','Barlow Condensed','Anton','Bebas Neue','Georgia','Arial Black'];
+  const EDC=['#ffffff','#f2c230','#cfd3da','#7ee0ff','#8be28b','#ffa94d','#ff7b7b','#c9a7ff'],EDH=['#f2c230','#8be28b','#7ee0ff','#ff9ec4','#ffa94d'];
+  const hex=c=>{const m=/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/.exec(c||'');if(!m||(m[4]!==undefined&&+m[4]===0))return '';return '#'+[m[1],m[2],m[3]].map(v=>(+v).toString(16).padStart(2,'0')).join('')};
+  function edSer(root){
+    let out='';
+    const wrap=(st,t)=>{if(!t)return;const f=[];if(st.b)f.push('b');if(st.i)f.push('i');if(st.u)f.push('u');if(st.k)f.push('k');if(st.c)f.push('c'+st.c);if(st.h)f.push('h'+st.h);if(st.f)f.push('f'+st.f);out+=f.length?'⟦'+f.join(';')+'|'+t+'⟧':t};
+    const walk=(n,st)=>{
+      if(n.nodeType===3){wrap(st,n.nodeValue.replace(/[⟦⟧]/g,''));return}
+      if(n.nodeType!==1)return;
+      if(n.tagName==='BR'){out+=' ';return}
+      const s={...st},cs=n.style||{},tg=n.tagName;
+      if(tg==='B'||tg==='STRONG'||/bold|^[6-9]00$/.test(cs.fontWeight||''))s.b=1;
+      if(tg==='I'||tg==='EM'||cs.fontStyle==='italic')s.i=1;
+      if(tg==='U'||/underline/.test(cs.textDecorationLine||cs.textDecoration||''))s.u=1;
+      if(cs.textTransform==='uppercase')s.k=1;
+      if(cs.color)s.c=hex(cs.color)||(/^#/.test(cs.color)?cs.color:s.c);
+      if(tg==='FONT'&&n.getAttribute('color'))s.c=n.getAttribute('color');
+      if(cs.backgroundColor){const h=hex(cs.backgroundColor);if(h)s.h=h}
+      if(cs.fontFamily){const f=cs.fontFamily.split(',')[0].replace(/["']/g,'').trim();if(f)s.f=f}
+      n.childNodes.forEach(c=>walk(c,s));
+    };
+    root.childNodes.forEach(c=>walk(c,{}));
+    return out;
+  }
+  function openEd(c,x,k){
+    const box=mk('div','bbed2'),ce=mk('div','bbce');ce.contentEditable='true';ce.spellcheck=false;window.rtSet(ce,ed[k]||x.t1);
+    const tb=mk('div','tb');
+    const ex=(cmd,v)=>{ce.focus();try{document.execCommand('styleWithCSS',false,true)}catch(e){}document.execCommand(cmd,false,v)};
+    const btn=(t,ti,fn,cls)=>{const b=mk('button',cls||'',t);b.type='button';b.title=ti;b.onmousedown=e=>e.preventDefault();b.onclick=fn;tb.appendChild(b);return b};
+    const lab=t=>tb.appendChild(mk('span','bbl',t));
+    lab('Font');const fs=mk('select');fs.innerHTML='<option value="">Default</option>'+EDF.map(f=>'<option>'+f+'</option>').join('');
+    fs.onchange=()=>{if(fs.value){try{ensureFont(fs.value)}catch(e){}ex('fontName',fs.value)}};tb.appendChild(fs);
+    btn('B','Bold',()=>ex('bold')).style.fontWeight='700';btn('I','Italic',()=>ex('italic')).style.fontStyle='italic';btn('U','Underline',()=>ex('underline')).style.textDecoration='underline';
+    btn('AA','Uppercase',()=>{const sel=getSelection();if(!sel.rangeCount)return;const r=sel.getRangeAt(0);if(r.collapsed||!ce.contains(r.commonAncestorContainer))return;const sp=document.createElement('span');sp.style.textTransform='uppercase';sp.appendChild(r.extractContents());r.insertNode(sp)});
+    lab('Color');EDC.forEach(h=>{const b=btn('','Text color '+h,()=>ex('foreColor',h),'sw');b.style.background=h});
+    lab('Highlight');EDH.forEach(h=>{const b=btn('','Highlight '+h,()=>ex('hiliteColor',h),'sw');b.style.background=h});
+    btn('⌀','No highlight',()=>ex('hiliteColor','transparent'),'sw');
+    const ft=mk('div','tb');
+    const clr=mk('button','','Clear formatting');clr.type='button';clr.onclick=()=>{ce.textContent=x.t1};
+    const sp=mk('span');sp.style.flex='1';
+    const cn=mk('button','','Cancel');cn.type='button';cn.onclick=()=>{editing=null;drawRead()};
+    const sv=mk('button','pri','Save');sv.type='button';sv.onclick=()=>{const m=edSer(ce);if(m===x.t1||m.indexOf('⟦')<0)delete ed[k];else ed[k]=m;editing=null;render()};
+    ft.append(clr,sp,cn,sv);box.append(ce,tb,ft);c.append(box);setTimeout(()=>ce.focus(),0);
+  }
   /* ---- columns: Books | Chapters | Verses, with quick text style on the right ---- */
-  let qe=Object.assign({font:'',bold:0,ital:0,ul:0,caps:0,fg:''},saved.qe||{});
+  let qe={font:'',bold:0,ital:0,ul:0,caps:0,fg:''};
   const qeD=()=>{const o={};if(qe.font)o.font=qe.font;if(qe.bold)o.bold=true;if(qe.ital)o.ital=true;if(qe.ul)o.ul=true;if(qe.caps)o.caps=true;if(qe.fg)o.fg=qe.fg;return o};
   function qeDraw(){
     const m=w.querySelector('.bbmain');
@@ -4676,7 +4737,7 @@ function remoteState(){
     on:true,v:1,hb:Date.now(),
     sid:s.id,title:s.title||'Untitled',type:s.type||'song',
     idx,n:sl.length,label:lab,
-    text:String(p.text||'').slice(0,700),next:String(p.next||'').slice(0,300),
+    text:rtStrip(String(p.text||'')).slice(0,700),next:rtStrip(String(p.next||'')).slice(0,300),
     secs:st.map(i=>({i,l:String(sl[i].label),c:labColor(sl[i].label),k:secCode(sl[i].label)||''})),
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):''
@@ -8186,7 +8247,7 @@ if(isStg){
     const L=(p.sl||[]).find(x=>'c:'+x.id===lay);if(!L){if(root){root.remove();root=null}return}
     document.body.className='stg lay-custom';
     if(!root){root=document.createElement('div');root.id='sx';root.style.cssText='position:fixed;inset:0;z-index:5;background:#000';document.body.appendChild(root)}
-    const D={live:(p.black||p.hideLive)?'':(p.clear?'':(p.text||'')),next:p.hideNext?'':(p.next||''),note:p.note||'',msg:[p.sm,p.msgS===undefined?p.msg:p.msgS].filter(Boolean).join('   |   '),si:p.si||{}};
+    const D={live:(p.black||p.hideLive)?'':(p.clear?'':rtStrip(p.text||'')),next:p.hideNext?'':rtStrip(p.next||''),note:p.note||'',msg:[p.sm,p.msgS===undefined?p.msg:p.msgS].filter(Boolean).join('   |   '),si:p.si||{}};
     curL=L;lastD=D;draw(root,L,D);
   })}catch(e){}
   setInterval(()=>{if(root&&curL)update(root,curL,lastD,false)},250);
@@ -14107,7 +14168,7 @@ window.dscDesign={applyDesign,TH,variantPatch};
     const s=cur(),a=expand(s)[idx+1],p=payload(),nt=p.next||'';
     box.classList.toggle('none',!nt);
     document.getElementById('nuL').textContent=(a&&a.label)||'';
-    document.getElementById('nuT').textContent=a?'':nt;
+    document.getElementById('nuT').textContent=a?'':rtStrip(nt);
     if(!nt){pv.innerHTML='';return}
     const q=Object.assign({},p,{text:nt,note:'',sm:'',props:[]});
     try{q.d=eff(s,idx+1)||p.d}catch(e){}
