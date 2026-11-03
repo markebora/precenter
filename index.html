@@ -81,6 +81,8 @@ body.out .stage{width:100vw;height:100vh;aspect-ratio:auto}
 .gal button.on{border-color:var(--acc)}
 .gal img,.gal video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .stage .dim{background:#000}
+/* no background: checkerboard in operator views; the audience output stays black (or keyed) */
+.stage .bg.nobg{background:conic-gradient(#2b2b30 25%,#1a1a1d 0 50%,#2b2b30 0 75%,#1a1a1d 0) 0 0/5cqw 5cqw}
 .stage .anim{background-size:300% 300%;animation:drift 22s ease infinite}
 .slide .anim{animation:none}
 @keyframes drift{0%,100%{background-position:0 50%}50%{background-position:100% 50%}}
@@ -1222,7 +1224,7 @@ function paint(stage,p){
       [...stage.children].forEach(c=>{if(c.classList.contains('ov')||c.classList.contains('tm')||c.classList.contains('pp')||c.classList.contains('cdx'))return;if(st==='Morph'&&!c.classList.contains('tx'))return;old.appendChild(c.cloneNode(true))});
     }
   }
-  const k=[d.bg,d.color,JSON.stringify(d.grad||''),(d.img||'').length,u,d.dim||0,d.fit||'',JSON.stringify(d.pat||''),d.tex||'',d.bgop||0,d.tile||0,(p.mp&&p.mp.mute)?1:0,(p.mp&&p.mp.vol)||100].join('|');
+  const k=[d.bg,d.color,JSON.stringify(d.grad||''),(d.img||'').length,u,d.dim||0,d.fit||'',JSON.stringify(d.pat||''),d.tex||'',d.bgop||0,d.tile||0,d.nobg?1:0,(p.mp&&p.mp.mute)?1:0,(p.mp&&p.mp.vol)||100].join('|');
   if(stage.dataset.k!==k){
     stage.dataset.k=k;
     let h;
@@ -1230,6 +1232,7 @@ function paint(stage,p){
     else if(d.bg==='Image'&&(u||d.img))h=`<div class="bg" style="background-image:url('${u||d.img}')${d.fit==='contain'?';background-size:contain;background-repeat:no-repeat;background-color:#000':''}${d.tile?`;background-size:${d.tile/19.2}cqw;background-repeat:repeat`:''}"></div>`;
     else if(d.bg==='Pattern'&&d.pat&&window.patCss)h=`<div class="bg" style="${window.patCss(d.pat)}"></div>`;
     else if(d.bg==='Texture'&&d.tex&&window.texCss)h=`<div class="bg" style="${window.texCss(d.tex,d.color)}"></div>`;
+    else if(d.nobg||d.bg==='None')h=document.body.classList.contains('out')?'<div class="bg" style="background:#000"></div>':'<div class="bg nobg"></div>';
     else{let c=G[d.bg]||G.Midnight;if(d.bg==='Color')c=d.color;else if(d.bg==='Gradient'&&d.grad)c=d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`;
       h=`<div class="bg${d.bg==='Aurora'?' anim':''}" style="background:${c}"></div>`}
     stage.innerHTML=h+(d.dim?`<div class="dim" style="opacity:${d.dim/100}"></div>`:'');
@@ -1272,7 +1275,7 @@ function sndBlocked(v){v.muted=true;window.__needClick=1;sndGesture();try{bc.pos
 function vidSound(v,mp){v.volume=mp.vol==null?1:Math.max(0,Math.min(1,mp.vol/100));v.muted=false;sndGesture();const q=v.play();if(q&&q.catch)q.catch(()=>sndBlocked(v))}
 function vcApply(v,c){if(!v)return;if(c.op==='play')v.play().catch(()=>{});else if(c.op==='pause')v.pause();else if(c.op==='seek'&&isFinite(c.t))v.currentTime=c.t}
 /* ---------- looks: which layers each screen shows ---------- */
-function stripMedia(p){return{...p,u:'',d:{...p.d,bg:'Color',color:'#000000',img:'',lib:'',dim:0}}}
+function stripMedia(p){return{...p,u:'',d:{...p.d,bg:'Color',color:'#000000',img:'',lib:'',dim:0,nobg:1}}}
 function applyLook(p,kind){
   const L=p&&p.look&&p.look[kind];if(!L)return p;
   let q={...p};
@@ -2859,6 +2862,7 @@ function drawTray(){
     b.textContent=v==='folders'?'Folders'+(inFolders.length?' ('+new Set(inFolders.map(x=>x.name.split('/')[0])).size+')':''):v==='files'?'Files'+(loose.length?' ('+loose.length+')':''):'Looks';
     b.onclick=()=>{trayView=v;trayPath='';drawTray()}});
   if(trayView==='looks'){
+    {const d=document.createElement('div');d.style.cssText='width:100%;height:100%;background:conic-gradient(#2b2b30 25%,#1a1a1d 0 50%,#2b2b30 0 75%,#1a1a1d 0) 0 0/18px 18px';item('None',{bg:'None'},d)}
     Object.keys(G).forEach(k=>{const d=document.createElement('div');d.style.cssText='width:100%;height:100%;background:'+G[k];item(k,{bg:k},d)});
     note('Use Color and Gradient (top) to build your own.');
   }else if(trayView==='files'){
@@ -2976,7 +2980,7 @@ function designPanel(host,sc){
   let sel='';if(hasBg)sel=e0.lib?'l:'+e0.lib:(e0.bg==='Color'||e0.bg==='Gradient')?'c:'+e0.bg:'b:'+e0.bg;
   const bs=q('bg'),add=(par,v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;if(v===sel)o.selected=true;par.appendChild(o)};
   add(bs,'','Same as song');
-  const g1=document.createElement('optgroup');g1.label='Looks';Object.keys(G).forEach(k=>add(g1,'b:'+k,k));add(g1,'c:Color','Color\u2026');add(g1,'c:Gradient','Gradient\u2026');bs.appendChild(g1);
+  const g1=document.createElement('optgroup');g1.label='Looks';add(g1,'b:None','None (checkerboard)');Object.keys(G).forEach(k=>add(g1,'b:'+k,k));add(g1,'c:Color','Color\u2026');add(g1,'c:Gradient','Gradient\u2026');bs.appendChild(g1);
   if(libList.some(x=>!x.deck)){const g2=document.createElement('optgroup');g2.label='Media';libList.filter(x=>!x.deck).forEach(x=>add(g2,'l:'+x.name,(x.type==='video'?'\u25b6 ':'')+x.name.split('/').pop()));bs.appendChild(g2)}
   bs.onchange=()=>{const v=bs.value;
     if(v==='b:'||v[0]==='b'){applyBg(idx,{bg:v.slice(2)});return}
