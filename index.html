@@ -81,7 +81,7 @@ body.out .stage{width:100vw;height:100vh;aspect-ratio:auto}
 .gal button.on{border-color:var(--acc)}
 .gal img,.gal video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .stage .dim{background:#000}
-button.act,button.act:hover{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:700}
+#bin button.act,#bin button.act:hover,#bin button.act:focus,button.act,button.act:hover{background:var(--acc)!important;color:var(--accink)!important;border-color:var(--acc)!important;font-weight:700}
 /* no background: checkerboard in operator views; the audience output stays black (or keyed) */
 .stage .bg.nobg{background:conic-gradient(#44444b 25%,#26262a 0 50%,#44444b 0 75%,#26262a 0) 0 0/5cqw 5cqw}
 .stage .anim{background-size:300% 300%;animation:drift 22s ease infinite}
@@ -3053,7 +3053,7 @@ function openBgPop(kind){
   const d=bgTarget();d.bg=kind;d.lib='';d.img='';
   if(kind==='Gradient'&&!d.grad)d.grad={c:['#3b2d07','#000000'],a:160};
   const ch=()=>{if(bgScope==='song')clearOv(['bg','lib','img']);save();drawGrid();push()};
-  pop.dataset.k=kind;pop.hidden=false;pop.innerHTML='';
+  pop.dataset.k=kind;pop.hidden=false;pop.innerHTML='';[['mCol','Color'],['mGrad','Gradient']].forEach(([i,k])=>{const x=$('#'+i);if(x)x.classList.toggle('act',k===kind)});
   const h=document.createElement('div');h.className='row';h.style.cssText='justify-content:space-between;align-items:center';
   const b=document.createElement('b');b.textContent=kind+' background'+(bgScope==='slide'?' (this slide)':' (whole song)');
   const x=document.createElement('button');x.textContent='\u2715';x.title='Close';x.onclick=()=>{pop.hidden=true};
