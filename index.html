@@ -501,7 +501,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box
 .st{padding:2px 0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 body.out.key,body.out.key .stage,html:has(body.out.key){background:none!important;background-color:transparent!important}
-body.out.key .stage .bg,body.out.key .stage video{display:none!important}
+body.out.key .stage .bg,body.out.key .stage video,body.out.key .stage iframe{display:none!important}
 #sedFilm .fs.add{display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--mute);border:1px dashed var(--line);cursor:pointer;min-height:56px}#sedFilm .fs.add:hover{color:var(--acc);border-color:var(--acc)}
 #sedFilm .fs.dz,.slide.dz{outline:2px dashed var(--acc);outline-offset:-2px}
 .cm.top{z-index:300}.cmsub{z-index:301}
@@ -547,6 +547,9 @@ body.hasbars #app{height:calc(100vh - 50px);height:calc(100dvh - 50px)}
 #ptabs [data-p=pSl]{display:none}
 #nextUp{display:grid;grid-template-columns:44% 1fr;gap:10px;align-items:center;margin:6px 0;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--chip)}
 #nextUp.none{display:none}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
+#ytr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:6px 0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--chip)}#ytr[hidden]{display:none}
+#ytr .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute);margin-right:2px}#ytr button{padding:2px 8px;font-size:12px}#ytr .vtT{margin-left:auto;font-size:10.5px;color:var(--mute)}
 #nextPrev{width:100%;aspect-ratio:16/9;border-radius:4px;overflow:hidden}
 #nextUp .nuI{display:flex;flex-direction:column;gap:3px;min-width:0}
 #nextUp .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute)}
@@ -1240,11 +1243,11 @@ function paint(stage,p){
       [...stage.children].forEach(c=>{if(c.classList.contains('ov')||c.classList.contains('tm')||c.classList.contains('pp')||c.classList.contains('cdx'))return;if(st==='Morph'&&!c.classList.contains('tx'))return;old.appendChild(c.cloneNode(true))});
     }
   }
-  const k=[d.bg,d.color,JSON.stringify(d.grad||''),(d.img||'').length,u,d.dim||0,d.fit||'',JSON.stringify(d.pat||''),d.tex||'',d.bgop||0,d.tile||0,d.nobg?1:0,(p.mp&&p.mp.mute)?1:0,(p.mp&&p.mp.vol)||100].join('|');
+  const k=[d.bg,d.color,JSON.stringify(d.grad||''),(d.img||'').length,u,d.dim||0,d.fit||'',JSON.stringify(d.pat||''),d.tex||'',d.bgop||0,d.tile||0,d.nobg?1:0,d.yt||'',(p.mp&&p.mp.mute)?1:0,(p.mp&&p.mp.vol)||100].join('|');
   if(stage.dataset.k!==k){
     stage.dataset.k=k;
     let h;
-    if(d.bg==='Video'&&u){const mp=p.mp||{},el=!mp.mute;h=`<video src="${u}" autoplay loop playsinline data-snd="${el?1:0}" data-vol="${mp.vol==null?100:mp.vol}"${el&&window.dscIsAud()?'':' muted'}></video>`}
+    if(d.bg==='YouTube'&&d.yt){const au=window.dscIsAud&&window.dscIsAud();h=`<iframe data-yt="${d.yt}" src="https://www.youtube-nocookie.com/embed/${d.yt}?autoplay=1&loop=1&playlist=${d.yt}&controls=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&iv_load_policy=3&mute=${au?0:1}" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" frameborder="0"></iframe>`}else if(d.bg==='Video'&&u){const mp=p.mp||{},el=!mp.mute;h=`<video src="${u}" autoplay loop playsinline data-snd="${el?1:0}" data-vol="${mp.vol==null?100:mp.vol}"${el&&window.dscIsAud()?'':' muted'}></video>`}
     else if(d.bg==='Image'&&(u||d.img))h=`<div class="bg" style="background-image:url('${u||d.img}')${d.fit==='contain'?';background-size:contain;background-repeat:no-repeat;background-color:#000':''}${d.tile?`;background-size:${d.tile/19.2}cqw;background-repeat:repeat`:''}"></div>`;
     else if(d.bg==='Pattern'&&d.pat&&window.patCss)h=`<div class="bg" style="${window.patCss(d.pat)}"></div>`;
     else if(d.bg==='Texture'&&d.tex&&window.texCss)h=`<div class="bg" style="${window.texCss(d.tex,d.color)}"></div>`;
@@ -2945,7 +2948,7 @@ function drawGrid(){
     if(gview==='grid'){
       c.innerHTML=`<div class="lab" style="--c:${labColor(x.label)}"></div><div class="stage"></div>`;
       c.firstChild.textContent=(i+1)+'  '+(x.label||'')+(s.ov&&s.ov[i]?' \u25cf':'')+tag;
-      paint(c.lastChild,{d:(()=>{const e=eff(s,i);return{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0}})(),u:libUrl(eff(s,i)),text:x.text});
+      paint(c.lastChild,{d:(()=>{const e=eff(s,i);return e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0}})(),u:libUrl(eff(s,i)),text:x.text});
     }else{
       c.innerHTML='<div class="lab"></div><div class="bd"><div class="tt"></div><div class="nt"></div></div>';
       c.firstChild.style.setProperty('--c',labColor(x.label));
@@ -3382,6 +3385,7 @@ function openCm(e,i){
   const items=[
     {t:'Show slide',fn:()=>go(i)},
     {t:'Quick Edit\u2026',fn:()=>quickEdit(i)},
+    {t:'Add YouTube video\u2026',fn:()=>window.openYouTube(i)},
     {t:'Slide Editor\u2026',fn:()=>openSed(i)},
     {t:'Edit Lyrics',fn:()=>editSlide(i)},
     {t:'Note, actions & auto-advance\u2026',fn:()=>noteEdit(i)},
@@ -14172,6 +14176,7 @@ window.dscDesign={applyDesign,TH,variantPatch};
     if(!nt){pv.innerHTML='';return}
     const q=Object.assign({},p,{text:nt,note:'',sm:'',props:[]});
     try{q.d=eff(s,idx+1)||p.d}catch(e){}
+    if(q.d&&q.d.bg==='YouTube'&&q.d.yt)q.d={...q.d,bg:'Image',img:'https://img.youtube.com/vi/'+q.d.yt+'/mqdefault.jpg'};
     paint(pv,applyLook(q,'a'));
   }catch(e){}};
   new MutationObserver(()=>{clearTimeout(t);t=setTimeout(draw,60)}).observe(pr,{childList:true,subtree:true});
@@ -14202,6 +14207,49 @@ window.dscDesign={applyDesign,TH,variantPatch};
     if(Math.abs(gv.currentTime-pv.currentTime)>0.5)gv.currentTime=pv.currentTime;
     if(pv.paused&&!gv.paused)gv.pause();else if(!pv.paused&&gv.paused)gv.play().catch(()=>{});
   }catch(e){}},250);
+})();
+
+/* ---- YouTube: right-click a slide > Add YouTube video (by link or by name) ---- */
+window.openYouTube=function(i){
+  const w=document.createElement('div');w.className='qe';
+  w.innerHTML='<div class="qb" style="width:min(640px,94vw);display:flex;flex-direction:column;gap:8px;max-height:86vh;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center"><b>Add YouTube video to slide '+(i+1)+'</b><button class="x" title="Close">\u2715</button></div><div style="display:flex;gap:6px"><input id="yq" placeholder="Paste a YouTube link, or type a name to search" style="flex:1" autocomplete="off"><button id="yg" class="pri">Go</button></div><div id="ym" class="hint" style="margin:0"></div><div id="yr" style="overflow:auto;display:flex;flex-direction:column;gap:6px;min-height:40px"></div><details><summary>Search by name needs a free YouTube API key</summary><div style="display:flex;gap:6px;margin-top:6px"><input id="yk" placeholder="API key" style="flex:1" autocomplete="off"><button id="yks">Save key</button></div><div class="hint">Create one in Google Cloud Console (YouTube Data API v3). Pasting a link works without a key.</div></details><div style="display:flex;gap:6px;justify-content:flex-end"><button class="x2">Cancel</button><button id="ya" class="pri" disabled>Add to slide</button></div></div>';
+  document.body.appendChild(w);
+  const q=id=>w.querySelector('#'+id);let pick=null;const done=()=>w.remove();
+  w.querySelector('.x').onclick=done;w.querySelector('.x2').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
+  let key='';try{key=localStorage.getItem('lp-ytkey')||''}catch(e){}q('yk').value=key;
+  q('yks').onclick=()=>{key=q('yk').value.trim();try{localStorage.setItem('lp-ytkey',key)}catch(e){}q('ym').textContent=key?'Key saved.':'Key removed.'};
+  const yid=t=>{t=t.trim();const m=/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([\w-]{11})/.exec(t);if(m)return m[1];return /^[\w-]{11}$/.test(t)?t:''};
+  const card=v=>{const r=document.createElement('div');r.style.cssText='display:flex;gap:10px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:8px;cursor:pointer';
+    r.innerHTML='<img alt="" style="width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:6px"><div><b></b><div class="hint" style="margin:0"></div></div>';
+    r.querySelector('img').src='https://img.youtube.com/vi/'+v.id+'/mqdefault.jpg';r.querySelector('b').textContent=v.t;r.querySelector('.hint').textContent=v.ch||'';
+    r.onclick=()=>{pick=v;[...q('yr').children].forEach(c=>c.style.borderColor='var(--line)');r.style.borderColor='var(--acc)';q('ya').disabled=false};return r};
+  async function go(){
+    const t=q('yq').value.trim();if(!t)return;pick=null;q('ya').disabled=true;q('yr').innerHTML='';q('ym').textContent='';
+    const id=yid(t);
+    if(id){q('ym').textContent='Checking video\u2026';
+      try{const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+id));if(!r.ok)throw 0;const j=await r.json();q('ym').textContent='';const c=card({id,t:j.title,ch:j.author_name});q('yr').appendChild(c);c.click()}
+      catch(e){q('ym').textContent='That video was not found, or its owner does not allow embedding.'}return}
+    if(!key){q('ym').innerHTML='To search by name, add a free API key below. Or <a href="#" id="yo">search on YouTube</a> and paste the link here.';q('ym').querySelector('#yo').onclick=e=>{e.preventDefault();window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(t),'_blank')};return}
+    q('ym').textContent='Searching\u2026';
+    try{const r=await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=8&q='+encodeURIComponent(t)+'&key='+encodeURIComponent(key));const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||'Search failed');
+      q('ym').textContent=j.items.length?'':'No results.';j.items.forEach(it=>q('yr').appendChild(card({id:it.id.videoId,t:it.snippet.title,ch:it.snippet.channelTitle})))}
+    catch(e){q('ym').textContent='Search failed: '+e.message}
+  }
+  q('yg').onclick=go;q('yq').onkeydown=e=>{if(e.key==='Enter')go()};
+  q('ya').onclick=()=>{if(!pick)return;const s=cur();s.ov=s.ov||{};s.ov[i]={...(s.ov[i]||{}),bg:'YouTube',yt:pick.id,ytt:pick.t,lib:'',img:''};save();drawGrid();if(i===idx)push();done();toast('YouTube video added to slide '+(i+1)+'. Click the slide to play it.')};
+  setTimeout(()=>q('yq').focus(),0);
+};
+/* YouTube play controls (preview + audience windows) */
+(function(){
+  const post=(op,t)=>document.querySelectorAll('.stage iframe[data-yt]').forEach(f=>{try{f.contentWindow.postMessage(JSON.stringify({event:'command',func:op==='play'?'playVideo':op==='pause'?'pauseVideo':'seekTo',args:op==='seek'?[t||0,true]:''}),'*')}catch(e){}});
+  const ctl=(op,t)=>{post(op,t);try{bc.postMessage({yt:{op,t}})}catch(e){}};
+  try{bc.addEventListener('message',e=>{if(e.data&&e.data.yt)post(e.data.yt.op,e.data.yt.t)})}catch(e){}
+  const vt=document.getElementById('vtr');if(!vt)return;
+  const r=document.createElement('div');r.id='ytr';r.hidden=true;
+  r.innerHTML='<span class="opl">YOUTUBE</span><button type="button" data-y="seek" title="Back to the start">\u23ee Restart</button><button type="button" data-y="play" class="pri" title="Play">\u25b6 Play</button><button type="button" data-y="pause" title="Pause">\u23f8 Pause</button><span class="vtT" id="ytT"></span>';
+  vt.after(r);
+  r.querySelectorAll('button').forEach(b=>b.onclick=()=>ctl(b.dataset.y,0));
+  setInterval(()=>{const f=document.querySelector('#preview iframe[data-yt]');r.hidden=!f;if(f)document.getElementById('ytT').textContent='Sound plays on the audience screen'},500);
 })();
 </script>
 </body>
