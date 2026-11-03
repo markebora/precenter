@@ -81,6 +81,7 @@ body.out .stage{width:100vw;height:100vh;aspect-ratio:auto}
 .gal button.on{border-color:var(--acc)}
 .gal img,.gal video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .stage .dim{background:#000}
+button.act,button.act:hover{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:700}
 /* no background: checkerboard in operator views; the audience output stays black (or keyed) */
 .stage .bg.nobg{background:conic-gradient(#44444b 25%,#26262a 0 50%,#44444b 0 75%,#26262a 0) 0 0/5cqw 5cqw}
 .stage .anim{background-size:300% 300%;animation:drift 22s ease infinite}
@@ -3043,6 +3044,7 @@ function markTray(){
   const s=cur(),e=eff(s,idx);
   t.querySelectorAll('.t').forEach(b=>{const on=b.dataset.lib?e.lib===b.dataset.lib:(!e.lib&&e.bg===b.dataset.bg);b.classList.toggle('sel',on)});
   const dm=bgTarget().dim||0;$('#dim').value=dm;$('#dimv').textContent=dm+'%';
+  [['mCol','Color'],['mGrad','Gradient']].forEach(([id,k])=>{const b=$('#'+id);if(b)b.classList.toggle('act',e.bg===k&&!e.lib)});
 }
 function bgPopClose(){const p=$('#bgpop');if(p)p.hidden=true}
 function openBgPop(kind){
