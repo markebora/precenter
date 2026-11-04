@@ -1969,6 +1969,9 @@ function openBible(sec){
 .bbx .bbed2 .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 .bbx .bbed2 .tb button{padding:3px 10px;min-width:30px}.bbx .bbed2 .tb .sw{width:18px;height:18px;min-width:0;padding:0;border-radius:50%;border:2px solid var(--line);font-size:10px;line-height:1}
 .bbx .bbed2 select{max-width:140px}
+.bbx .bbcl{font-size:11px;color:var(--mute);margin-bottom:5px}
+.bbx .bbcp{margin-top:6px;padding:6px 8px;border-left:3px solid var(--acc);border-radius:4px;background:var(--panel)}
+.bbx .bbcp small{display:block;font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .bbx #bbPick,.bbx #bbBkB,.bbx #bbChB,.bbx #bbVB{display:none!important}
 .bbx .bbcols{display:grid;grid-template-columns:210px 128px 150px minmax(0,1fr);gap:8px;flex:1;min-height:0}
 .bbx .bbcol{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden}
@@ -2100,7 +2103,10 @@ function openBible(sec){
     V.forEach(x=>{
       if(P&&P.c1!==P.c2&&x.ch!==lastCh){g.appendChild(mk('div','bbch',book+' '+x.ch));lastCh=x.ch}
       const c=mk('div','bbc c1'),ek=tr1+'|'+x.ch+':'+x.v;c.append(mk('sup','',String(x.v)));
-       if(editing===ek)openEd(c,x,ek);else{const t=mk('span');window.rtSet(t,ed[ek]||x.t1);c.append(t);const eb=mk('button','bbei','✎');eb.type='button';eb.title='Edit this verse: font, color, highlight, bold, italic, underline';eb.onclick=()=>{editing=ek;drawRead()};c.append(eb)}
+       {const t=mk('span');t.textContent=x.t1;c.append(t);
+        if(editing===ek)openEd(c,x,ek);
+        else{const eb=mk('button','bbei','✎');eb.type='button';eb.title='Edit the text that goes on the slide (a copy: the Bible text stays as it is)';eb.onclick=()=>{editing=ek;drawRead()};c.append(eb);
+          if(ed[ek]){const cp=mk('div','bbcp');cp.append(mk('small','','Text sent to the slide'));const t2=mk('span');window.rtSet(t2,ed[ek]);cp.append(t2);c.append(cp)}}}
        g.appendChild(c);
       if(dd){const c2=mk('div','bbc c2');const s2=mk('sup','',String(x.v));c2.append(s2,document.createTextNode(x.t2));g.appendChild(c2)}
     });
@@ -2199,7 +2205,7 @@ function openBible(sec){
     const sp=mk('span');sp.style.flex='1';
     const cn=mk('button','','Cancel');cn.type='button';cn.onclick=()=>{editing=null;drawRead()};
     const sv=mk('button','pri','Save');sv.type='button';sv.onclick=()=>{const m=edSer(ce);if(m===x.t1||m.indexOf('⟦')<0)delete ed[k];else ed[k]=m;editing=null;render()};
-    ft.append(clr,sp,cn,sv);box.append(ce,tb,ft);c.append(box);setTimeout(()=>ce.focus(),0);
+    ft.append(clr,sp,cn,sv);box.append(mk('div','bbcl','Text sent to the slide. This is a copy: the Bible text above does not change.'),ce,tb,ft);c.append(box);setTimeout(()=>ce.focus(),0);
   }
   /* ---- columns: Books | Chapters | Verses, with quick text style on the right ---- */
   let qe={font:'',bold:0,ital:0,ul:0,caps:0,fg:''};
