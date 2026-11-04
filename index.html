@@ -4327,6 +4327,61 @@ function dscErr(e){
    for button presses in presenterCmd/{teamId}/q. The projector is still fed
    directly by this computer, so it never depends on the internet. */
 var RM=null,RMauth=false,RMerr=0;
+/* ---- background for the phone remote's live preview ----
+   remoteBg() describes the slide background as {k,t,v}:
+     k = 'img' | 'vid' | 'grad' | 'color'
+     img/vid : t = small JPEG thumbnail (320x180; a video sends one frame), v = version id of that picture
+     grad/color : t and v both hold the CSS colour / gradient string
+   The thumbnail is made once per picture and cached, then the state is published again. */
+var RMB={cache:new Map(),busy:new Set()};
+function rmHash(x){let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))|0;return(h>>>0).toString(36)}
+async function rmThumb(key,kind,src,contain){
+  RMB.busy.add(key);let out='';
+  try{
+    let el,w,h;
+    if(kind==='vid'){
+      el=document.createElement('video');el.muted=true;el.preload='auto';el.playsInline=true;el.src=src;
+      await new Promise((ok,no)=>{el.onloadeddata=ok;el.onerror=no;setTimeout(no,8000)});
+      try{el.currentTime=Math.min(1,(el.duration||2)/4)}catch(e){}
+      await new Promise(ok=>{el.onseeked=ok;setTimeout(ok,1500)});
+      w=el.videoWidth;h=el.videoHeight;
+    }else{
+      el=new Image();if(/^https?:/i.test(src))el.crossOrigin='anonymous';el.src=src;
+      await el.decode();w=el.naturalWidth;h=el.naturalHeight;
+    }
+    if(w&&h){
+      const c=document.createElement('canvas');c.width=320;c.height=180;const g=c.getContext('2d');
+      g.fillStyle='#000';g.fillRect(0,0,320,180);
+      const sc=contain?Math.min(320/w,180/h):Math.max(320/w,180/h),dw=w*sc,dh=h*sc;
+      g.drawImage(el,(320-dw)/2,(180-dh)/2,dw,dh);
+      out=c.toDataURL('image/jpeg',.6);if(out.length>45000)out=c.toDataURL('image/jpeg',.4);
+    }
+    if(kind==='vid'){el.removeAttribute('src');el.load()}
+  }catch(e){out=''}
+  RMB.cache.set(key,out);RMB.busy.delete(key);
+  try{remotePublish()}catch(e){}
+}
+function remoteBg(p){
+  try{
+    const d=p.d||{},u=p.u||'';
+    const css=c=>({k:/gradient\(/i.test(c)?'grad':'color',t:c,v:c});
+    if(d.nobg||d.bg==='None')return css('#000000');
+    let kind='',src='';
+    if(d.bg==='Video'&&u){kind='vid';src=u}
+    else if(d.bg==='Image'&&(u||d.img)){kind='img';src=u||d.img}
+    else if(d.bg==='YouTube'&&d.yt){kind='img';src='https://img.youtube.com/vi/'+d.yt+'/mqdefault.jpg'}
+    if(kind){
+      const key=kind+(d.fit==='contain'?'c':'')+'.'+rmHash(src.length>200?src.slice(0,100)+src.length+src.slice(-100):src);
+      const hit=RMB.cache.get(key);
+      if(hit===undefined&&!RMB.busy.has(key))rmThumb(key,kind,src,d.fit==='contain');
+      return hit?{k:kind,t:hit,v:key}:{k:kind,v:key};
+    }
+    if(d.bg==='Color'&&d.color)return css(String(d.color));
+    if(d.bg==='Gradient'&&d.grad&&d.grad.c)return css(d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`);
+    if(typeof G!=='undefined'&&G[d.bg])return css(String(G[d.bg]));
+    return css('#111111');
+  }catch(e){return null}
+}
 function remoteState(){
   const s=cur(),sl=expand(s),p=payload(),st=secStarts(sl);
   let lab='';for(let i=Math.min(idx,sl.length-1);i>=0;i--){if(sl[i]&&sl[i].label){lab=sl[i].label;break}}
@@ -4338,6 +4393,7 @@ function remoteState(){
     ch:p.ch?JSON.stringify(p.ch).slice(0,4000):'',chn:p.chn?JSON.stringify(p.chn).slice(0,2000):'',
     secs:st.map(i=>({i,l:String(sl[i].label),c:labColor(sl[i].label),k:secCode(sl[i].label)||''})),
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
+    bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
     black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):''
   };
 }
