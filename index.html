@@ -200,6 +200,11 @@ body.stg .tm{color:#E8B923;font-weight:700}
 body.stg .card{position:relative;border:.25vw solid #2d2d32;border-radius:1vw;background:#0c0c0e;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:3.2vw 2.4vw 1.4vw}
 body.stg .card.live{border-color:#d33}
 body.stg .card.nx{border-color:#E8B923;padding-top:2.8vw}
+body.stg .cl{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;line-height:1.12;margin:.18em 0;white-space:normal}
+body.stg .cs{display:inline-flex;flex-direction:column;align-items:flex-start}
+body.stg .cs b{font-size:.6em;line-height:1.15;font-weight:800;color:#E8B923;padding-right:.4em;white-space:pre}
+body.stg .cs i{font-style:normal;white-space:pre-wrap}
+body.stg .nx .cs b{color:#fff}
 body.stg .tag{position:absolute;top:.8vw;left:1vw;font:700 1.7vw Poppins,Inter,sans-serif;letter-spacing:.12em;padding:.2vw 1vw;border-radius:.5vw;background:#d33;color:#fff}
 body.stg .nx .tag{background:#E8B923;color:#171200}
 body.stg .card>div:last-child{white-space:pre-wrap;line-height:1.2;text-align:center;word-break:break-word;width:100%;max-height:100%;overflow:hidden}
@@ -1168,6 +1173,7 @@ function applyLook(p,kind){
   }else{
     if(L.slide===0)q.hideLive=true;
     if(L.next===0)q.hideNext=true;
+    if(L.chords===0)q.hideChords=true;
     if(L.msg===0){q.msg='';q.sm=''}
     if(L.tm===0)q.te=0;
   }
@@ -1201,6 +1207,7 @@ if(/^#stage/.test(location.hash)){
   document.body.innerHTML='<div class="hb"><span id="sk"></span><span id="ss"></span><span class="tm" id="st"></span></div><div class="card live"><span class="tag">LIVE</span><div id="sc"></div></div><div class="card nx"><span class="tag">NEXT</span><div id="sn"></div></div><div class="card nt" hidden><span class="tag">NOTE</span><div id="snt"></div></div><div class="msg" id="sm" hidden></div>';
   const LSIZ={both:[8.4,2.4,3.6,1.2],live:[10,2.4,3,1],next:[5,1.6,5.4,1.6],notes:[6.4,2,3,1.2],clock:[6,2,3,1]};
   const fitT=(el,max,min)=>{let f=max;el.style.fontSize=f+'vw';const box=el.parentNode,cs=getComputedStyle(box),av=box.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);while(f>min&&el.scrollHeight>av){f-=.3;el.style.fontSize=f+'vw'}};
+  const stgSet=(el,t,ch)=>{if(!ch){el.textContent=t;return}el.textContent='';ch.forEach(ln=>{const d=document.createElement('div');d.className='cl';ln.forEach(q=>{const c=document.createElement('span');c.className='cs';const b=document.createElement('b'),i=document.createElement('i');b.textContent=q[0]||'\u00a0';i.textContent=q[1]||'';c.append(b,i);d.appendChild(c)});el.appendChild(d)})};
   const clk=()=>{$('#sk').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};setInterval(clk,1000);clk();
   bc.onmessage=e=>{if(e.data.tp!==undefined){if(window.dscTpFor&&!dscTpFor(e.data,'s'))return;dscTestPattern(e.data.tp,'STAGE '+(stN+1));return}if(!e.data.d||e.data.only==='a')return;const p=applyLook(e.data,'s');
     const lay=(p.stl&&p.stl[stN])||'both',z=LSIZ[lay]||LSIZ.both;
@@ -1209,8 +1216,9 @@ if(/^#stage/.test(location.hash)){
     document.querySelector('.card.nx').hidden=lay==='live'||lay==='clock';
     document.querySelector('.card.nt').hidden=lay!=='notes';
     const live=(p.black||p.hideLive)?'':(p.clear?'':rtStrip(p.text||''));
-    $('#sc').textContent=live;$('#sc').style.opacity=p.black?.3:1;$('#ss').textContent=p.black?'BLACK':(p.clear?'TEXT CLEARED':'');
-    $('#sn').textContent=p.hideNext?'':rtStrip(p.next||'— end —');
+    const chOk=!p.hideChords&&!p.black&&!p.clear&&!p.hideLive;
+    stgSet($('#sc'),live,chOk&&p.ch?p.ch:null);$('#sc').style.opacity=p.black?.3:1;$('#ss').textContent=p.black?'BLACK':(p.clear?'TEXT CLEARED':'');
+    stgSet($('#sn'),p.hideNext?'':rtStrip(p.next||'— end —'),(!p.hideNext&&!p.hideChords&&p.chn)?p.chn:null);
     $('#snt').textContent=p.note||'';
     if(lay!=='clock'){fitT($('#sc'),z[0],z[1]);if(lay!=='live')fitT($('#sn'),z[2],z[3]);if(lay==='notes')fitT($('#snt'),3.2,1.2)}
     const mt=[p.sm,p.msgS===undefined?p.msg:p.msgS].filter(Boolean).join('   |   ');
@@ -1325,6 +1333,9 @@ function arrange(s){
   return{slides,bad,used,on:true};
 }
 const expand=s=>arrange(s).slides;
+/* chords: s.cm maps a slide's lyric text to its chord lines [[ [chord,text], ... ], ...] (kept at import; the audience never sees them) */
+const cmKey=t=>String(t||'').split('\n').map(l=>l.trim()).join('\n').trim();
+function chordsFor(s,i){try{if(!s||!s.cm||i<0)return null;const x=expand(s)[i];return x?(s.cm[cmKey(x.text)]||null):null}catch(e){return null}}
 const arranged=s=>arrange(s).on;
 const labColor=l=>{try{const g=S&&S.grpC;if(g){const k=Object.keys(g).sort((a,b)=>b.length-a.length).find(k=>new RegExp('^'+k.replace(/[^a-z0-9]/gi,'.'),'i').test(l||''));if(k)return g[k]}}catch(e){}return labC0(l)};
 const labC0=l=>/^verse/i.test(l)?'#1a8fc4':/^(chorus|refrain)/i.test(l)?'#d98a0b':/^(bridge|pre)/i.test(l)?'#7c5cd6':'#4b5160';
@@ -2385,7 +2396,7 @@ function toArrangement(){
 function slideText(s,i){const a=expand(s)[i];return a?a.text+(s.ref?'\n\u2014 '+s.ref:''):''}
 function payload(){
   const s=cur(),L=curLook();
-  const p={look:{a:{...L.a},s:{...L.s}},props:S.props.filter(x=>x.on).map(x=>({t:x.t,pos:x.pos,size:x.size,img:x.img,text:x.t==='ccli'?ccliLine(s):x.text})).filter(x=>x.img||x.text),sm:smsgOn?smsg:'',note:ntOf(s,idx).n||'',stl:window.lpScr?window.lpScr.layouts():[],d:eff(s,idx),mp:(window.dscMpGet?dscMpGet(eff(s,idx).lib||''):{}),u:libUrl(eff(s,idx)),text:slideText(s,idx),next:slideText(s,idx+1)||(adjItem(1)?'\u25b6 Next: '+(adjItem(1).title||'Untitled'):''),black,clear,msg:msgOn?msg:'',te,sid:s.id+':'+idx,mst:(mstMap[s.id+':'+idx]||[]).slice(),ast:SHOW().noAnim?undefined:(astMap[s.id+':'+idx]||0),atg:SHOW().noAnim?undefined:(atgMap[s.id+':'+idx]||[]).slice()};
+  const p={look:{a:{...L.a},s:{...L.s}},props:S.props.filter(x=>x.on).map(x=>({t:x.t,pos:x.pos,size:x.size,img:x.img,text:x.t==='ccli'?ccliLine(s):x.text})).filter(x=>x.img||x.text),sm:smsgOn?smsg:'',note:ntOf(s,idx).n||'',stl:window.lpScr?window.lpScr.layouts():[],d:eff(s,idx),mp:(window.dscMpGet?dscMpGet(eff(s,idx).lib||''):{}),u:libUrl(eff(s,idx)),text:slideText(s,idx),ch:chordsFor(s,idx),chn:chordsFor(s,idx+1),next:slideText(s,idx+1)||(adjItem(1)?'\u25b6 Next: '+(adjItem(1).title||'Untitled'):''),black,clear,msg:msgOn?msg:'',te,sid:s.id+':'+idx,mst:(mstMap[s.id+':'+idx]||[]).slice(),ast:SHOW().noAnim?undefined:(astMap[s.id+':'+idx]||0),atg:SHOW().noAnim?undefined:(atgMap[s.id+':'+idx]||[]).slice()};
   return noMedia?stripMedia(p):p;
 }
 function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
@@ -3281,7 +3292,7 @@ function openLooks(){
   const w=document.createElement('div');w.className='qe';
   w.innerHTML='<div class="qb lkb" role="dialog" aria-label="Looks"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px"><b>Looks</b><button class="x pri">Done</button></div><div class="hint" style="margin:0 0 8px">A look is a saved set of layers for each screen, for example one for the service and one for the pre-service announcements. Switch looks from the toolbar in one click.</div><div class="lkw"><div class="lkL"></div><div class="lkR"></div></div></div>';
   const L=w.querySelector('.lkL'),R=w.querySelector('.lkR');
-  const ROWS=[['slide','Slide text / live slide',1,1],['media','Media background',1,0],['next','Next slide',0,1],['msg','Message',1,1],['prop','Props',1,0],['tm','Timer',1,1],['ann','Announcement',1,0],['cam','Video input',1,0],['mask','Mask',1,0]];
+  const ROWS=[['slide','Slide text / live slide',1,1],['media','Media background',1,0],['next','Next slide',0,1],['chords','Chords (songs that have them)',0,1],['msg','Message',1,1],['prop','Props',1,0],['tm','Timer',1,1],['ann','Announcement',1,0],['cam','Video input',1,0],['mask','Mask',1,0]];
   function draw(){
     L.innerHTML='';
     S.looks.forEach(l=>{const b=document.createElement('button');b.className=l.id===sel?'sel':'';b.textContent=l.n+(l.id===S.look?'  \u25cf':'');b.title=l.id===S.look?'Active look':'Edit this look';b.onclick=()=>{sel=l.id;draw()};L.appendChild(b)});
@@ -3740,9 +3751,9 @@ function openPCO(){
           const sr=it.relationships&&it.relationships.song&&it.relationships.song.data,ar=it.relationships&&it.relationships.arrangement&&it.relationships.arrangement.data;
           const so=sr&&inc['Song:'+sr.id],arr=ar&&inc['Arrangement:'+ar.id];
           const raw=arr&&arr.attributes&&(arr.attributes.lyrics||arr.attributes.chord_chart)||'';
-          const lyr=raw?dscLyrics({text:raw},4):'';if(!lyr)bare++;
+          const cm0={},lyr=raw?dscLyrics({text:raw},4,cm0):'';if(!lyr)bare++;
           const sa=so&&so.attributes||{};
-          item={id:dscNewId(used),title:sa.title||a.title||'Song',lyrics:lyr,d:{...base},sec,type:'song',src};
+          item={id:dscNewId(used),title:sa.title||a.title||'Song',lyrics:lyr,d:{...base},sec,type:'song',src};if(Object.keys(cm0).length)item.cm=cm0;
           if(sa.ccli_number||sa.copyright||sa.author)item.ccli={no:sa.ccli_number?String(sa.ccli_number):'',author:sa.author||'',copy:sa.copyright||''};
           songs++;
         }else{
@@ -4075,19 +4086,41 @@ function dscLabel(name){
 
 /* A Harmony song -> Present lyrics: chord lines removed, sections kept as
    labelled slides, optionally split into slides of N lines. */
-function dscLyrics(song,perSlide){
+/* chord-over-lyric line (or inline [G] chords) -> [[chord,text],...] so the stage can draw chords above the right words */
+function dscSegs(line,chLine){
+  let segs=[];
+  if(chLine&&!/\[[A-G]/.test(line)){
+    const pos=[],re=/\S+/g;let m;
+    while((m=re.exec(chLine))){if(dscIsChordToken(m[0]))pos.push([m.index,m[0]])}
+    if(pos.length){
+      if(pos[0][0]>0)segs.push(['',line.slice(0,pos[0][0])]);
+      pos.forEach((q,i)=>segs.push([q[1],line.slice(q[0],i+1<pos.length?pos[i+1][0]:undefined)]));
+    }
+  }else if(/\[[A-G]/.test(line)){
+    const re=/\[([A-G](?:#|b)?[A-Za-z0-9#\/+\-]*)\]/g;let last=0,c='',m;
+    while((m=re.exec(line))){if(m.index>last||c)segs.push([c,line.slice(last,m.index)]);c=m[1];last=m.index+m[0].length}
+    segs.push([c,line.slice(last)]);
+  }
+  if(!segs.length)return null;
+  segs=segs.map(q=>[q[0],q[1].replace(/\s{2,}/g,' ')]);
+  segs[0][1]=segs[0][1].replace(/^\s+/,'');segs[segs.length-1][1]=segs[segs.length-1][1].replace(/\s+$/,'');
+  segs=segs.filter(q=>q[0]||q[1]);
+  return segs.length?segs:null;
+}
+function dscLyrics(song,perSlide,cmOut){
   const parts=Array.isArray(song.mergeParts)&&song.mergeParts.length>1?song.mergeParts:null;
   const part=parts?parts[Math.max(0,Math.min(parts.length-1,song.activePartIndex||0))]:song;
   const text=String((part&&(part.originalText||part.text))||song.originalText||song.text||'');
   const blocks=[];
   dscParseSections(text).forEach(sec=>{
-    const paras=[];let curP=[];
+    const paras=[];let curP=[],pend=null;
     (sec.lines||[]).forEach(raw=>{
       const line=String(raw).replace(/\s+$/,'');
-      if(line.trim()===''){if(curP.length){paras.push(curP);curP=[]}return}
-      if(dscIsChordOnly(line))return;
+      if(line.trim()===''){pend=null;if(curP.length){paras.push(curP);curP=[]}return}
+      if(dscIsChordOnly(line)){pend=line;return}
       const clean=line.replace(/\[[A-G](?:#|b)?[A-Za-z0-9#\/+\-]*\]/g,'').replace(/\s{2,}/g,' ').trim();
-      if(clean)curP.push(clean);
+      if(clean){let sg=null;try{sg=dscSegs(line,pend)}catch(e){}curP.push({t:clean,s:sg})}
+      pend=null;
     });
     if(curP.length)paras.push(curP);
     const chunks=[];
@@ -4099,7 +4132,11 @@ function dscLyrics(song,perSlide){
     });
     if(!chunks.length)return;
     const label=dscLabel(sec.name);
-    chunks.forEach((c,i)=>blocks.push((i===0&&label?label+'\n':'')+c.join('\n')));
+    chunks.forEach((c,i)=>{
+      const txt=c.map(o=>o.t).join('\n');
+      blocks.push((i===0&&label?label+'\n':'')+txt);
+      if(cmOut&&c.some(o=>o.s))cmOut[cmKey(txt)]=c.map(o=>o.s||[['',o.t]]);
+    });
   });
   return blocks.join('\n\n');
 }
@@ -4114,13 +4151,13 @@ function dscAddSongs(songs,perSlide,secName,fresh){
   const used=new Set(S.songs.map(x=>x.id));
   let added=0,updated=0,skipped=0,first=null;
   songs.forEach(song=>{
-    const lyr=song._edited!=null?song._edited:dscLyrics(song,perSlide);
+    const cm={},lyr0=dscLyrics(song,perSlide,cm),lyr=song._edited!=null?song._edited:lyr0,hasCm=Object.keys(cm).length>0;
     if(!lyr.trim()){skipped++;return}
     const src={app:'harmony',id:song.id,updatedAt:song.updatedAt||''};
     if(fresh)src.fresh=true;
     const ex=fresh?null:S.songs.find(x=>x.src&&x.src.app==='harmony'&&x.src.id===song.id&&(x.sec||'Music')===secName);
-    if(ex){ex.lyrics=lyr;ex.src=src;updated++;first=first||ex;return}
-    const item={id:dscNewId(used),title:song.title||'Untitled Song',lyrics:lyr,d:{...base},sec:secName,type:'song',src};
+    if(ex){ex.lyrics=lyr;ex.src=src;if(hasCm)ex.cm=cm;else delete ex.cm;updated++;first=first||ex;return}
+    const item={id:dscNewId(used),title:song.title||'Untitled Song',lyrics:lyr,d:{...base},sec:secName,type:'song',src};if(hasCm)item.cm=cm;
     S.songs.push(item);added++;first=first||item;
   });
   if(first){S.sel=first.id;idx=0}
@@ -4218,6 +4255,7 @@ function remoteState(){
     sid:s.id,title:s.title||'Untitled',type:s.type||'song',
     idx,n:sl.length,label:lab,
     text:rtStrip(String(p.text||'')).slice(0,700),next:rtStrip(String(p.next||'')).slice(0,300),
+    ch:p.ch?JSON.stringify(p.ch).slice(0,4000):'',chn:p.chn?JSON.stringify(p.chn).slice(0,2000):'',
     secs:st.map(i=>({i,l:String(sl[i].label),c:labColor(sl[i].label),k:secCode(sl[i].label)||''})),
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):''
