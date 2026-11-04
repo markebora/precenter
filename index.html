@@ -4404,8 +4404,13 @@ function rmVidCfg(){
     const v=val();if(!(v.acct&&v.bucket&&v.id&&v.secret&&v.base)){st('Fill in every box first.');return}
     st('Testing\u2026');
     try{await r2Put(v,'bg/test.txt',new Blob(['ok'],{type:'text/plain'}),'text/plain')}catch(e){st('Upload failed: '+(e&&e.message||e)+'  (check the keys, the Account ID, the bucket name and the CORS rule)');return}
-    try{const r=await fetch(v.base.replace(/\/+$/,'')+'/bg/test.txt?'+Date.now());st(r.ok?'Upload and public link both work.':'Upload works, but the public link answered '+r.status+'. Turn on public access for the bucket.')}
-    catch(e){st('Upload works, but the public link could not be read. Check the public link and the CORS rule.')}
+    const url=v.base.replace(/\/+$/,'')+'/bg/test.txt?'+Date.now();
+    try{const r=await fetch(url);st(r.ok?'Upload and public link both work.':'Upload works, but the public link answered '+r.status+'. Turn on public access for the bucket.')}
+    catch(e){
+      /* the phone only plays the video from this link, which needs no CORS: if the address answers at all, that is enough */
+      try{await fetch(url,{mode:'no-cors'});st('Upload works and the public link answers. PreCenter cannot read the reply (CORS), but the phone does not need to. You can press Save.')}
+      catch(e2){st('Upload works, but this computer cannot reach the public link ('+(e2&&e2.message||'network error')+'). Open the link in a browser to check it, and check the public link spelling.')}
+    }
   };
 }
 function rmHash(x){let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))|0;return(h>>>0).toString(36)}
@@ -4467,12 +4472,18 @@ function remoteBg(p){
 function remoteState(){
   const s=cur(),sl=expand(s),p=payload(),st=secStarts(sl);
   let lab='';for(let i=Math.min(idx,sl.length-1);i>=0;i--){if(sl[i]&&sl[i].label){lab=sl[i].label;break}}
+  /* text-only cards for the phone's slide grid: label (Verse 1, Verse 1B, Chorus...) + the words */
+  let cbase='',ck=0;const cards=sl.slice(0,80).map(x=>{
+    if(x.label){cbase=String(x.label);ck=0}else ck++;
+    return{l:cbase?(ck?cbase+(ck<26?String.fromCharCode(65+ck):ck):cbase):'',t:rtStrip(String(x.text||'')).slice(0,140)};
+  });
   return{
     on:true,v:1,hb:Date.now(),
     sid:s.id,title:s.title||'Untitled',type:s.type||'song',
     idx,n:sl.length,label:lab,
     text:rtStrip(String(p.text||'')).slice(0,700),next:rtStrip(String(p.next||'')).slice(0,300),
     ch:p.ch?JSON.stringify(p.ch).slice(0,4000):'',chn:p.chn?JSON.stringify(p.chn).slice(0,2000):'',
+    sl:cards,
     secs:st.map(i=>({i,l:String(sl[i].label),c:labColor(sl[i].label),k:secCode(sl[i].label)||''})),
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
