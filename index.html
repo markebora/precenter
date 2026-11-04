@@ -5053,14 +5053,24 @@ async function build(name){
   const media=[],audio=[],zip=typeof JSZip!=='undefined'?new JSZip():null;
   const stt=window.plForSave?plForSave():JSON.parse(JSON.stringify(S));
   const data={app:'Disciples PreCenter',v:1,name,saved:new Date().toISOString(),state:stt,settings:settings(),media,audio};
-  const miss=new Set();(JSON.stringify(stt).match(/"lib":"[^"]+"/g)||[]).forEach(m=>{const n=m.slice(7,-1);if(!libFile[n])miss.add(n)});
-  if(!zip)return{blob:new Blob([JSON.stringify(data)],{type:'application/json'}),json:true,miss:miss.size};
+  /* only the backgrounds this service actually uses go into the file (not every saved folder) */
+  const used=new Set((JSON.stringify(stt).match(/"lib":"[^"]+"/g)||[]).map(m=>m.slice(7,-1).replace(/\\\//g,'/')));
+  const miss=new Set();used.forEach(n=>{if(!libFile[n])miss.add(n)});
+  if(!zip)return{json:true,blob:new Blob([JSON.stringify(data)],{type:'application/json'}),miss:miss.size};
   let i=0;
-  for(const x of libList){const f=libFile[x.name];if(!f)continue;const pth='media/'+(i++)+'-'+safe(f.name);zip.file(pth,f,{compression:'STORE'});media.push({name:x.name,type:x.type,file:pth,mime:f.type})}
+  for(const x of libList){if(!used.has(x.name))continue;const f=libFile[x.name];if(!f)continue;const pth='media/'+(i++)+'-'+safe(f.name);zip.file(pth,f,{compression:'STORE'});media.push({name:x.name,type:x.type,file:pth,mime:f.type})}
   i=0;
   for(const a of aud.list){try{const b=await(await fetch(a.url)).blob();const pth='audio/'+(i++)+'-'+safe(a.name);zip.file(pth,b,{compression:'STORE'});audio.push({name:a.name,file:pth,mime:b.type})}catch(e){}}
   zip.file('service.json',JSON.stringify(data),{compression:'DEFLATE'});
-  return{blob:await zip.generateAsync({type:'blob'}),miss:miss.size};
+  return{zip,miss:miss.size};
+}
+/* write the zip to disk piece by piece so big services do not need one giant block of memory */
+function zipToFile(zip,writable){
+  return new Promise((res,rej)=>{
+    const st=zip.generateInternalStream({type:'uint8array',streamFiles:true});
+    st.on('data',chunk=>{st.pause();writable.write(chunk).then(()=>st.resume(),rej)});
+    st.on('error',rej);st.on('end',res);st.resume();
+  });
 }
 /* remembered save folder for services (File System Access API; handle kept in IndexedDB) */
 const sfDB=()=>new Promise((res,rej)=>{const r=indexedDB.open('dscSvcDir',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
@@ -5085,17 +5095,21 @@ async function saveSvc(name){
     }catch(e){if(e&&e.name==='AbortError')return;pickErr=e}
   }
   toast('Saving service…');
-  let r;try{r=await build(name)}catch(e){toast('Could not save: '+e.message);return}
+  const dropEmpty=async()=>{try{if(fh&&fh.remove)await fh.remove()}catch(e){}};
+  let r;try{r=await build(name)}catch(e){await dropEmpty();toast('Could not save: '+(e.message||e));return}
   const note=(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' • '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
   if(fh){
     try{
-      const w=await fh.createWritable();await w.write(r.blob);await w.close();
+      const w=await fh.createWritable();
+      try{if(r.zip)await zipToFile(r.zip,w);else await w.write(r.blob);await w.close()}catch(e){try{await w.abort()}catch(_){}throw e}
       let where='';
       if(dir){try{const pth=await dir.resolve(fh);if(pth)where=' in “'+[dir.name,...pth.slice(0,-1)].join(' › ')+'”'}catch(e){}}
       toast('Saved '+fh.name+where+note);return;
-    }catch(e){pickErr=e}
+    }catch(e){await dropEmpty();toast('Could not save: '+(e.message||e));return}
   }
-  const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+  let blob=r.blob;
+  if(!blob){try{blob=await r.zip.generateAsync({type:'blob',streamFiles:true})}catch(e){toast('Could not save: '+(e.message||e));return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
   toast((pickErr?'The Save window could not open ('+(pickErr.message||pickErr.name||pickErr)+'). ':'')+'Saved '+fn+' to your Downloads folder'+note);
 }
 window.dscSaveFlow=function(forceAsk){
@@ -5105,6 +5119,7 @@ window.dscSaveFlow=function(forceAsk){
 async function openSvc(file){
   try{
     const buf=await file.arrayBuffer(),u=new Uint8Array(buf);let zip=null,data;
+    if(!u.length){toast('That file is empty. The save did not finish, so please save the service again.');return}
     if(u[0]===0x50&&u[1]===0x4B){if(typeof JSZip==='undefined'){toast('JSZip is not loaded. Connect to the internet once and reload.');return}zip=await JSZip.loadAsync(buf);const e=zip.file('service.json');if(!e)throw new Error('missing service.json');data=JSON.parse(await e.async('string'))}
     else data=JSON.parse(new TextDecoder().decode(u));
     if(!data||!data.state||!Array.isArray(data.state.songs)||!data.state.songs.length){toast('That is not a PreCenter service file.');return}
@@ -5119,7 +5134,7 @@ async function openSvc(file){
     try{const t=localStorage.getItem('lp-theme');if(t==='dark'||t==='light'){th=t;applyTheme()}}catch(e){}
     idx=0;S.sel=(S.songs.find(x=>x.id===S.sel)||S.songs[0]).id;save();drawAll();try{drawProps();drawMacros();tmDraw()}catch(e){}refreshSvc();
     toast('Opened "'+(data.name||file.name)+'"');
-  }catch(e){toast('Could not open that file: '+e.message)}
+  }catch(e){toast(/JSON/.test(e.message||'')?'That file is damaged or incomplete (the save was probably interrupted). Please save the service again.':'Could not open that file: '+e.message)}
 }
 document.getElementById('svFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)openSvc(f)};
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='s'){e.preventDefault();e.stopPropagation();window.dscSaveFlow(false)}},true);
