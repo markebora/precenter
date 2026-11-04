@@ -2317,24 +2317,26 @@ function newBlankPres(sec){
   try{if(typeof openSed==='function')openSed(0)}catch(e){}
   toast('Blank presentation added. Use + Slide to add more, and Text, Image or Rectangle to fill it.');
 }
-function addMenu(e,sec){
+function addMenu(e,sec,general){
   e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
-  showMenu(r.left,r.bottom+2,[
+  const items=general?[
     {t:'Song',fn:()=>{newItem(sec,'song');const t=$('#eT');if(t)t.select()}},
     {t:'Announcement slides',fn:()=>newItem(sec,'announce')},
+    {t:'Bible passage…',fn:()=>openBible(sec)},
+    {t:'Image slide…',fn:()=>{addSec=sec;$('#fMed').click()}},
+    {t:'Planning Center plan…',fn:()=>openPCO()},
+    {sep:1},
+    {t:'New section…',fn:()=>ask('Section name, e.g. Worship',n=>{if(!S.secs.includes(n))S.secs.push(n);save();drawList()})}
+  ]:[
     {t:'Presentation / sermon',fn:()=>newItem(sec,'present')},
     {t:'Blank presentation (empty slide)',fn:()=>newBlankPres(sec)},
-    {t:'PowerPoint file (.pptx)\u2026',fn:()=>importPptxSlides(sec)},
-    {t:'Slides from images (PNG/JPG)\u2026',fn:()=>importDeck(sec)},
-    {t:'Bible passage\u2026',fn:()=>openBible(sec)},
-    {t:'From Disciples library\u2026',fn:()=>dscOpen(sec)},
-    {t:'Image slide\u2026',fn:()=>{addSec=sec;$('#fMed').click()}},
-    {t:'Import file (PowerPoint, lyrics)\u2026',fn:()=>{addSec=sec;$('#fImp').click()}},
-    {t:'SongSelect (CCLI) lyrics\u2026',fn:()=>openSongSelect(sec)},
-    {t:'Planning Center plan\u2026',fn:()=>openPCO()},
-    {sep:1},
-    {t:'New section\u2026',fn:()=>ask('Section name, e.g. Worship',n=>{if(!S.secs.includes(n))S.secs.push(n);save();drawList()})}
-  ]);
+    {t:'PowerPoint file (.pptx)…',fn:()=>importPptxSlides(sec)},
+    {t:'Slides from images (PNG/JPG)…',fn:()=>importDeck(sec)},
+    {t:'From Disciples library…',fn:()=>dscOpen(sec)},
+    {t:'Import file (PowerPoint, lyrics)…',fn:()=>{addSec=sec;$('#fImp').click()}},
+    {t:'SongSelect (CCLI) lyrics…',fn:()=>openSongSelect(sec)}
+  ];
+  showMenu(r.left,r.bottom+2,items);
 }
 let lpSuppress=false;
 function startLP(e,r,it){
@@ -3180,7 +3182,7 @@ document.addEventListener('keydown',e=>{
 function drawAll(){drawList();drawGrid();drawEditor();drawTray();push()}
 
 /* ---------- controls ---------- */
-$('#addSong').onclick=e=>addMenu(e,secOf(cur()));
+$('#addSong').onclick=e=>addMenu(e,secOf(cur()),true);
 $('#svMenu').onclick=e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect(),k=Object.keys(S.services||{});
   showMenu(r.left,r.bottom+2,[{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>window.dscSaveFlow(true)},{t:'Open service from computer\u2026',fn:()=>$('#svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:()=>$('#svS').click()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}])};
 $('#tL').onclick=()=>{tab='L';drawEditor()};$('#tD').onclick=()=>{tab='D';drawEditor()};$('#tC').onclick=()=>{tab='C';drawEditor()};
