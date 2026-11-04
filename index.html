@@ -490,6 +490,9 @@ body.lite :not(.stage):not(.stage *){animation:none!important;transition:none!im
 #ytr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:6px 0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--chip)}#ytr[hidden]{display:none}
 #ytr .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute);margin-right:2px}#ytr button{padding:2px 8px;font-size:12px}#ytr .vtT{margin-left:auto;font-size:10.5px;color:var(--mute)}
 #vtr.min #vtBk,#vtr.min #vtFw,#vtr.min #vtSc,#vtr.min #vtS{display:none}#vtr.min{flex-wrap:nowrap}#vtr.min .vtT{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#showCtl .hint.tipped,#vtS{display:none!important}
+.tipI{width:16px;height:16px;min-width:16px;padding:0!important;border-radius:50%;font-size:10px;line-height:1;font-style:italic;font-weight:700;margin-left:6px;margin-right:auto;flex:none;opacity:.75}.tipI:hover{opacity:1}
+#hintTip{position:fixed;z-index:99999;display:none;max-width:260px;padding:7px 9px;border-radius:6px;background:var(--chip,#222);color:var(--ink,#eee);border:1px solid var(--line,#444);font-size:11.5px;line-height:1.4;white-space:pre-line;box-shadow:0 6px 20px rgba(0,0,0,.45);pointer-events:none}
 #nextPrev{width:100%;aspect-ratio:16/9;border-radius:4px;overflow:hidden}
 #nextUp .nuI{display:flex;flex-direction:column;gap:3px;min-width:0}
 #nextUp .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute)}
@@ -3309,6 +3312,48 @@ function setVtMin(on,keep){const v=$('#vtr'),m=$('#vtMin');if(!v||!m)return;v.cl
 $('#vtMin').onclick=e=>{e.stopPropagation();setVtMin(!$('#vtr').classList.contains('min'))};
 {let m=false;try{m=localStorage.getItem('lp-vtmin')==='1'}catch(e){}if(m)setVtMin(true,true)}
 $('#ptabs').addEventListener('click',e=>{if(e.target.closest('button'))setVtMin(true,true)});
+/* help text lives in hover tips: a small (i) button on each panel header, and the video / output status lines */
+(()=>{
+  const tip=document.createElement('div');tip.id='hintTip';document.body.appendChild(tip);
+  let tm=null,curEl=null;
+  const hide=()=>{clearTimeout(tm);tip.style.display='none';curEl=null};
+  const show=el=>{const t=el.dataset.tip;if(!t)return;tip.textContent=t;tip.style.display='block';
+    const r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+    let l=Math.min(r.left,innerWidth-w-8);l=Math.max(8,l);let tp=r.bottom+6;if(tp+h>innerHeight-8)tp=Math.max(8,r.top-h-6);
+    tip.style.left=l+'px';tip.style.top=tp+'px'};
+  document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el===curEl)return;hide();if(!el)return;curEl=el;tm=setTimeout(()=>show(el),400)});
+  document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el){hide();curEl=el;show(el)}});
+  document.addEventListener('focusout',hide);document.addEventListener('mousedown',hide);document.addEventListener('scroll',hide,true);
+  const box=$('#showCtl');let q=0;
+  function sync(){
+    q=0;
+    box.querySelectorAll('.pane').forEach(pane=>{
+      const groups=new Map();
+      pane.querySelectorAll('div.hint').forEach(h=>{
+        if(h.id)return;const t=h.textContent.trim();if(t.length<36)return;
+        h.classList.add('tipped');
+        let hd=h.previousElementSibling;while(hd&&!hd.classList.contains('ph'))hd=hd.previousElementSibling;
+        hd=hd||pane.querySelector('.ph');if(!hd)return;
+        if(!groups.has(hd))groups.set(hd,[]);groups.get(hd).push(t);
+      });
+      pane.querySelectorAll('.ph').forEach(hd=>{
+        const old=hd.querySelector('.tipI'),txt=groups.get(hd);
+        if(!txt){if(old)old.remove();return}
+        const val=txt.join('\n\n');
+        if(old){if(old.dataset.tip!==val)old.dataset.tip=val;return}
+        const b=document.createElement('button');b.type='button';b.className='tipI';b.textContent='i';b.setAttribute('aria-label','Help');b.dataset.tip=val;
+        hd.firstElementChild?hd.firstElementChild.after(b):hd.appendChild(b);
+      });
+    });
+    const vs=$('#vtS'),vl=$('#vtr .opl');if(vs&&vl){const t=vs.textContent.trim();if(vl.dataset.tip!==t){if(t)vl.dataset.tip=t;else delete vl.dataset.tip}}
+  }
+  const queue=()=>{if(!q){q=1;requestAnimationFrame(sync)}};
+  new MutationObserver(queue).observe(box,{childList:true,subtree:true,characterData:true});
+  const vs=$('#vtS');if(vs)new MutationObserver(queue).observe(vs,{childList:true,characterData:true,subtree:true});
+  const oh=$('#outHint');
+  if(oh)new MutationObserver(()=>{const t=oh.textContent.trim();if(t){toast(t);setTimeout(()=>{oh.textContent=''},0)}}).observe(oh,{childList:true,characterData:true,subtree:true});
+  queue();
+})();
 $('#bAll').onclick=()=>{['slide','media','prop','msg','tm'].forEach(clrLayer);push()};
 $('#bGrp').onclick=clrGroup;
 
