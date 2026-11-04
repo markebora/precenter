@@ -4487,7 +4487,9 @@ function remoteState(){
     secs:st.map(i=>({i,l:String(sl[i].label),c:labColor(sl[i].label),k:secCode(sl[i].label)||''})),
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
-    black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):''
+    black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):'',
+    bv:BIBLES.map(b=>[b[0],b[2]]),
+    bq:(RM&&RM.bq&&Date.now()-RM.bq.at<900000)?RM.bq:null
   };
 }
 function remotePublish(force){
@@ -4517,7 +4519,69 @@ function remoteRun(c){
     case'songPrev':goSong(-1);break;
     case'black':black=!!c.v;push();break;
     case'clear':clear=!!c.v;push();break;
+    case'bq':remoteBibleQuery(c);break;
+    case'bgo':remoteBibleGo(c);break;
   }
+}
+/* ---- Bible from the phone ----
+   The phone sends {t:'bq', q, ver, w, rid}; this computer looks it up in the same Bible files as the Bible window
+   and publishes up to 25 answers in presenter/{team}.bq. Tapping one sends {t:'bgo', ver, ref}: the passage is added
+   to the service as a scripture item (same slides as the Bible window makes) and shown. */
+async function remoteBibleQuery(c){
+  if(!RM)return;
+  const ver=BIBLES.some(b=>b[0]===c.ver)?c.ver:'kjv',q=String(c.q||'').trim().slice(0,80),rid=String(c.rid||'').slice(0,40);
+  RM.bq={rid,q,ver,busy:1,at:Date.now()};remotePublish(true);
+  const out={rid,q,ver,res:[],at:Date.now()};
+  try{
+    const d=await bbLoad(ver);
+    if(!q)out.err='Type a passage like John 3:16, or a word to search for.';
+    else{
+      const p=c.w?{err:'Book not found'}:bbParse(q,d);
+      if(!p.err){
+        const V=bbCollect(p,d,null);
+        if(!V.length)out.err='No verses found for that passage.';
+        else{
+          const book=d.books[p.bi].n;
+          out.res.push({r:bbLabel(V[0],V[V.length-1],book,''),t:V.map(x=>x.v+' '+x.t1).join(' ').slice(0,900),n:V.length});
+        }
+      }else if(/^Book not found|^Type a passage/.test(p.err)){
+        const terms=q.toLowerCase().split(/\s+/).filter(Boolean).slice(0,5);
+        outer:for(const bk of d.books){
+          for(let ci=0;ci<bk.c.length;ci++){
+            const ch=bk.c[ci];
+            for(let vi=0;vi<ch.length;vi++){
+              const tx=String(ch[vi]||''),lo=tx.toLowerCase();
+              if(terms.every(t=>lo.includes(t))){
+                if(out.res.length>=25){out.more=1;break outer}
+                out.res.push({r:bk.n+' '+(ci+1)+':'+(vi+1),t:tx.slice(0,260)});
+              }
+            }
+          }
+        }
+        if(!out.res.length)out.err='No verses contain \u201c'+q+'\u201d in this Bible.';
+      }else out.err=p.err;
+    }
+  }catch(e){out.err='The computer could not open that Bible.'}
+  if(RM&&RM.bq&&RM.bq.rid===rid){RM.bq=out;remotePublish(true)}
+}
+async function remoteBibleGo(c){
+  try{
+    const ver=BIBLES.some(b=>b[0]===c.ver)?c.ver:'kjv',d=await bbLoad(ver),p=bbParse(String(c.ref||'').slice(0,60),d);
+    if(p.err){toast('Remote Bible: '+p.err);return}
+    const V=bbCollect(p,d,null);if(!V.length)return;
+    const info=BIBLES.find(b=>b[0]===ver)||[],tag=info[2]||'',book=d.books[p.bi].n;
+    let sv={};try{sv=JSON.parse(localStorage.getItem('lp-bible')||'{}')}catch(e){}
+    const per=Math.max(0,parseInt(sv.per,10)||0);
+    const slides=bbSlides(V,{per,nums:sv.nums!==false,ref:sv.refOn!==false,dual:false,book,tag});
+    const title=bbLabel(V[0],V[V.length-1],book,'')+' ('+tag+')';
+    const have=S.songs.find(x=>x.type==='scripture'&&x.title===title);
+    if(have){openItem(have);toast('Remote: '+title);return}
+    const lyrics=slides.concat(sv.note!==false&&info[3]?[info[3]]:[]).join('\n\n');
+    addSec=S.secs.includes('Presentation')?'Presentation':secOf(cur());
+    addItem(title,lyrics,{type:'scripture'});
+    black=false;clear=false;setMode('show');push();
+    toast('Remote: showing '+title);
+  }catch(e){toast('Remote Bible: could not open that passage.')}
 }
 function remoteListen(){
   let first=true;
