@@ -4925,22 +4925,29 @@ window.dscSetSvcFolder=async function(){
   }catch(e){if(!(e&&e.name==='AbortError'))toast('Could not choose that folder: '+(e&&e.message||e));return null}
 };
 async function saveSvc(name){
-  toast('Saving service…');
-  let r;try{r=await build(name)}catch(e){toast('Could not save: '+e.message);return}
-  const fn=safe(name)+(r.json?'.json':EXT);
-  const note=(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' • '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
+  /* ask WHERE first, while the click is still fresh (browsers block the Save window if we wait until the zip is built) */
+  const fn=safe(name)+(typeof JSZip!=='undefined'?EXT:'.json');
+  let fh=null,pickErr=null,dir=null;
   if(window.showSaveFilePicker){
     try{
-      const dir=await sfGet();
-      const opt={id:'dscService',suggestedName:fn,types:[{description:'PreCenter service',accept:{'application/octet-stream':[EXT],'application/json':['.json']}}]};
-      if(dir)opt.startIn=dir;else opt.startIn='documents';
-      const h=await showSaveFilePicker(opt);const w=await h.createWritable();await w.write(r.blob);await w.close();
-      let where='';
-      if(dir){try{const p=await dir.resolve(h);if(p)where=' in “'+[dir.name,...p.slice(0,-1)].join(' › ')+'”'}catch(e){}}
-      toast('Saved '+h.name+where+note);return;
-    }catch(e){if(e&&e.name==='AbortError')return}
+      dir=await sfGet();
+      const opt={id:'dscService',suggestedName:fn,startIn:dir||'documents',types:[{description:'PreCenter service',accept:{'application/octet-stream':[EXT],'application/json':['.json']}}]};
+      fh=await showSaveFilePicker(opt);
+    }catch(e){if(e&&e.name==='AbortError')return;pickErr=e}
   }
-  const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('Saved '+fn+' to your Downloads folder'+note);
+  toast('Saving service…');
+  let r;try{r=await build(name)}catch(e){toast('Could not save: '+e.message);return}
+  const note=(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' • '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
+  if(fh){
+    try{
+      const w=await fh.createWritable();await w.write(r.blob);await w.close();
+      let where='';
+      if(dir){try{const pth=await dir.resolve(fh);if(pth)where=' in “'+[dir.name,...pth.slice(0,-1)].join(' › ')+'”'}catch(e){}}
+      toast('Saved '+fh.name+where+note);return;
+    }catch(e){pickErr=e}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+  toast((pickErr?'The Save window could not open ('+(pickErr.message||pickErr.name||pickErr)+'). ':'')+'Saved '+fn+' to your Downloads folder'+note);
 }
 window.dscSaveFlow=function(forceAsk){
   if(S.svcName&&!forceAsk){saveSvc(S.svcName);return}
