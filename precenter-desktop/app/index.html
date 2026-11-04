@@ -2187,6 +2187,22 @@ function openBible(sec){
     root.childNodes.forEach(c=>walk(c,{}));
     return out;
   }
+  /* paints the slide that will contain verse x, using the text currently typed in the edit box */
+  function bbEdPrev(st,x,m){
+    if(!st.isConnected)return;
+    try{
+      const dd=dual&&!!d2,per=Math.max(0,parseInt(q('bbPer').value,10)||0);
+      const o={per,nums:q('bbNums').checked,ref:q('bbRefOn').checked,dual:dd,book,book2,tag:tagOf(tr1),tag2:dd?tagOf(tr2):''};
+      const keep=x.t1m;x.t1m='\u0001';const k=bbSlides(V,o).findIndex(t=>t.indexOf('\u0001')>=0);
+      x.t1m=(m&&m!==x.t1)?m:'';const txt=bbSlides(V,o)[k];x.t1m=keep;
+      if(txt==null)return;
+      const p=payload(),e={...p.d,...qeD()};delete e.lay;
+      p.black=false;p.clear=false;p.msg='';p.sm='';p.note='';p.next='';p.sid=undefined;p.ast=undefined;p.atg=undefined;p.mst=[];
+      p.d=e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0};
+      p.text=txt;
+      paint(st,applyLook(p,'a'));fitStage(st);
+    }catch(err){}
+  }
   function openEd(c,x,k){
     const box=mk('div','bbed2'),ce=mk('div','bbce');ce.contentEditable='true';ce.spellcheck=false;window.rtSet(ce,ed[k]||x.t1);
     const tb=mk('div','tb');
@@ -2205,7 +2221,14 @@ function openBible(sec){
     const sp=mk('span');sp.style.flex='1';
     const cn=mk('button','','Cancel');cn.type='button';cn.onclick=()=>{editing=null;drawRead()};
     const sv=mk('button','pri','Save');sv.type='button';sv.onclick=()=>{const m=edSer(ce);if(m===x.t1||m.indexOf('⟦')<0)delete ed[k];else ed[k]=m;editing=null;render()};
-    ft.append(clr,sp,cn,sv);box.append(mk('div','bbcl','Text sent to the slide. This is a copy: the Bible text above does not change.'),ce,tb,ft);c.append(box);setTimeout(()=>ce.focus(),0);
+    ft.append(clr,sp,cn,sv);const pv=mk('div','stage');pv.style.borderRadius='6px';
+    const row=mk('div','');row.style.cssText='display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap';
+    const lf=mk('div','');lf.style.cssText='flex:1 1 260px;min-width:0';lf.append(mk('div','bbcl','Text sent to the slide. This is a copy: the Bible text above does not change.'),ce);
+    const rt=mk('div','');rt.style.cssText='flex:0 1 290px;min-width:200px';rt.append(mk('div','bbcl','Preview: how the slide will look'),pv);
+    row.append(lf,rt);
+    let raf=0;const upd=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>bbEdPrev(pv,x,edSer(ce)))};
+    new MutationObserver(upd).observe(ce,{subtree:true,childList:true,attributes:true,characterData:true});
+    box.append(row,tb,ft);c.append(box);setTimeout(()=>{ce.focus();upd()},0);
   }
   /* ---- columns: Books | Chapters | Verses, with quick text style on the right ---- */
   let qe={font:'',bold:0,ital:0,ul:0,caps:0,fg:''};
