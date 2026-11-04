@@ -4488,7 +4488,7 @@ function remoteState(){
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
     black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):'',
-    bv:BIBLES.map(b=>[b[0],b[2]]),
+    bv:BIBLES.map(b=>({i:b[0],n:b[2]})),
     bq:(RM&&RM.bq&&Date.now()-RM.bq.at<900000)?RM.bq:null
   };
 }
