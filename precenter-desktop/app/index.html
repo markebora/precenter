@@ -205,6 +205,10 @@ body.stg .cs{display:inline-flex;flex-direction:column;align-items:flex-start}
 body.stg .cs b{font-size:.6em;line-height:1.15;font-weight:800;color:#E8B923;padding-right:.4em;white-space:pre}
 body.stg .cs i{font-style:normal;white-space:pre-wrap}
 body.stg .nx .cs b{color:#fff}
+.sxe .cl{display:flex;flex-wrap:wrap;align-items:flex-end;line-height:1.12;margin:.18em 0;white-space:normal}
+.sxe .cs{display:inline-flex;flex-direction:column;align-items:flex-start}
+.sxe .cs b{font-size:.6em;line-height:1.15;font-weight:800;padding-right:.4em;white-space:pre}
+.sxe .cs i{font-style:normal;white-space:pre-wrap}
 body.stg .tag{position:absolute;top:.8vw;left:1vw;font:700 1.7vw Poppins,Inter,sans-serif;letter-spacing:.12em;padding:.2vw 1vw;border-radius:.5vw;background:#d33;color:#fff}
 body.stg .nx .tag{background:#E8B923;color:#171200}
 body.stg .card>div:last-child{white-space:pre-wrap;line-height:1.2;text-align:center;word-break:break-word;width:100%;max-height:100%;overflow:hidden}
@@ -4625,7 +4629,7 @@ function dscOpen(sec){
     body.innerHTML=`
       <div class="row" style="justify-content:space-between;align-items:center;gap:8px">
         <span class="hint" style="margin:0">${dscEsc(team.name)} &middot; ${dscEsc(user.email||'')} &middot; ${lib.length} songs</span>
-        <span class="row" style="gap:4px">${teams.length>1?'<button id="dscSw">Switch team</button>':''}<button id="dscOut">Sign out</button></span>
+        <span class="row" style="gap:4px">${S.songs.some(x=>x.src&&x.src.app==='harmony')?'<button id="dscCh" title="Refresh the stage chords of every Harmony song already in your playlists. Lyrics, looks and slide order are not changed.">Update chords in Present</button>':''}${teams.length>1?'<button id="dscSw">Switch team</button>':''}<button id="dscOut">Sign out</button></span>
       </div>
       <div class="tabs"><button id="dscTS" class="on">Songs</button><button id="dscTL">Lineup</button></div>
       <div class="row" style="align-items:flex-end">
@@ -4637,6 +4641,19 @@ function dscOpen(sec){
     const remember=()=>{try{localStorage.setItem('lp-dsc',JSON.stringify({per:per(),sec:secName()}))}catch(e){}};
     let perHook=null;q('dscPer').onchange=()=>{remember();if(perHook)perHook()};q('dscSec').onchange=remember;
     q('dscOut').onclick=async()=>{await dscAuth.signOut();done()};
+    if(q('dscCh'))q('dscCh').onclick=()=>{
+      /* add stage chords to every Harmony song already in Present, without touching lyrics, looks or order */
+      const items=S.songs.filter(x=>x.src&&x.src.app==='harmony');let ok=0,part=0,none=0,gone=0;
+      items.forEach(it=>{
+        const song=lib.find(x=>x.id===it.src.id);if(!song){gone++;return}
+        const uk=[...new Set(expand(it).map(x=>cmKey(x.text)))];let best=null,bn=0;
+        [per(),0,2,3,4].filter((v,i,a)=>a.indexOf(v)===i).forEach(pp=>{const cm={};try{dscLyrics(song,pp,cm)}catch(e){return}const n=uk.filter(k=>cm[k]).length;if(n>bn){bn=n;best=cm}});
+        if(!best){none++;return}
+        it.cm=best;ok++;if(bn<uk.length)part++;
+      });
+      save();try{push()}catch(e){}
+      toast('Chords updated for '+ok+' of '+items.length+' song'+(items.length===1?'':'s')+'.'+(part?' '+part+' have some slides without chords (their words were edited).':'')+(none?' '+none+' had no chords or no matching words: add them again to refresh.':'')+(gone?' '+gone+' are no longer in the Harmony library.':''));
+    };
     if(q('dscSw'))q('dscSw').onclick=()=>{try{localStorage.removeItem('lp-dsc-team')}catch(e){}body.innerHTML='<div class="hint" style="margin:0">Choose a team.</div>'+teams.map((t,i)=>'<button data-i="'+i+'" style="text-align:left;padding:8px">'+dscEsc(t.name)+'</button>').join('');body.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>main(user,teams[+b.dataset.i],teams))};
 
     const pane=q('dscPane'),inPresent=id=>S.songs.some(x=>x.src&&x.src.app==='harmony'&&x.src.id===id);
@@ -7732,13 +7749,23 @@ function fitBox(b,sp,max){
   let f=max;b.style.fontSize=f+'cqw';let n=0;
   while(f>1&&n++<160&&(b.scrollHeight>b.clientHeight+1||sp.scrollWidth>b.clientWidth+1)){f-=.3;b.style.fontSize=f+'cqw'}
 }
+function fillCh(sp,cl,e){
+  sp.textContent='';
+  const jc=e.al==='left'?'flex-start':e.al==='right'?'flex-end':'center',cc=e.cc||(e.k==='next'?'#ffffff':'#E8B923');
+  cl.forEach(ln=>{const d=document.createElement('div');d.className='cl';d.style.justifyContent=jc;
+    ln.forEach(q=>{const c=document.createElement('span');c.className='cs';const b=document.createElement('b'),i=document.createElement('i');b.textContent=q[0]||'\u00a0';b.style.color=cc;i.textContent=q[1]||'';c.append(b,i);d.appendChild(c)});
+    sp.appendChild(d)});
+}
 function update(root,L,D,fit,editor){
   [...root.querySelectorAll('.sxe')].forEach(b=>{
     const e=(L.els||[]).find(x=>x.id===b.dataset.eid);if(!e)return;
     const sp=b.querySelector('.sxt');let t=txt(e,D);
     if(editor&&!t&&e.k!=='box')t='['+(KINDS[e.k]||e.k)+']';
     if(e.k==='msg'&&!editor)b.style.visibility=t?'visible':'hidden';
-    if(sp.textContent!==t){sp.textContent=t;if(fit&&MULTI[e.k])fitBox(b,sp,e.s||4)}else if(fit&&MULTI[e.k])fitBox(b,sp,e.s||4);
+    const cl=(t&&e.ch!==0&&(e.k==='live'||e.k==='next'))?(e.k==='live'?D.ch:D.chn):null;
+    const key=t+'\u0001'+(cl?JSON.stringify(cl):'')+'\u0001'+(e.cc||'')+(e.al||'');
+    if(sp.dataset.k!==key){sp.dataset.k=key;if(cl)fillCh(sp,cl,e);else sp.textContent=t}
+    if(fit&&MULTI[e.k])fitBox(b,sp,e.s||4);
   });
 }
 function draw(root,L,D,opt){
@@ -7765,7 +7792,7 @@ if(isStg){
     const L=(p.sl||[]).find(x=>'c:'+x.id===lay);if(!L){if(root){root.remove();root=null}return}
     document.body.className='stg lay-custom';
     if(!root){root=document.createElement('div');root.id='sx';root.style.cssText='position:fixed;inset:0;z-index:5;background:#000';document.body.appendChild(root)}
-    const D={live:(p.black||p.hideLive)?'':(p.clear?'':rtStrip(p.text||'')),next:p.hideNext?'':rtStrip(p.next||''),note:p.note||'',msg:[p.sm,p.msgS===undefined?p.msg:p.msgS].filter(Boolean).join('   |   '),si:p.si||{}};
+    const D={live:(p.black||p.hideLive)?'':(p.clear?'':rtStrip(p.text||'')),next:p.hideNext?'':rtStrip(p.next||''),ch:(!p.hideChords&&!p.black&&!p.clear&&!p.hideLive)?(p.ch||null):null,chn:(!p.hideNext&&!p.hideChords)?(p.chn||null):null,note:p.note||'',msg:[p.sm,p.msgS===undefined?p.msg:p.msgS].filter(Boolean).join('   |   '),si:p.si||{}};
     curL=L;lastD=D;draw(root,L,D);
   })}catch(e){}
   setInterval(()=>{if(root&&curL)update(root,curL,lastD,false)},250);
@@ -7815,7 +7842,7 @@ document.addEventListener('lp-screens-save',()=>{try{pick()}catch(e){}});
 /* ---- editor ---- */
 function sample(){
   const p=payload(),si0=p.si||{};
-  return{live:p.text||'Amazing grace, how sweet the sound\nThat saved a wretch like me',next:p.next||'I once was lost, but now am found',note:p.note||'Slow down on the chorus',msg:'Slow down',si:si0};
+  return{live:p.text||'Amazing grace, how sweet the sound\nThat saved a wretch like me',ch:p.text?p.ch:[[['G','Amazing '],['D','grace, how sweet the '],['Em','sound']],[['C','That saved a wretch like '],['G','me']]],chn:p.next?p.chn:[[['G','I once was lost, but '],['D','now am found']]],next:p.next||'I once was lost, but now am found',note:p.note||'Slow down on the chorus',msg:'Slow down',si:si0};
 }
 window.dscStageEdit=function(){
   let sel=SL()[0]?SL()[0].id:null,selE=null;
@@ -7890,6 +7917,7 @@ window.dscStageEdit=function(){
         fl('Background',col('bg',1),'0 0 90px'),fl('Border',col('bd',1),'0 0 90px'),fl('Corner',num('r',0,10,0.2)),
         fl('Label',(()=>{const i=document.createElement('input');i.value=e.lb||'';i.placeholder='e.g. NOW';i.style.width='90px';i.oninput=()=>{e.lb=i.value;save();push();render()};return i})(),'0 0 98px'),
         fl('Left %',num('x',0,100,0.5)),fl('Top %',num('y',0,100,0.5)),fl('Width %',num('w',1,100,0.5)),fl('Height %',num('h',1,100,0.5)));
+      if(e.k==='live'||e.k==='next'){g.append(fl('Show chords',(()=>{const i=document.createElement('input');i.type='checkbox';i.style.width='auto';i.checked=e.ch!==0;i.title='Draw chords above the words when the song has them';i.onchange=()=>{e.ch=i.checked?1:0;save();push();render()};return i})(),'0 0 90px'),fl('Chord colour',(()=>{const i=document.createElement('input');i.type='color';i.value=e.cc||(e.k==='next'?'#ffffff':'#e8b923');i.style.cssText='width:44px;padding:0';i.oninput=()=>{e.cc=i.value;save();push();render()};return i})(),'0 0 90px'))}
       if(e.k==='clock'){g.append(fl('Clock',sl('f',[['24','24-hour'],['12','12-hour']]),'0 0 92px'),fl('Seconds',(()=>{const i=document.createElement('input');i.type='checkbox';i.style.width='auto';i.checked=!!e.sec;i.onchange=()=>{e.sec=i.checked;save();push();render()};return i})(),'0 0 60px'))}
       if(e.k==='timer'){const o=[['','The latest timer started']].concat(TMS().map(t=>[t.n,t.n]));g.append(fl('Which timer',sl('t',o),'1 1 160px'))}
       if(e.k==='text'){const t=document.createElement('textarea');t.rows=2;t.value=e.t||'';t.style.width='100%';t.oninput=()=>{e.t=t.value;save();push();render()};const x=document.createElement('label');x.style.flex='1 1 100%';x.append('Text (tokens like {clock}, {timer}, {song} work)',t);g.append(x)}
