@@ -2362,7 +2362,7 @@ function payload(){
 function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
   const ln=p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
   bc.postMessage(p);
-  markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd();remotePublish()}
+  markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd();remotePublish();scrPrev()}
 function drawGrid(){
   const s=cur(),sl=expand(s);
   $('#songTitle').textContent=s.title||'Untitled';
@@ -2654,14 +2654,26 @@ function designPanel(host,sc){
   q('reset').onclick=()=>{if(s.ov)delete s.ov[idx];ch();again()};
   if(hasBg&&(e0.bg==='Color'||e0.bg==='Gradient'))bgPanel(q('bgp'),d,ch);
 }
+function scrPrev(){
+  const st=document.getElementById('scrPv');if(!st||!st.isConnected)return;
+  try{
+    const p=payload(),e=p.d,n=expand(cur()).length;
+    p.black=false;p.clear=false;p.msg='';p.sm='';p.ast=undefined;p.atg=undefined;
+    p.d=e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0};
+    paint(st,applyLook(p,'a'));fitStage(st);
+    const c=document.getElementById('scrPc');if(c)c.textContent='Slide '+(idx+1)+' of '+n;
+  }catch(x){}
+}
 function drawEditor(){
   const s=cur(),e=$('#editor');
   ['L','D','C'].forEach(k=>$('#t'+k).classList.toggle('on',tab===k));
   if(tab==='L'){
     const isSong=!s.type||s.type==='song';
-    e.innerHTML=`<label>Title<input id="eT"></label>${isSong?`<label style="margin-top:8px">Order <span style="font-weight:400;color:var(--mute)">(optional, e.g. V1, PC, C, V2, PC, C, B, C)</span><input id="eO" spellcheck="false" placeholder="Leave empty to play slides as written"></label><div class="row" id="eOs" style="gap:4px;flex-wrap:wrap;margin-top:4px;align-items:center"></div><div class="row" id="eAr" style="gap:4px;flex-wrap:wrap;margin-top:6px;align-items:center"></div>`:''}<label style="margin-top:8px">Lyrics<textarea id="eL" spellcheck="false" style="min-height:150px"></textarea></label>
-    <p class="hint">A blank line starts a new slide. Start a block with Verse 1, Chorus, Bridge and so on to label it.${isSong?' Write each section once, then list the Order: editing a section once updates every repeat.':''}</p>`;
+    const scr=s.type==='scripture';
+    e.innerHTML=(scr?'<div id="scrWrap" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1 1 240px;min-width:0">':'')+`<label>Title<input id="eT"></label>${isSong?`<label style="margin-top:8px">Order <span style="font-weight:400;color:var(--mute)">(optional, e.g. V1, PC, C, V2, PC, C, B, C)</span><input id="eO" spellcheck="false" placeholder="Leave empty to play slides as written"></label><div class="row" id="eOs" style="gap:4px;flex-wrap:wrap;margin-top:4px;align-items:center"></div><div class="row" id="eAr" style="gap:4px;flex-wrap:wrap;margin-top:6px;align-items:center"></div>`:''}<label style="margin-top:8px">Lyrics<textarea id="eL" spellcheck="false" style="min-height:150px"></textarea></label>
+    <p class="hint">A blank line starts a new slide. Start a block with Verse 1, Chorus, Bridge and so on to label it.${isSong?' Write each section once, then list the Order: editing a section once updates every repeat.':''}</p>`+(scr?'</div><div id="scrPvBox" style="flex:0 1 340px;min-width:220px;position:sticky;top:0"><div class="hint" style="margin:0 0 4px"><b>Preview</b> &middot; how this slide will look</div><div class="stage" id="scrPv" style="border-radius:6px"></div><div class="row" style="gap:6px;align-items:center;justify-content:center;margin-top:6px"><button id="scrPp" title="Previous slide">&#9664;</button><span class="hint" id="scrPc" style="margin:0"></span><button id="scrPn" title="Next slide">&#9654;</button></div></div></div>':'');
     $('#eT').value=s.title;$('#eL').value=s.lyrics;
+    if(scr){$('#scrPp').onclick=()=>go(idx-1);$('#scrPn').onclick=()=>go(idx+1);scrPrev()}
     if(window.dscArrUi)dscArrUi(s);
     const orderUi=()=>{
       const box=$('#eOs');if(!box)return;box.innerHTML='';
