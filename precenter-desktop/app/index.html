@@ -263,7 +263,16 @@ body.stg .msg{background:#E8B923;color:#171200;font:700 3vw Poppins,Inter,sans-s
 .dscs{display:flex;justify-content:space-between;align-items:center;gap:6px;width:100%;text-align:left;border:0;background:none;color:inherit;padding:6px 9px;border-radius:6px;font-size:13px;cursor:pointer}
 .dscs:hover{background:var(--chip)}
 .dscs.on{background:var(--acc);color:var(--accink);font-weight:600}
-.dscs small{font-size:10px;opacity:.7;flex:none}
+.dscs small{font-size:10px;opacity:.7;flex:none}.lnc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--panel)}
+.lnc:hover{background:var(--chip)}.lnc.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.lnd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.lnd b{font-size:15px}
+.lntm{font-size:12px;font-weight:700;background:var(--acc);color:var(--accink);border-radius:999px;padding:1px 9px}
+.lndt{margin-left:auto;font-size:12px;color:var(--mute)}
+.lnt{font-size:12px;color:var(--mute);margin-top:2px}
+.lns{display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:6px}.lnc.on .lns{display:block}
+.lnr{display:grid;grid-template-columns:22px 1fr 56px 84px;gap:8px;align-items:center;padding:4px 0;font-size:13px}
+.lnr.h{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.lnr .lnk,.lnr .lnb{text-align:center;font-variant-numeric:tabular-nums}.lnr .lnk{font-weight:700}
 #dscTx{flex:1;min-height:0;resize:none;white-space:pre;overflow:auto;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;box-sizing:border-box}
 @media(max-width:700px){.dscx{grid-template-columns:1fr;height:auto}.dscList{max-height:25vh}#dscTx{min-height:30vh}}
 #dscGate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -4700,16 +4709,42 @@ function dscOpen(sec){
       try{if(!lineups)lineups=await dscLoadLineups(team.id)}catch(e){pane.innerHTML='<div class="hint" style="margin:0;color:#c0392b">'+dscEsc(dscErr(e))+'</div>';return}
       if(!lineups.length){pane.innerHTML='<div class="hint" style="margin:0">No lineups with songs yet. Build one in Disciples: Harmony first.</div>';return}
       const byId=new Map(lib.map(s=>[s.id,s]));
-      pane.innerHTML=`<div id="dscLn" style="max-height:26vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px">${lineups.map((l,i)=>`<label class="dscrow"><input type="radio" name="dscLn" value="${i}"${i===0?' checked':''}><span class="dscT">${dscEsc(dscDateLabel(l.dateKey||String(l.id).split('_').pop()))}</span><span class="hint" style="margin:0">${dscEsc(l.title||'Worship Lineup')} &middot; ${l.songs.length} songs</span></label>`).join('')}</div>
-        <div id="dscPv" class="hint" style="margin:0"></div>
+      /* one card per lineup: day, time and date, then the lineup name, then each song with its key and BPM */
+      const fmtT=v=>{
+        if(!v)return '';let d=null;
+        if(typeof v.toDate==='function')d=v.toDate();
+        else{const m=/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?$/i.exec(String(v).trim());
+          if(m){if(m[3])return (+m[1])+':'+m[2]+' '+m[3].toUpperCase();d=new Date(2000,0,1,+m[1],+m[2])}
+          else{d=new Date(v);if(isNaN(d))return String(v)}}
+        return d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+      };
+      const lnTime=l=>fmtT(l.serviceTime||l.eventTime||l.time||l.startTime||l.start||l.at||''),lnReh=l=>fmtT(l.rehearsalTime||l.rehearsal||l.rehearsalAt||'');
+      const sKey=(x,b)=>String(x.key||x.songKey||x.transposedKey||x.selectedKey||x.currentKey||(b&&(b.key||b.songKey||b.originalKey))||'');
+      const sBpm=(x,b)=>{const v=x.bpm||x.tempo||(b&&(b.bpm||b.tempo));return v?String(v):''};
+      const dparts=l=>{const key=l.dateKey||String(l.id).split('_').pop(),d=new Date(key+'T00:00:00');
+        if(isNaN(d))return{wd:'',dt:key||''};
+        return{wd:d.toLocaleDateString(undefined,{weekday:'long'}),dt:d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}};
+      let selI=0;
+      pane.innerHTML=`<div id="dscLn" style="max-height:min(46vh,430px);overflow:auto;display:flex;flex-direction:column;gap:6px;padding:2px">${lineups.map((l,i)=>{
+          const d=dparts(l),t=lnTime(l),r=lnReh(l);
+          return `<div class="lnc" data-i="${i}" tabindex="0" role="button"><div class="lnd"><b>${dscEsc(d.wd)}</b>${t?'<span class="lntm">'+dscEsc(t)+'</span>':''}<span class="lndt">${dscEsc(d.dt)}</span></div><div class="lnt">${dscEsc(l.title||'Worship Lineup')} &middot; ${l.songs.length} song${l.songs.length===1?'':'s'}${r?' &middot; Rehearsal '+dscEsc(r):''}</div><div class="lns"></div></div>`}).join('')}</div>
         <div class="row" style="align-items:flex-end"><label style="flex:1">New section name<input id="dscSn"></label><button id="dscAddL" class="pri">Add lineup</button></div>`;
-      const sel=()=>lineups[+(pane.querySelector('input[name=dscLn]:checked')||{value:0}).value];
+      const sel=()=>lineups[selI];
       const show=()=>{
         const l=sel(),key=l.dateKey||String(l.id).split('_').pop();
         q('dscSn').value=(l.title&&!/^worship lineup$/i.test(l.title)?l.title+' ':'')+new Date(key+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
-        q('dscPv').innerHTML=l.songs.map((s,i)=>(i+1)+'. '+dscEsc((byId.get(s.id)||s).title||'Untitled')+(byId.has(s.id)?'':' <i>(not in the library)</i>')).join('<br>');
+        pane.querySelectorAll('.lnc').forEach(c=>{
+          const on=+c.dataset.i===selI;c.classList.toggle('on',on);
+          const box=c.querySelector('.lns');
+          if(on&&!box.dataset.f){box.dataset.f=1;
+            box.innerHTML='<div class="lnr h"><span>#</span><span>Song</span><span>Key</span><span>BPM</span></div>'+l.songs.map((x,n)=>{const b=byId.get(x.id),k=sKey(x,b),bp=sBpm(x,b);
+              return '<div class="lnr"><span>'+(n+1)+'</span><span>'+dscEsc((b||x).title||'Untitled')+(b?'':' <i>(not in the library)</i>')+'</span><span class="lnk">'+(dscEsc(k)||'&ndash;')+'</span><span class="lnb">'+(bp?dscEsc(bp)+' BPM':'&ndash;')+'</span></div>'}).join('')}
+        });
       };
-      pane.querySelector('#dscLn').onchange=show;show();
+      const pickCard=e=>{const c=e.target.closest('.lnc');if(!c)return;selI=+c.dataset.i;show()};
+      pane.querySelector('#dscLn').onclick=pickCard;
+      pane.querySelector('#dscLn').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickCard(e)}};
+      show();
       q('dscAddL').onclick=()=>{
         const l=sel(),name=q('dscSn').value.trim()||'Lineup';remember();
         const songs=l.songs.map(s=>byId.get(s.id)).filter(Boolean);
