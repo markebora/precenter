@@ -5286,10 +5286,13 @@ function secRename(sec){
 function secMove(sec,d){const i=S.secs.indexOf(sec),j=i+d;if(i<0||j<0||j>=S.secs.length)return;[S.secs[i],S.secs[j]]=[S.secs[j],S.secs[i]];save();drawList()}
 function secDelete(sec){
   if(S.secs.length<2){toast('You need at least one section.');return}
-  const i=S.secs.indexOf(sec),to=S.secs[i>0?i-1:1],n=S.songs.filter(z=>secOf(z)===sec).length;
-  confirmBox('Delete the section “'+sec+'”? '+(n?'Its '+n+' item'+(n===1?'':'s')+' move to “'+to+'”.':'It is empty.'),'Delete',()=>{
-    S.songs.forEach(it=>{if(secOf(it)===sec)it.sec=to});
-    S.secs=S.secs.filter(z=>z!==sec);delete secClosed[sec];save();drawList();
+  const n=S.songs.filter(z=>secOf(z)===sec).length;
+  confirmBox('Delete the section “'+sec+'”? '+(n?'Its '+n+' item'+(n===1?'':'s')+' will be deleted too. This cannot be undone.':'It is empty.'),'Delete',()=>{
+    const gone=new Set(S.songs.filter(z=>secOf(z)===sec).map(z=>z.id));
+    S.songs=S.songs.filter(z=>!gone.has(z.id));
+    S.secs=S.secs.filter(z=>z!==sec);delete secClosed[sec];
+    if(gone.has(S.sel)){S.sel=S.songs.length?S.songs[0].id:null;idx=0}
+    save();drawAll();
   });
 }
 const secMenu=(x,y,sec)=>{
