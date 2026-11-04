@@ -3202,7 +3202,7 @@ function drawAll(){drawList();drawGrid();drawEditor();drawTray();push()}
 /* ---------- controls ---------- */
 $('#addSong').onclick=e=>addMenu(e,secOf(cur()),true);
 $('#svMenu').onclick=e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect(),k=Object.keys(S.services||{});
-  showMenu(r.left,r.bottom+2,[{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>window.dscSaveFlow(true)},{t:'Open service from computer\u2026',fn:()=>$('#svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:()=>$('#svS').click()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}])};
+  showMenu(r.left,r.bottom+2,[{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>window.dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>window.dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>$('#svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:()=>$('#svS').click()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}])};
 $('#tL').onclick=()=>{tab='L';drawEditor()};$('#tD').onclick=()=>{tab='D';drawEditor()};$('#tC').onclick=()=>{tab='C';drawEditor()};
 $('#bBlack').onclick=()=>{black=!black;push()};
 async function openAud(){
@@ -4913,13 +4913,34 @@ async function build(name){
   zip.file('service.json',JSON.stringify(data),{compression:'DEFLATE'});
   return{blob:await zip.generateAsync({type:'blob'}),miss:miss.size};
 }
+/* remembered save folder for services (File System Access API; handle kept in IndexedDB) */
+const sfDB=()=>new Promise((res,rej)=>{const r=indexedDB.open('dscSvcDir',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const sfGet=async()=>{try{const db=await sfDB();return await new Promise(res=>{const q=db.transaction('h').objectStore('h').get('dir');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}};
+const sfPut=async h=>{try{const db=await sfDB();await new Promise((res,rej)=>{const tx=db.transaction('h','readwrite');tx.objectStore('h').put(h,'dir');tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});return true}catch(e){return false}};
+window.dscSetSvcFolder=async function(){
+  if(!window.showDirectoryPicker){toast('This browser cannot remember a folder. Services are saved to your Downloads.');return null}
+  try{
+    const h=await showDirectoryPicker({id:'dscService',mode:'readwrite',startIn:'documents'});
+    await sfPut(h);toast('Services will be saved in “'+h.name+'”. The Save window will open there next time.');return h;
+  }catch(e){if(!(e&&e.name==='AbortError'))toast('Could not choose that folder: '+(e&&e.message||e));return null}
+};
 async function saveSvc(name){
-  toast('Saving service\u2026');
+  toast('Saving service…');
   let r;try{r=await build(name)}catch(e){toast('Could not save: '+e.message);return}
   const fn=safe(name)+(r.json?'.json':EXT);
-  const note=(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' \u2022 '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
-  if(window.showSaveFilePicker){try{const h=await showSaveFilePicker({suggestedName:fn,types:[{description:'PreCenter service',accept:{'application/octet-stream':[EXT],'application/json':['.json']}}]});const w=await h.createWritable();await w.write(r.blob);await w.close();toast('Saved '+h.name+note);return}catch(e){if(e&&e.name==='AbortError')return}}
-  const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('Saved '+fn+' to your Downloads'+note);
+  const note=(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' • '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
+  if(window.showSaveFilePicker){
+    try{
+      const dir=await sfGet();
+      const opt={id:'dscService',suggestedName:fn,types:[{description:'PreCenter service',accept:{'application/octet-stream':[EXT],'application/json':['.json']}}]};
+      if(dir)opt.startIn=dir;else opt.startIn='documents';
+      const h=await showSaveFilePicker(opt);const w=await h.createWritable();await w.write(r.blob);await w.close();
+      let where='';
+      if(dir){try{const p=await dir.resolve(h);if(p)where=' in “'+[dir.name,...p.slice(0,-1)].join(' › ')+'”'}catch(e){}}
+      toast('Saved '+h.name+where+note);return;
+    }catch(e){if(e&&e.name==='AbortError')return}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('Saved '+fn+' to your Downloads folder'+note);
 }
 window.dscSaveFlow=function(forceAsk){
   if(S.svcName&&!forceAsk){saveSvc(S.svcName);return}
@@ -5060,12 +5081,12 @@ const info=(title,rows)=>{
   w.onclick=x;document.addEventListener('keydown',k,true);w.appendChild(b);document.body.appendChild(w)};
 const setView=v=>()=>{gview=v;try{localStorage.setItem('lp-view',v)}catch(e){}drawGrid()};
 const MENUS=window.dscMENUS={
- File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
+ File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  'Slide Show':()=>window.dscShowMenu?dscShowMenu():[],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
  Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
- Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
+ Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
 };
