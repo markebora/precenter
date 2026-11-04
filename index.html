@@ -489,13 +489,14 @@ body.lite :not(.stage):not(.stage *){animation:none!important;transition:none!im
 .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
 #ytr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:6px 0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--chip)}#ytr[hidden]{display:none}
 #ytr .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute);margin-right:2px}#ytr button{padding:2px 8px;font-size:12px}#ytr .vtT{margin-left:auto;font-size:10.5px;color:var(--mute)}
+#vtr.min #vtBk,#vtr.min #vtFw,#vtr.min #vtSc,#vtr.min #vtS{display:none}#vtr.min{flex-wrap:nowrap}#vtr.min .vtT{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #nextPrev{width:100%;aspect-ratio:16/9;border-radius:4px;overflow:hidden}
 #nextUp .nuI{display:flex;flex-direction:column;gap:3px;min-width:0}
 #nextUp .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute)}
 #nextUp b{font-size:13px}#nextUp #nuT{font-size:11.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#clrRow{display:grid!important;grid-template-columns:repeat(3,1fr);gap:5px;align-items:stretch}
+#clrRow{display:grid!important;grid-template-columns:repeat(3,1fr);gap:3px;align-items:stretch;margin:4px 0}
 #clrRow .cl{grid-column:1/-1;margin:0 0 1px}
-#clrRow button,#clrRow #gotoN{width:100%;min-width:0;box-sizing:border-box;padding:4px 6px;font-size:11.5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clrRow button,#clrRow #gotoN{width:100%;min-width:0;box-sizing:border-box;padding:1px 4px;font-size:10.5px;line-height:1.25;min-height:0;height:21px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #clrRow button.hold{grid-column:span 2}
 #clrRow [data-c=all],#clrRow [data-c=slide],#clrRow [data-c=media]{font-weight:600}
 </style>
@@ -567,14 +568,14 @@ body.lite :not(.stage):not(.stage *){animation:none!important;transition:none!im
         </div>
       </div>
       <div id="nextUp" class="none"><div class="stage" id="nextPrev" aria-label="Next slide"></div><div class="nuI"><span class="opl">UP NEXT</span><b id="nuL"></b><span id="nuT"></span></div></div>
-      <div id="clrRow" role="toolbar" aria-label="Clear layers"><span class="cl">CLEAR</span><button data-c="all" title="Clear everything except audio, or bring the slide back (F1)">All</button><button data-c="slide" title="Clear or restore the slide text (F2)">Text</button><button data-c="media" title="Clear or restore the background media (F3)">Media</button><button data-c="prop" title="Clear props (F4)">Props</button><button data-c="msg" title="Clear messages (F5)">Messages</button><button data-c="audio" title="Stop the audio (F6)">Audio</button><button data-c="ann" title="Clear the announcement banner (F7)">Announcement</button><button data-c="cam" title="Clear the live video input">Video input</button><button data-c="test" title="Test patterns for the screens">Test &#9662;</button></div>
-      <div class="opn" id="opn"><span class="opl">NOTE</span><span class="opt ph" id="opnT"></span><button id="opnA" hidden title="Timed auto-advance. Click to stop it for this slide."></button><button id="opnE" title="Add or edit the note and auto-advance for this slide">Edit</button></div>
-      <div id="vtr" role="toolbar" aria-label="Video"><span class="opl">VIDEO</span><button id="vtBk" title="Back 10 seconds">&#9198;</button><button id="vtPl" class="pri" title="Play or pause the video on the live slide">&#9654;</button><button id="vtSt" title="Stop and go back to the start">&#9632;</button><button id="vtFw" title="Forward 10 seconds">&#9197;</button><span class="vtT" id="vtT">no video on this slide</span><input type="range" id="vtSc" min="0" max="1000" value="0" aria-label="Video position"><div class="hint" id="vtS" style="flex:1 0 100%;margin:0"></div></div>
       <div class="lyr" role="group" aria-label="Layers">
         <div class="lyH"><span>LAYERS<span id="lyCnt"></span></span><span class="lyHR"><button id="lyLook" title="Switch look">Look</button><button id="lyMin" aria-expanded="true" aria-controls="lyList" title="Minimize the layers list to make room for the tabs below">&#9662;</button></span></div>
         <div id="lyList"></div>
       </div>
       <div class="st"><span>Audience <i id="dA"></i></span><span>Stage <i id="dS"></i></span><button id="scrB" title="Screen configuration">Screens&hellip;</button><button id="outQ" class="qm" title="To show on the projector: click Audience, drag the new window onto the projector screen, then click inside it to go fullscreen." aria-label="How to put the output on the projector">?</button></div>
+      <div id="clrRow" role="toolbar" aria-label="Clear layers"><span class="cl">CLEAR</span><button data-c="all" title="Clear everything except audio, or bring the slide back (F1)">All</button><button data-c="slide" title="Clear or restore the slide text (F2)">Text</button><button data-c="media" title="Clear or restore the background media (F3)">Media</button><button data-c="prop" title="Clear props (F4)">Props</button><button data-c="msg" title="Clear messages (F5)">Messages</button><button data-c="audio" title="Stop the audio (F6)">Audio</button><button data-c="ann" title="Clear the announcement banner (F7)">Announcement</button><button data-c="cam" title="Clear the live video input">Video input</button><button data-c="test" title="Test patterns for the screens">Test &#9662;</button></div>
+      <div class="opn" id="opn"><span class="opl">NOTE</span><span class="opt ph" id="opnT"></span><button id="opnA" hidden title="Timed auto-advance. Click to stop it for this slide."></button><button id="opnE" title="Add or edit the note and auto-advance for this slide">Edit</button></div>
+      <div id="vtr" role="toolbar" aria-label="Video"><span class="opl">VIDEO</span><button id="vtMin" aria-expanded="true" title="Collapse or expand the video controls" style="padding:0 6px;font-size:11px">&#9662;</button><button id="vtBk" title="Back 10 seconds">&#9198;</button><button id="vtPl" class="pri" title="Play or pause the video on the live slide">&#9654;</button><button id="vtSt" title="Stop and go back to the start">&#9632;</button><button id="vtFw" title="Forward 10 seconds">&#9197;</button><span class="vtT" id="vtT">no video on this slide</span><input type="range" id="vtSc" min="0" max="1000" value="0" aria-label="Video position"><div class="hint" id="vtS" style="flex:1 0 100%;margin:0"></div></div>
       <div class="hint" id="outHint" style="margin:0"></div>
     </div>
     <div class="ptabs" id="ptabs" role="tablist">
@@ -3303,6 +3304,11 @@ function drawLayers(){
 function setLyMin(on,keep){const b=$('.lyr');if(!b)return;b.classList.toggle('min',on);const m=$('#lyMin');m.innerHTML=on?'&#9652;':'&#9662;';m.setAttribute('aria-expanded',String(!on));m.title=on?'Show the layers list':'Minimize the layers list to make room for the tabs below';if(!keep){try{localStorage.setItem('lp-lymin',on?'1':'0')}catch(e){}}}
 $('#lyMin').onclick=e=>{e.stopPropagation();setLyMin(!$('.lyr').classList.contains('min'))};
 {let m=false;try{m=localStorage.getItem('lp-lymin')==='1'}catch(e){}if(m)setLyMin(true,true)}
+/* collapse the video controls (click the arrow); also collapses when a bottom tab is used so the tabs get the room */
+function setVtMin(on,keep){const v=$('#vtr'),m=$('#vtMin');if(!v||!m)return;v.classList.toggle('min',on);m.innerHTML=on?'&#9652;':'&#9662;';m.setAttribute('aria-expanded',String(!on));if(!keep){try{localStorage.setItem('lp-vtmin',on?'1':'0')}catch(e){}}}
+$('#vtMin').onclick=e=>{e.stopPropagation();setVtMin(!$('#vtr').classList.contains('min'))};
+{let m=false;try{m=localStorage.getItem('lp-vtmin')==='1'}catch(e){}if(m)setVtMin(true,true)}
+$('#ptabs').addEventListener('click',e=>{if(e.target.closest('button'))setVtMin(true,true)});
 $('#bAll').onclick=()=>{['slide','media','prop','msg','tm'].forEach(clrLayer);push()};
 $('#bGrp').onclick=clrGroup;
 
