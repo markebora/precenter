@@ -2550,6 +2550,7 @@ function addLib(f){const t=/\.(mp4|webm|mov|m4v|ogv)$/i.test(f.name)?'video':/\.
 function applyBg(i,o){const s=cur();s.ov=s.ov||{};s.ov[i]={...(s.ov[i]||{}),bg:o.bg,lib:o.lib||'',img:''};save();drawGrid();if(i===idx)push();if(tab==='D')drawEditor()}
 let trayView='folders',trayPath='';
 function removeFolder(path){
+  if(!path.includes('/'))dirForget(path);
   libList=libList.filter(x=>{if(x.name.startsWith(path+'/')){try{URL.revokeObjectURL(lib[x.name])}catch(e){}delete lib[x.name];delete libFile[x.name];return false}return true});
   if(trayPath===path||trayPath.startsWith(path+'/'))trayPath=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';
   drawTray();
@@ -2785,7 +2786,61 @@ function openBgPop(kind){
 }
 document.addEventListener('click',e=>{const p=$('#bgpop');if(!p||p.hidden)return;if(e.composedPath().includes(p)||e.target.id==='mCol'||e.target.id==='mGrad')return;p.hidden=true});
 let fileTarget=null;
-$('#mDir').onclick=()=>$('#fDir').click();
+/* ---- remembered media folders (File System Access API; handles kept in IndexedDB) ---- */
+const dirDB=()=>new Promise((res,rej)=>{const r=indexedDB.open('dscMediaDirs',1);r.onupgradeneeded=()=>r.result.createObjectStore('h',{keyPath:'name'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const dirOp=async(mode,fn)=>{const db=await dirDB();return new Promise((res,rej)=>{const tx=db.transaction('h',mode);let rq;try{rq=fn(tx.objectStore('h'))}catch(e){rej(e);return}tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)})};
+const dirSave=(name,handle)=>dirOp('readwrite',s=>s.put({name,handle})).catch(()=>{});
+const dirForget=name=>dirOp('readwrite',s=>s.delete(name)).catch(()=>{});
+const dirAll=()=>dirOp('readonly',s=>s.getAll()).then(r=>r||[]).catch(()=>[]);
+let dirPending=[];
+async function dirWalk(h,prefix){
+  for await(const [nm,e] of h.entries()){
+    if(nm.startsWith('.'))continue;
+    if(e.kind==='directory'){await dirWalk(e,prefix+nm+'/');continue}
+    const t=/\.(mp4|webm|mov|m4v|ogv)$/i.test(nm)?'video':/\.(jpe?g|png|webp|gif|avif)$/i.test(nm)?'image':'';
+    if(!t)continue;const key=prefix+nm;if(lib[key])continue;
+    const f=await e.getFile();lib[key]=URL.createObjectURL(f);libFile[key]=f;libList.push({name:key,type:t});
+  }
+}
+async function dirLoad(rec,ask){
+  const h=rec.handle;
+  try{
+    let p=await h.queryPermission({mode:'read'});
+    if(p!=='granted'&&ask)p=await h.requestPermission({mode:'read'});
+    if(p!=='granted')return false;
+    await dirWalk(h,rec.name+'/');return true;
+  }catch(e){return false}
+}
+function dirButton(){
+  let b=$('#mReconn');
+  if(!dirPending.length){if(b)b.remove();return}
+  if(!b){b=document.createElement('button');b.id='mReconn';b.className='pri';b.onclick=()=>dirRestore(true);$('#mDir').after(b)}
+  b.textContent='Reconnect folders ('+dirPending.length+')';
+  b.title='Your saved media folders need one click to be allowed again: '+dirPending.map(r=>r.name).join(', ');
+}
+async function dirRestore(ask){
+  if(!window.showDirectoryPicker)return;
+  const recs=await dirAll();dirPending=[];let n=0;
+  for(const r of recs){if(await dirLoad(r,ask))n++;else dirPending.push(r)}
+  dirButton();
+  if(n){try{drawAll()}catch(e){drawTray()}}
+}
+$('#mDir').onclick=async()=>{
+  if(!window.showDirectoryPicker){$('#fDir').click();return}
+  let h;
+  try{h=await showDirectoryPicker({id:'dscMedia',mode:'read'})}
+  catch(e){if(e&&e.name==='AbortError')return;$('#fDir').click();return}
+  const recs=await dirAll();let name=h.name,k=1;
+  for(const r of recs){if(r.name===name||r.name.startsWith(h.name+' (')){try{if(await r.handle.isSameEntry(h)){name=r.name;k=0;break}}catch(_){}}}
+  if(k){const used=new Set(recs.map(r=>r.name));while(used.has(name))name=h.name+' ('+(++k)+')'}
+  await dirSave(name,h);
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(_){}
+  await dirLoad({name,handle:h},true);
+  trayView='folders';trayPath='';
+  try{drawAll()}catch(e){drawTray()}
+  toast('Folder “'+name+'” is saved. It will load automatically next time.');
+};
+setTimeout(()=>dirRestore(false),0);
 $('#mOne').onclick=()=>{fileTarget=null;$('#fOne').click()};
 $('#fDir').onchange=e=>{const n=[...e.target.files].map(addLib).filter(Boolean).length;e.target.value='';if(!n)$('#outHint').textContent='No supported images or videos were found in that folder.';trayView='folders';trayPath='';drawTray()};
 $('#fOne').onchange=e=>{
