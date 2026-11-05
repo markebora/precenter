@@ -2435,7 +2435,7 @@ function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
   const ln=p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
   bc.postMessage(p);
   try{markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd()}catch(e){console.error(e)}
-  remotePublish();scrPrev()}
+  remotePublish();r2Stream();scrPrev()}
 function drawGrid(){
   const s=cur(),sl=expand(s);
   $('#songTitle').textContent=s.title||'Untitled';
@@ -4386,9 +4386,9 @@ function rmPrune(c){
 }
 function rmCfg(){try{const c=JSON.parse(localStorage.getItem('lp-r2')||'null');return c&&c.on&&c.acct&&c.bucket&&c.id&&c.secret&&c.base?c:null}catch(e){return null}}
 function rmVidUrl(c,vk){rmPrune(c);const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?String(k).split(',').filter(Boolean).map(x=>c.base.replace(/\/+$/,'')+'/'+x):[]}
-async function r2Put(c,key,blob,type){
+async function r2Put(c,key,blob,type,ccOv){
   const enc=new TextEncoder(),host=c.acct+'.r2.cloudflarestorage.com',path='/'+c.bucket+'/'+key.split('/').map(encodeURIComponent).join('/');
-  const amz=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''),ds=amz.slice(0,8),ph='UNSIGNED-PAYLOAD',cc='public, max-age=31536000, immutable';
+  const amz=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''),ds=amz.slice(0,8),ph='UNSIGNED-PAYLOAD',cc=ccOv||'public, max-age=31536000, immutable';
   const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
   const sha=async t=>hex(await crypto.subtle.digest('SHA-256',enc.encode(t)));
   const hm=async(k,t)=>crypto.subtle.sign('HMAC',await crypto.subtle.importKey('raw',k,{name:'HMAC',hash:'SHA-256'},false,['sign']),enc.encode(t));
@@ -4466,14 +4466,16 @@ function rmVidCfg(){
     +'<label>Access Key ID<input id="r2I" value="'+dscEsc(c.id||'')+'"></label>'
     +'<label>Secret Access Key<input id="r2S" type="password" value="'+dscEsc(c.secret||'')+'"></label>'
     +'<label>Public link of the bucket<input id="r2U" value="'+dscEsc(c.base||'')+'" placeholder="https://pub-xxxx.r2.dev  or  https://media.yourdomain.com"></label>'
+    +'<label class="row" style="gap:6px;align-items:center"><input type="checkbox" id="r2Stm"'+(c.stm===false?'':' checked')+' style="width:auto"> Also send the live slide to Disciples Stream (stream/state.json)</label>'
     +'<label>Forget uploaded clips after (days)<input id="r2D" type="number" min="0" max="365" value="'+dscEsc(String(c.days||0))+'" placeholder="same days as the R2 lifecycle rule, 0 = never"></label>'
     +'<div class="hint" id="r2St" style="margin:4px 0">'+dscEsc(RMV.status||'')+'</div>'
-    +'<div class="row"><button id="r2T">Test</button><button id="r2C">Clear uploaded clips</button><button id="r2Sv" class="pri">Save</button></div>'
+    +'<div class="row"><button id="r2T">Test</button><button id="r2L">Copy Stream access link</button><button id="r2C">Clear uploaded clips</button><button id="r2Sv" class="pri">Save</button></div>'
     +'<p class="hint">The keys stay on this computer only. In the bucket settings turn on public access and add this CORS rule: <code>[{"AllowedOrigins":["*"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedHeaders":["*"],"MaxAgeSeconds":3600}]</code></p>');
-  const val=()=>({on:m.q('#r2On').checked,acct:m.q('#r2A').value.trim(),bucket:m.q('#r2B').value.trim(),id:m.q('#r2I').value.trim(),secret:m.q('#r2S').value.trim(),base:m.q('#r2U').value.trim(),days:Math.max(0,Math.min(365,parseInt(m.q('#r2D').value,10)||0))});
+  const val=()=>({on:m.q('#r2On').checked,acct:m.q('#r2A').value.trim(),bucket:m.q('#r2B').value.trim(),id:m.q('#r2I').value.trim(),secret:m.q('#r2S').value.trim(),base:m.q('#r2U').value.trim(),stm:m.q('#r2Stm').checked,days:Math.max(0,Math.min(365,parseInt(m.q('#r2D').value,10)||0))});
   const st=t=>{m.q('#r2St').textContent=t};
   m.q('.x').onclick=m.done;
   m.q('#r2Sv').onclick=()=>{localStorage.setItem('lp-r2',JSON.stringify(val()));RMV.fail={};st('Saved.');try{remotePublish(true)}catch(e){}};
+  m.q('#r2L').onclick=()=>{const v=val();if(!v.base){st('Fill in the public link of the bucket first.');return}localStorage.setItem('lp-r2',JSON.stringify(v));remoteAccessLink()};
   m.q('#r2C').onclick=()=>{RMV.done={};RMV.at={};RMV.fail={};rmSaveDone();st('Cleared. Clips will be made and uploaded again when a video slide goes live.');try{remotePublish(true)}catch(e){}};
   m.q('#r2T').onclick=async()=>{
     const v=val();if(!(v.acct&&v.bucket&&v.id&&v.secret&&v.base)){st('Fill in every box first.');return}
@@ -4488,6 +4490,28 @@ function rmVidCfg(){
     }
   };
 }
+/* live slide for Disciples Stream: one small JSON file in the same R2 bucket; Stream reads it from the public link */
+var R2S={t:0,key:'',busy:0,again:0};
+function r2Stream(force){
+  const c=rmCfg();if(!c||c.stm===false)return;
+  clearTimeout(R2S.t);R2S.t=setTimeout(async()=>{
+    let st,key;
+    try{
+      const s=cur(),p=payload(),d=p.d||{};
+      st={v:1,on:true,at:Date.now(),title:s.title||'',type:s.type||'song',
+        text:rtStrip(String(p.text||'')).slice(0,1200),ref:s.type==='scripture'?String(s.title||''):'',
+        black:!!black,clear:!!clear,dim:Math.min(.9,Math.max(0,(d.dim||0)/100)),bg:remoteBg(p)};
+      key=JSON.stringify(Object.assign({},st,{at:0}));
+    }catch(e){return}
+    if(!force&&key===R2S.key)return;
+    if(R2S.busy){R2S.again=1;return}
+    R2S.busy=1;
+    try{await r2Put(c,'stream/state.json',new Blob([JSON.stringify(st)],{type:'application/json'}),'application/json','no-store, max-age=0');R2S.key=key}
+    catch(e){R2S.key='';if(!R2S.errAt||Date.now()-R2S.errAt>15000){R2S.errAt=Date.now();toast('Stream link: '+((e&&e.message)||e))}}
+    R2S.busy=0;if(R2S.again){R2S.again=0;r2Stream()}
+  },force?0:200);
+}
+setInterval(()=>{if(rmCfg())r2Stream(true)},20000);
 function rmHash(x){let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))|0;return(h>>>0).toString(36)}
 async function rmThumb(key,kind,src,contain){
   RMB.busy.add(key);let out='';
@@ -4743,6 +4767,16 @@ async function remoteOn(auto){
     remoteBtn();
     if(!auto)toast('Remote is on for '+pick.name+'. Open Remote in the Disciples app on your phone.');
   }catch(e){if(!auto)toast(dscErr(e))}
+}
+/* access link for Disciples Stream: it carries only the team id; Stream signs in with the same account and reads presenter/{team} like the phone does */
+async function remoteAccessLink(){
+  const c=rmCfg();
+  if(!c){toast('Set up the R2 bucket first (Phone video backgrounds), then copy the link.');try{rmVidCfg()}catch(e){}return}
+  let tm='';try{tm=(RM&&RM.team)||localStorage.getItem('lp-dsc-team')||''}catch(e){}
+  const link='dscr2:'+c.base.replace(/\/+$/,'')+(tm?'#'+tm:'');
+  r2Stream(true);
+  try{await navigator.clipboard.writeText(link);toast('Stream access link copied. Paste it in Stream (StreamLink, Cloud link).')}
+  catch(e){window.prompt('Copy this access link and paste it in Stream:',link)}
 }
 $('#tRemote').onclick=()=>{RM?remoteOff():remoteOn(false)};
 try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),1200)}catch(e){}
@@ -5425,7 +5459,7 @@ const MENUS=window.dscMENUS={
  'Slide Show':()=>window.dscShowMenu?dscShowMenu():[],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
- Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
+ Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Copy Stream access link (cloud)',fn:()=>remoteAccessLink()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Phone video backgrounds\u2026',fn:()=>rmVidCfg()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
