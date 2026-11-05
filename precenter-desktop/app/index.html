@@ -2440,10 +2440,18 @@ function drawGrid(){
   const s=cur(),sl=expand(s);
   $('#songTitle').textContent=s.title||'Untitled';
   drawSecBar(sl);
-  const g=$('#grid');g.innerHTML='';g.className='grid '+gview;
+  const g=$('#grid');
+  const gcls='grid '+gview;if(g.className!==gcls)g.className=gcls;
   document.querySelectorAll('#vwSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===gview));
-  if(!sl.length){g.innerHTML='<div class="empty">No slides yet. Paste lyrics in the Lyrics tab; a blank line starts a new slide.</div>';return}
+  if(!sl.length){g._sig=null;g.innerHTML='<div class="empty">No slides yet. Paste lyrics in the Lyrics tab; a blank line starts a new slide.</div>';return}
+  /* only the cards whose content changed are rebuilt; the rest are kept as they are */
+  const kk=s.id+'|'+gview+'|'+sl.length,oldK=[...g.children],reuse=g.dataset.k===kk&&g._s===s&&g._sig&&oldK.length===sl.length&&oldK.every(e=>e.classList&&e.classList.contains('slide'));
+  const strp=(k,v)=>typeof v==='string'&&v.length>200?v.length+':'+v.slice(0,60)+v.slice(-60):v;
+  const nodes=[],sigs=[],fresh=[];
+  if(!reuse)g.innerHTML='';
   sl.forEach((x,i)=>{
+    const sg=JSON.stringify([x,eff(s,i),libUrl(eff(s,i)),s.ov&&s.ov[i]?1:0,ntOf(s,i),slideHidden(i)?1:0,labColor(x.label)],strp);
+    if(reuse&&g._sig[i]===sg){nodes.push(oldK[i]);sigs.push(sg);return}
     const nt=ntOf(s,i),tag=(nt.n?' \ud83d\udcdd':'')+(nt.a?' \u23f1'+nt.a+'s':'')+((nt.mac||(nt.acts&&nt.acts.length))?' \u26a1'+(nt.acts&&nt.acts.length>1?nt.acts.length:''):'');
     const c=document.createElement('div');c.className='slide'+(gview==='grid'?'':' tv')+(i===idx?' cur':'')+(slideHidden(i)?' shd':'');c.tabIndex=0;c.draggable=true;c.ondragstart=ev=>{ev.dataTransfer.setData('text/plain','dscslide:'+i);ev.dataTransfer.effectAllowed='move'};c.ondragover=ev=>{if(window._dragOn){ev.preventDefault();c.classList.add('dz')}};c.ondragleave=()=>c.classList.remove('dz');c.ondrop=ev=>{c.classList.remove('dz');const t=ev.dataTransfer.getData('text/plain');if(t.indexOf('dscslide:')===0){ev.preventDefault();moveSlide(+t.slice(9),i)}};
     if(gview==='grid'){
@@ -2467,9 +2475,13 @@ function drawGrid(){
       if(raw){try{applyBg(i,JSON.parse(raw))}catch(x){}}
       else{const f=e.dataTransfer.files[0],n=f&&addLib(f);if(n){applyBg(i,{bg:n.type==='video'?'Video':'Image',lib:n.name});drawTray()}}};
     c.onkeydown=e=>{if(e.key==='Enter')go(i)};
-    g.appendChild(c);if(gview==='grid')fitStage(c.lastChild);
+    nodes.push(c);sigs.push(sg);fresh.push(c);
   });
-  g.dataset.k=s.id+'|'+gview+'|'+sl.length;gridDirty=false;
+  if(reuse){nodes.forEach((n,i)=>{if(n!==oldK[i])g.replaceChild(n,oldK[i])})}
+  else nodes.forEach(n=>g.appendChild(n));
+  if(gview==='grid')fresh.forEach(c=>fitStage(c.lastChild));
+  [...g.children].forEach((e,i)=>e.classList.toggle('cur',i===idx));
+  g.dataset.k=kk;g._s=s;g._sig=sigs;gridDirty=false;
 }
 /* Fast path for moving between slides: only move the LIVE border instead of rebuilding every card.
    Falls back to the full drawGrid() whenever anything was edited (save() sets gridDirty) or the song/view/slide count differs. */
@@ -2484,8 +2496,12 @@ function drawGridCur(){
 let autoNext=false;try{autoNext=localStorage.getItem('lp-autonext')==='1'}catch(e){}
 function secStarts(sl){const r=[];sl.forEach((x,i)=>{if(x&&x.label)r.push(i)});return r}
 function drawSecBar(sl){
-  const box=$('#secChips');if(!box)return;box.innerHTML='';
+  const box=$('#secChips');if(!box)return;
   const st=secStarts(sl||expand(cur()));
+  {const sg=cur().id+'|'+st.map(i=>{const x=(sl||expand(cur()))[i];return i+':'+x.label}).join(',');
+   if(box.dataset.sig===sg&&st.length>=2){let curK=-1;st.forEach((i,k)=>{if(i<=idx)curK=k});[...box.children].forEach((b,k)=>b.classList.toggle('cur',k===curK));
+     const an0=$('#autoNext'),t0='Auto-next: '+(autoNext?'on':'off');an0.classList.toggle('on',autoNext);if(an0.textContent!==t0)an0.textContent=t0;return}
+   box.dataset.sig=sg;box.innerHTML=''}
   if(st.length>=2){
     let curK=-1;st.forEach((i,k)=>{if(i<=idx)curK=k});
     st.forEach((i,k)=>{
@@ -2546,7 +2562,7 @@ const libUrl=d=>(d.lib&&lib[d.lib])||(d.bg==='Video'?vurl:'');
 let mode='show',stgWins=[];
 function setMode(m){mode=m;$('#mShow').classList.toggle('on',m==='show');$('#mEdit').classList.toggle('on',m==='edit');$('#editSec').hidden=m!=='edit';if(m==='edit'){$('#editSec').classList.remove('min');drawEditor()}updBot();drawSlideEd(true)}
 window.dscAudOpen=()=>!!(outWin&&!outWin.closed)||Object.values(outW||{}).some(w=>w&&!w.closed)||!!(window.dscNdiOn&&window.dscNdiOn('a'));
-function dots(){const a=!!(outWin&&!outWin.closed)||!!(window.dscNdiOn&&window.dscNdiOn('a')),s=stgWins.some(w=>w&&!w.closed)||!!(window.dscNdiOn&&window.dscNdiOn('s'));$('#dA').classList.toggle('on',a);$('#dS').classList.toggle('on',s);$('#openOut').classList.toggle('on',a);$('#stgB').classList.toggle('on',s);$('#openOut').setAttribute('aria-pressed',a);$('#stgB').setAttribute('aria-pressed',s)}
+function dots(){const a=!!(outWin&&!outWin.closed)||!!(window.dscNdiOn&&window.dscNdiOn('a')),s=stgWins.some(w=>w&&!w.closed)||!!(window.dscNdiOn&&window.dscNdiOn('s'));$('#dA').classList.toggle('on',a);$('#dS').classList.toggle('on',s);$('#openOut').classList.toggle('on',a);$('#stgB').classList.toggle('on',s);{const o=$('#openOut'),t=$('#stgB');if(o.getAttribute('aria-pressed')!==String(a))o.setAttribute('aria-pressed',a);if(t.getAttribute('aria-pressed')!==String(s))t.setAttribute('aria-pressed',s)}}
 setInterval(dots,1500);
 function updBot(){
   const bot=$('#bot'),vis=[...bot.children].filter(c=>!c.hidden);
@@ -3301,21 +3317,29 @@ function drawLayers(){
     {k:'cue',n:'Media cue',live:!!(window.dscMC&&window.dscMC.on),val:(window.dscMC&&window.dscMC.on)?String(window.dscMC.name).split('/').pop():''},
     {k:'cam',n:'Video input',live:!!(window.dscCam&&window.dscCam.on),val:(window.dscCam&&window.dscCam.on)?'live':''}
   ];
-  host.innerHTML='';
-  {const c=document.createElement('div');c.className='lyCap';c.textContent='\u2611 = included when you press Clear group (\u2297 or G). \u2715 clears just that layer.';host.appendChild(c)}
-  rows.forEach(r=>{
-    const e=document.createElement('div');e.className='ly'+(r.live?' live':'');
-    const cb=document.createElement('input');cb.type='checkbox';cb.checked=g.includes(r.k);cb.title='Include '+r.n.toLowerCase()+' in Clear group';cb.setAttribute('aria-label','Include '+r.n+' in Clear group');
-    cb.onchange=()=>{const a=cgGet().filter(x=>x!==r.k);if(cb.checked)a.push(r.k);cgSet(a)};
-    const n=document.createElement('span');n.className='ln';n.textContent=r.n;
-    const v=document.createElement('span');v.className='lv';v.textContent=r.val||'\u2014';v.title=r.val||'';
-    const b=document.createElement('button');
-    if(r.back){b.textContent='\u21ba';b.title='Show '+r.n.toLowerCase()+' again';b.setAttribute('aria-label',b.title);b.onclick=()=>{restoreLayer(r.k);push()}}
-    else{b.textContent='\u2715';b.title='Clear '+r.n.toLowerCase();b.setAttribute('aria-label',b.title);b.disabled=!r.live;b.onclick=()=>{clrLayer(r.k);push()}}
-    e.append(cb,n,v,b);host.appendChild(e);
+  if(!host._ly||host._ly.length!==rows.length||host._ly.some((o,i)=>o.k!==rows[i].k)){
+    host.innerHTML='';host._ly=[];
+    {const c=document.createElement('div');c.className='lyCap';c.textContent='\u2611 = included when you press Clear group (\u2297 or G). \u2715 clears just that layer.';host.appendChild(c)}
+    rows.forEach(r=>{
+      const o={k:r.k,e:document.createElement('div'),cb:document.createElement('input'),n:document.createElement('span'),v:document.createElement('span'),b:document.createElement('button'),r:r};
+      o.e.className='ly';o.cb.type='checkbox';o.cb.title='Include '+r.n.toLowerCase()+' in Clear group';o.cb.setAttribute('aria-label','Include '+r.n+' in Clear group');
+      o.cb.onchange=()=>{const a=cgGet().filter(x=>x!==o.k);if(o.cb.checked)a.push(o.k);cgSet(a)};
+      o.n.className='ln';o.n.textContent=r.n;o.v.className='lv';
+      o.b.onclick=()=>{if(o.r.back){restoreLayer(o.k)}else{clrLayer(o.k)}push()};
+      o.e.append(o.cb,o.n,o.v,o.b);host.appendChild(o.e);host._ly.push(o);
+    });
+  }
+  rows.forEach((r,i)=>{
+    const o=host._ly[i];o.r=r;
+    const cls='ly'+(r.live?' live':'');if(o.e.className!==cls)o.e.className=cls;
+    const on=g.includes(r.k);if(o.cb.checked!==on)o.cb.checked=on;
+    const vt=r.val||'\u2014';if(o.v.textContent!==vt){o.v.textContent=vt;o.v.title=r.val||''}
+    const bt=r.back?'\u21ba':'\u2715',bl=r.back?'Show '+r.n.toLowerCase()+' again':'Clear '+r.n.toLowerCase();
+    if(o.b.textContent!==bt){o.b.textContent=bt;o.b.title=bl;o.b.setAttribute('aria-label',bl)}
+    const dis=r.back?false:!r.live;if(o.b.disabled!==dis)o.b.disabled=dis;
   });
-  const lk=$('#lyLook');if(lk){lk.textContent='Look: '+curLook().n;lk.title='Switch look'}
-  const nl=rows.filter(r=>r.live).length,lc=$('#lyCnt');if(lc)lc.textContent=' \u00b7 '+nl+' live'+(nl?'':'');
+  const lk=$('#lyLook');if(lk){const lt='Look: '+curLook().n;if(lk.textContent!==lt){lk.textContent=lt;lk.title='Switch look'}}
+  const nl=rows.filter(r=>r.live).length,lc=$('#lyCnt');if(lc){const ct=' \u00b7 '+nl+' live';if(lc.textContent!==ct)lc.textContent=ct}
 }
 /* minimize / restore the layers list so the tabs below get the room */
 function setLyMin(on,keep){const b=$('.lyr');if(!b)return;b.classList.toggle('min',on);const m=$('#lyMin');m.innerHTML=on?'&#9652;':'&#9662;';m.setAttribute('aria-expanded',String(!on));m.title=on?'Show the layers list':'Minimize the layers list to make room for the tabs below';if(!keep){try{localStorage.setItem('lp-lymin',on?'1':'0')}catch(e){}}}
@@ -3440,9 +3464,9 @@ function armAdv(force){
 function drawNotes(){
   const el=$('#opn');if(!el)return;
   const n=ntOf(cur(),idx),t=$('#opnT'),c=$('#opnA');
-  t.textContent=n.n||'No note for this slide';t.classList.toggle('ph',!n.n);el.classList.toggle('has',!!n.n);
-  const a=n.a||0;c.hidden=!a;
-  if(a)c.textContent=advEnd?'\u23f1 '+Math.max(0,Math.ceil((advEnd-Date.now())/1000))+'s \u2715':'\u23f1 '+a+'s stopped';
+  const nt=n.n||'No note for this slide';if(t.textContent!==nt)t.textContent=nt;t.classList.toggle('ph',!n.n);el.classList.toggle('has',!!n.n);
+  const a=n.a||0;if(c.hidden===!!a)c.hidden=!a;
+  if(a){const at=advEnd?'\u23f1 '+Math.max(0,Math.ceil((advEnd-Date.now())/1000))+'s \u2715':'\u23f1 '+a+'s stopped';if(c.textContent!==at)c.textContent=at}
 }
 setInterval(()=>{if(advEnd)drawNotes()},250);
 $('#opnA').onclick=()=>{clearTimeout(advT);advEnd=0;drawNotes()};
@@ -5386,24 +5410,25 @@ function upd(){
   try{
     const nd=window.dscNdiOn,a=!!(outWin&&!outWin.closed)||!!(nd&&nd('a')),s=stgWins.some(w=>w&&!w.closed)||!!(nd&&nd('s'));
     const nc=window.dscNdiConfigs?dscNdiConfigs().length:0,lvS=window.dscLiveSel?dscLiveSel():S.sel,lvI=window.dscLiveIdx?dscLiveIdx():idx,sg=S.songs.find(z=>z.id===lvS)||cur(),ex=expand(sg),x=ex[lvI]||{};
-    sb.textContent='';const now=Date.now(),kk=S.sel+':'+idx;if(kk!==lk){lk=kk;ls=now}if(S.sel!==lik){lik=S.sel;lis=now}
-    air.className='air '+(window._tp?'blk':!a?'':black?'blk':'on');air.textContent=window._tp?'TEST PATTERN':!a?'OFF AIR':black?'BLACK':'LIVE';
-    sb.appendChild(sp('Audience '+(a?'on':'off'),a?'on':'',1));
-    sb.appendChild(sp('Stage '+(s?'on':'off'),s?'on':'',1));
-    sb.appendChild(sp(window.dscNative?('NDI '+(nc?nc+' output'+(nc>1?'s':''):'off')):(nc?'NDI needs desktop app':'NDI off'),window.dscNative&&nc?'on':'',1));
-    if(black)sb.appendChild(sp('BLACK SCREEN','bad'));
-    sb.appendChild(sp((sg.title||'Untitled')+' \u00b7 '+(lvI+1)+'/'+ex.length+(x.label?' '+x.label:''),'live',1));
-    if(a)sb.appendChild(sp('Slide '+fmt(now-ls)+'  \u00b7  Item '+fmt(now-lis)));
-    if(typeof aud!=='undefined'&&aud.cur>=0&&aud.el&&!aud.el.paused)sb.appendChild(sp('\u266a '+((aud.list[aud.cur]||{}).name||'Audio'),'on',1));
-    if(msgOn)sb.appendChild(sp('Message showing','on',1));
-    if(window.dscAnn&&dscAnn.on())sb.appendChild(sp('Announcement showing','on',1));
-    if(smsgOn)sb.appendChild(sp('Stage message','on',1));
-    if(clear)sb.appendChild(sp('Text cleared','bad'));
-    if(window._tp)sb.appendChild(sp('Test pattern on: '+window._tp,'bad'));
-    if(window.dscTL&&dscTL.playing())sb.appendChild(sp('Timeline '+dscTL.status(),'on',1));
-    if(S.svcAt){const m=/^(\d{1,2}):(\d{2})$/.exec(S.svcAt);if(m){const t=new Date();t.setHours(+m[1],+m[2],0,0);const d=Math.round((t-now)/1000),ab=Math.abs(d),h=Math.floor(ab/3600),mi=Math.floor(ab%3600/60),se=ab%60,z=n=>String(n).padStart(2,'0'),tx=(h?h+':'+z(mi):mi)+':'+z(se);sb.appendChild(sp(d>0?'Service in '+tx:'Service started '+tx+' ago',d>0&&d<300?'bad':'on',1))}}
-    sb.appendChild(sp(mode==='edit'?'Editing':'Show mode'));
-    const r=sp(new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'  \u00b7  '+(S.svcName?'Service: '+S.svcName:'Not saved to a file'),'r');sb.appendChild(r);{const lb=sp('\u26a1 Light mode '+(document.body.classList.contains('lite')?'on':'off'),'');lb.className=(lb.className||'')+' lite-tg';lb.title='Light mode: no animations, no video previews. For slower computers. Click to switch.';lb.onclick=()=>window.dscLite&&dscLite();sb.appendChild(lb)}
+    const out=document.createElement('div');const now=Date.now(),kk=S.sel+':'+idx;if(kk!==lk){lk=kk;ls=now}if(S.sel!==lik){lik=S.sel;lis=now}
+    {const ac='air '+(window._tp?'blk':!a?'':black?'blk':'on'),at=window._tp?'TEST PATTERN':!a?'OFF AIR':black?'BLACK':'LIVE';if(air.className!==ac)air.className=ac;if(air.textContent!==at)air.textContent=at}
+    out.appendChild(sp('Audience '+(a?'on':'off'),a?'on':'',1));
+    out.appendChild(sp('Stage '+(s?'on':'off'),s?'on':'',1));
+    out.appendChild(sp(window.dscNative?('NDI '+(nc?nc+' output'+(nc>1?'s':''):'off')):(nc?'NDI needs desktop app':'NDI off'),window.dscNative&&nc?'on':'',1));
+    if(black)out.appendChild(sp('BLACK SCREEN','bad'));
+    out.appendChild(sp((sg.title||'Untitled')+' \u00b7 '+(lvI+1)+'/'+ex.length+(x.label?' '+x.label:''),'live',1));
+    if(a)out.appendChild(sp('Slide '+fmt(now-ls)+'  \u00b7  Item '+fmt(now-lis)));
+    if(typeof aud!=='undefined'&&aud.cur>=0&&aud.el&&!aud.el.paused)out.appendChild(sp('\u266a '+((aud.list[aud.cur]||{}).name||'Audio'),'on',1));
+    if(msgOn)out.appendChild(sp('Message showing','on',1));
+    if(window.dscAnn&&dscAnn.on())out.appendChild(sp('Announcement showing','on',1));
+    if(smsgOn)out.appendChild(sp('Stage message','on',1));
+    if(clear)out.appendChild(sp('Text cleared','bad'));
+    if(window._tp)out.appendChild(sp('Test pattern on: '+window._tp,'bad'));
+    if(window.dscTL&&dscTL.playing())out.appendChild(sp('Timeline '+dscTL.status(),'on',1));
+    if(S.svcAt){const m=/^(\d{1,2}):(\d{2})$/.exec(S.svcAt);if(m){const t=new Date();t.setHours(+m[1],+m[2],0,0);const d=Math.round((t-now)/1000),ab=Math.abs(d),h=Math.floor(ab/3600),mi=Math.floor(ab%3600/60),se=ab%60,z=n=>String(n).padStart(2,'0'),tx=(h?h+':'+z(mi):mi)+':'+z(se);out.appendChild(sp(d>0?'Service in '+tx:'Service started '+tx+' ago',d>0&&d<300?'bad':'on',1))}}
+    out.appendChild(sp(mode==='edit'?'Editing':'Show mode'));
+    const r=sp(new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'  \u00b7  '+(S.svcName?'Service: '+S.svcName:'Not saved to a file'),'r');out.appendChild(r);{const lb=sp('\u26a1 Light mode '+(document.body.classList.contains('lite')?'on':'off'),'');lb.className=(lb.className||'')+' lite-tg';lb.title='Light mode: no animations, no video previews. For slower computers. Click to switch.';lb.onclick=()=>window.dscLite&&dscLite();out.appendChild(lb)}
+    {const h=out.innerHTML;if(h!==sb._h){sb._h=h;sb.replaceChildren(...out.childNodes)}}
   }catch(e){}
 }
 upd();setInterval(upd,500);
@@ -5421,7 +5446,9 @@ function strip(){
   let el=document.getElementById('plNow');if(!el){el=mk('div');el.id='plNow';L.parentNode.insertBefore(el,L)}
   if(el.querySelector('select:focus'))return;
   const LSL=window.dscLiveSel?dscLiveSel():S.sel,o=order(),k=o.findIndex(x=>x.id===LSL),it=o[k]||o[0],nx=k>=0?o[k+1]:null;
-  if(!it){el.textContent='';return}
+  if(!it){if(el.dataset.sig!=='-'){el.dataset.sig='-';el.textContent=''}return}
+  {const sg=JSON.stringify([it.id,it.title,(window.dscLiveIdx?dscLiveIdx():idx),count(it),nx&&nx.id,nx&&nx.title,it.arrs&&it.arrs.map(a=>a.n),it.ai,it.order||'']);
+   if(el.dataset.sig===sg)return;el.dataset.sig=sg}
   el.textContent='';
   const a=mk('div','pr lv');a.appendChild(mk('i','ld'));a.appendChild(mk('b',null,'LIVE'));a.appendChild(mk('span','tt',it.title||'Untitled'));
   a.appendChild(mk('small',null,((window.dscLiveIdx?dscLiveIdx():idx)+1)+'/'+count(it)));if(it.arrs&&it.arrs.length&&window.dscArrSelect)a.appendChild(dscArrSelect(it));el.appendChild(a);
@@ -5476,10 +5503,10 @@ function upd(){
   try{row.querySelectorAll('button[data-c]').forEach(b=>{
     const k=b.dataset.c;
     if(k==='test'){b.classList.toggle('live',!!window._tp);return}
-    if(k==='all'){const any=live.slide()||live.media()||live.prop()||live.msg()||live.ann()||live.cam()||live.cue()||!!te;b.classList.toggle('live',any);b.textContent=any?'All':'All \u21ba';return}
+    if(k==='all'){const any=live.slide()||live.media()||live.prop()||live.msg()||live.ann()||live.cam()||live.cue()||!!te;b.classList.toggle('live',any);const t=any?'All':'All \u21ba';if(b.textContent!==t)b.textContent=t;return}
     const lv=live[k]();b.classList.toggle('live',lv);
-    if(k==='slide')b.textContent=clear?'Text \u21ba':'Text';
-    if(k==='media')b.textContent=noMedia?'Media \u21ba':'Media';
+    if(k==='slide'){const t=clear?'Text \u21ba':'Text';if(b.textContent!==t)b.textContent=t}
+    if(k==='media'){const t=noMedia?'Media \u21ba':'Media';if(b.textContent!==t)b.textContent=t}
   })}catch(e){}
 }
 const _p=push;push=function(){const r=_p.apply(this,arguments);upd();return r};
@@ -9812,7 +9839,7 @@ push=function(){
   if(!on){liveRef=null;return _push.apply(this,arguments)}
   if(!liveRef||!exists(liveRef.sel))liveRef={sel:S.sel,idx};
   const sig=S.sel+':'+idx;
-  if(taking||same()){const moved=!same();liveRef={sel:S.sel,idx};lastSig=sig;const r=_push.apply(this,arguments);snap();ui(moved);return r}
+  if(taking||same()){const moved=!liveRef||liveRef.sel!==S.sel;liveRef={sel:S.sel,idx};lastSig=sig;const r=_push.apply(this,arguments);snap();ui(moved);return r}
   /* preview only: update the operator's screen, but keep the outputs on the live slide */
   const real=bc.postMessage;
   bc.postMessage=function(m){if(m&&m.d)return;return real.apply(this,arguments)};
@@ -14200,6 +14227,25 @@ window.openYouTube=function(i){
   const apply=()=>document.body.classList.toggle('lite',on);
   window.dscLite=()=>{on=!on;try{localStorage.setItem('lp-lite',on?'1':'0')}catch(e){}apply();try{drawGrid();push()}catch(e){}try{toast('Light mode '+(on?'on: no animations or video previews here; the audience screen is unchanged.':'off.'))}catch(e){}};
   apply();if(on){try{drawGrid();push()}catch(e){}}
+})();
+</script>
+<script>
+/* Quiet DOM: the audio / video / pane tickers run several times a second and used to rewrite the same text, disabled and hidden values
+   every time, which makes the browser re-style and re-layout the panel for nothing. These elements now ignore a write that would not change anything. */
+(function(){
+  if(/^#(output|stage|layout)/.test(location.hash))return;
+  const def=(el,name,proto,cmp)=>{const d=Object.getOwnPropertyDescriptor(proto,name);if(!d||!d.set||!d.get)return;
+    Object.defineProperty(el,name,{configurable:true,get(){return d.get.call(this)},set(v){if(cmp(d.get.call(this),v))return;d.set.call(this,v)}})};
+  const quiet=el=>{
+    if(!el||el._q)return;el._q=1;
+    def(el,'textContent',Node.prototype,(a,b)=>a===String(b));
+    if('disabled' in el)def(el,'disabled',Object.getPrototypeOf(el),(a,b)=>a===!!b);
+    if('hidden' in el)def(el,'hidden',HTMLElement.prototype,(a,b)=>a===!!b);
+    const ih=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+    if(ih&&ih.set)Object.defineProperty(el,'innerHTML',{configurable:true,get(){return ih.get.call(this)},set(v){v=String(v);if(this._ih===v&&ih.get.call(this)===this._ihr)return;ih.set.call(this,v);this._ih=v;this._ihr=ih.get.call(this)}});
+  };
+  const ids=['auPl','auT','vdBk','vdPl','vdFw','vdSc','vdT','vtBk','vtPl','vtSt','vtFw','vtSc','vtT','vtS','msgLib','prList','mcList','auList','mqBox','ytr','pTm','pAu','pAn','pMsg','pSl','pPr','pMc'];
+  ids.forEach(i=>quiet(document.getElementById(i)));
 })();
 </script>
 </body>
