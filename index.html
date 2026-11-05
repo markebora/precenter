@@ -779,7 +779,14 @@ function buildLay(host,objs,tx,spans){
     host.appendChild(ob);
   });
 }
-function fitStage(st){st.querySelectorAll('.ob[data-fit]').forEach(ob=>{if(!ob.clientHeight)return;let f=+ob.dataset.base,n=0;ob.style.fontSize=f+'cqw';while(ob.scrollHeight>ob.clientHeight+1&&n++<40){f*=.94;ob.style.fontSize=f+'cqw'}})}
+/* shrink the slide text until it fits its box (design option "Auto-fit"; on by default for Bible passages) */
+function fitTx(el){
+  const sp=el.firstElementChild;if(!sp||!el.clientHeight)return;
+  const cs=getComputedStyle(el),avail=el.clientHeight-(parseFloat(cs.paddingTop)||0)-(parseFloat(cs.paddingBottom)||0);
+  let f=+el.dataset.base||5,n=0;const min=f*.22;el.style.fontSize=f+'cqw';
+  while(sp.offsetHeight>avail&&f>min&&n++<45){f*=.94;el.style.fontSize=f+'cqw'}
+}
+function fitStage(st){st.querySelectorAll('.tx[data-afit]').forEach(fitTx);st.querySelectorAll('.ob[data-fit]').forEach(ob=>{if(!ob.clientHeight)return;let f=+ob.dataset.base,n=0;ob.style.fontSize=f+'cqw';while(ob.scrollHeight>ob.clientHeight+1&&n++<40){f*=.94;ob.style.fontSize=f+'cqw'}})}
 setInterval(tick,250);
 window.rtStrip=t=>String(t||'').replace(/\u27e6[^|\u27e7]*\|([^\u27e7]*)\u27e7/g,'$1');
 window.rtSet=function(el,tx){tx=String(tx||'');if(tx.indexOf('\u27e6')<0){el.textContent=tx;return}
@@ -1147,7 +1154,8 @@ function paint(stage,p){
   if(d.lay&&d.lay.length){el=document.createElement('div');el.className='tx lay';el.style.cssText='display:block;padding:0';window.__mst=p.mst||[];buildLay(el,d.lay,tx,spans)}
   else{
     el=document.createElement('div');el.className='tx';
-  el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'');
+  el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'')+(d.half&&d.align==='left'?';padding-right:48cqw':'')+(d.half&&d.align==='right'?';padding-left:48cqw':'');
+    if(d.afit){el.dataset.afit='1';el.dataset.base=String(d.size/19.2)}
     if(tx){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
   }
   stage.appendChild(el);if(stage.isConnected)fitStage(stage);
@@ -2397,7 +2405,7 @@ function drawList(){
   const se=$('#list .song.sel');if(se&&se.scrollIntoView)se.scrollIntoView({block:'nearest'});
 }
 let scope='song';
-function eff(s,i){return s.ov&&s.ov[i]?{...s.d,...s.ov[i]}:s.d}
+function eff(s,i){if(s.type==='scripture'&&s.d&&s.d.afit===undefined)s.d.afit=true;return s.ov&&s.ov[i]?{...s.d,...s.ov[i]}:s.d}
 function toArrangement(){
   const s=cur(),secs=sections(s);
   if(secs.some(x=>!x.label)){toast('Give every section a label first (Verse 1, Chorus, Bridge...), then try again.');return}
@@ -2672,7 +2680,7 @@ function designPanel(host,sc){
     <label>Align<select data-k="align">${opt(['left','center','right'],d.align)}</select></label>
     <label>Position<select data-k="pos">${opt(['Top','Middle','Bottom'],d.pos)}</select></label>
     <label>Text color<input type="color" data-k="fg" value="${d.fg}"></label></div>
-    <div class="row" style="margin-top:8px">${ck('shadow','Shadow')}${ck('caps','All caps')}${ck('bold','Bold')}${ck('outline','Outline')}${ck('box','Text box')}</div>
+    <div class="row" style="margin-top:8px">${ck('shadow','Shadow')}${ck('caps','All caps')}${ck('bold','Bold')}${ck('outline','Outline')}${ck('box','Text box')}${ck('afit','Auto-fit')}${ck('half','Side column')}</div>
     ${H('Animation')}<div class="row">
     <label>Text animation<select data-k="ta">${opt(['None','Fade','Fly In','Typewriter','Zoom','Bounce'],d.ta||'Fade')}</select></label>
     ${(d.ta||'Fade')==='Fly In'?`<label>Fly in from<select data-k="dir">${opt(['Left','Right','Top','Bottom'],d.dir||'Left')}</select></label>`:''}
@@ -2689,7 +2697,7 @@ function designPanel(host,sc){
   q('align').onchange=v=>{d.align=v.target.value;ch()};
   q('pos').onchange=v=>{d.pos=v.target.value;ch()};
   q('fg').oninput=v=>{d.fg=v.target.value;ch()};
-  ['shadow','caps','bold','outline','box'].forEach(k=>{q(k).onchange=v=>{d[k]=v.target.checked;ch()}});
+  ['shadow','caps','bold','outline','box','afit','half'].forEach(k=>{q(k).onchange=v=>{d[k]=v.target.checked;ch()}});
   q('ta').onchange=v=>{d.ta=v.target.value;ch();again()};
   if(q('dir'))q('dir').onchange=v=>{d.dir=v.target.value;ch()};
   q('st').onchange=v=>{d.st=v.target.value;d.sdir='';ch();again()};
@@ -4485,6 +4493,7 @@ function remoteState(){
     text:rtStrip(String(p.text||'')).slice(0,700),next:rtStrip(String(p.next||'')).slice(0,300),
     ch:p.ch?JSON.stringify(p.ch).slice(0,4000):'',chn:p.chn?JSON.stringify(p.chn).slice(0,2000):'',
     sl:cards,
+    pl:{p:(p.d&&p.d.pos)||'Middle',a:(p.d&&p.d.align)||'center',h:(p.d&&p.d.half)?1:0},
     secs:st.map(i=>({i,l:String(sl[i].label),c:labColor(sl[i].label),k:secCode(sl[i].label)||''})),
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
@@ -4531,12 +4540,22 @@ function remoteRun(c){
     case'clear':clear=!!c.v;push();break;
     case'bq':remoteBibleQuery(c);break;
     case'bgo':remoteBibleGo(c);break;
+    case'place':remotePlace(c);break;
   }
 }
 /* ---- Bible from the phone ----
    The phone sends {t:'bq', q, ver, w, rid}; this computer looks it up in the same Bible files as the Bible window
    and publishes up to 25 answers in presenter/{team}.bq. Tapping one sends {t:'bgo', ver, ref}: the passage is added
    to the service as a scripture item (same slides as the Bible window makes) and shown. */
+/* text position from the phone: row = Top/Middle/Bottom, column = left/center/right (left and right use a side column) */
+function remotePlace(c){
+  const s=cur();if(!s||s.id!==c.sid)return;
+  const P=['Top','Middle','Bottom'].includes(c.pos)?c.pos:'Middle',A=['left','center','right'].includes(c.al)?c.al:'center';
+  s.d.pos=P;s.d.align=A;s.d.half=A==='center'?0:1;
+  if(s.ov)Object.keys(s.ov).forEach(k=>{const o=s.ov[k];if(o){delete o.pos;delete o.align;delete o.half}});
+  save();drawGrid();push();
+  toast('Remote: text '+P.toLowerCase()+(A==='center'?'':' '+A));
+}
 async function remoteBibleQuery(c){
   if(!RM)return;
   const ver=BIBLES.some(b=>b[0]===c.ver)?c.ver:'kjv',q=String(c.q||'').trim().slice(0,80),rid=String(c.rid||'').slice(0,40);
@@ -4589,6 +4608,7 @@ async function remoteBibleGo(c){
     const lyrics=slides.concat(sv.note!==false&&info[3]?[info[3]]:[]).join('\n\n');
     addSec=S.secs.includes('Presentation')?'Presentation':secOf(cur());
     addItem(title,lyrics,{type:'scripture'});
+    try{const qd=sv.qe||{},o={};if(qd.font)o.font=qd.font;if(qd.bold)o.bold=true;if(qd.ital)o.ital=true;if(qd.ul)o.ul=true;if(qd.caps)o.caps=true;if(qd.fg)o.fg=qd.fg;Object.assign(cur().d,o,{afit:true});save();drawGrid()}catch(e){}
     black=false;clear=false;setMode('show');push();
     toast('Remote: showing '+title);
   }catch(e){toast('Remote Bible: could not open that passage.')}
