@@ -687,6 +687,10 @@ const GF={'Poppins':'400;700','Inter':'400;700','Montserrat':'400;700','Roboto':
 const SYSF=['Arial','Arial Black','Calibri','Cambria','Comic Sans MS','Courier New','Georgia','Helvetica','Impact','Palatino Linotype','Segoe UI','Tahoma','Times New Roman','Trebuchet MS','Verdana'];
 const loadedF=new Set(['Inter']);
 function ensureFont(f){if(!f||loadedF.has(f)||!GF[f])return;loadedF.add(f);const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f.replace(/ /g,'+')+':wght@'+GF[f]+'&display=swap';l.onload=()=>{document.querySelectorAll('.stage').forEach(fitStage)};document.head.appendChild(l)}
+/* refit the slide text whenever a web font finishes loading or the window changes size (the audience window opens fresh, so its font arrives after the first slide is drawn) */
+{const rf=()=>document.querySelectorAll('.stage').forEach(fitStage);let rz=0;
+ try{document.fonts.addEventListener('loadingdone',rf);document.fonts.ready.then(rf)}catch(e){}
+ window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(rf,80)})}
 const fmt=n=>{const h=Math.floor(n/3600),m=Math.floor(n%3600/60),sc=n%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sc).padStart(2,'0')};
 function tick(){if(window.dscTick)return window.dscTick();document.querySelectorAll('.tm[data-end]').forEach(e=>{const n=Math.max(0,Math.round((e.dataset.end-Date.now())/1000));e.textContent=fmt(n)})}
 const RK=['k','b','i','u','c','x','h','v','l','f','lk'];/* 'x' = strikethrough (was 's', which clashed with the run start index) */
@@ -1154,7 +1158,7 @@ function paint(stage,p){
   if(d.lay&&d.lay.length){el=document.createElement('div');el.className='tx lay';el.style.cssText='display:block;padding:0';window.__mst=p.mst||[];buildLay(el,d.lay,tx,spans)}
   else{
     el=document.createElement('div');el.className='tx';
-  el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'')+(d.half&&d.align==='left'?';padding-right:48cqw':'')+(d.half&&d.align==='right'?';padding-left:48cqw':'');
+  el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end',justify:'stretch'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'')+(d.half&&d.align==='left'?';padding-right:48cqw':'')+(d.half&&d.align==='right'?';padding-left:48cqw':'');
     if(d.afit){el.dataset.afit='1';el.dataset.base=String(d.size/19.2)}
     if(tx){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
   }
@@ -2677,7 +2681,7 @@ function designPanel(host,sc){
    `${H('Text')}<div class="row">
     <label>Font<select data-k="font">${fontOpts(d.font)}</select></label>
     <label>Size (${d.size})<input type="range" data-k="size" min="24" max="140" value="${d.size}"></label>
-    <label>Align<select data-k="align">${opt(['left','center','right'],d.align)}</select></label>
+    <label>Align<select data-k="align">${opt(['left','center','right','justify'],d.align)}</select></label>
     <label>Position<select data-k="pos">${opt(['Top','Middle','Bottom'],d.pos)}</select></label>
     <label>Text color<input type="color" data-k="fg" value="${d.fg}"></label></div>
     <div class="row" style="margin-top:8px">${ck('shadow','Shadow')}${ck('caps','All caps')}${ck('bold','Bold')}${ck('outline','Outline')}${ck('box','Text box')}${ck('afit','Auto-fit')}${ck('half','Side column')}</div>
@@ -4550,11 +4554,12 @@ function remoteRun(c){
 /* text position from the phone: row = Top/Middle/Bottom, column = left/center/right (left and right use a side column) */
 function remotePlace(c){
   const s=cur();if(!s||s.id!==c.sid)return;
-  const P=['Top','Middle','Bottom'].includes(c.pos)?c.pos:'Middle',A=['left','center','right'].includes(c.al)?c.al:'center';
-  s.d.pos=P;s.d.align=A;s.d.half=A==='center'?0:1;
-  if(s.ov)Object.keys(s.ov).forEach(k=>{const o=s.ov[k];if(o){delete o.pos;delete o.align;delete o.half}});
+  const had=[];
+  if(['Top','Middle','Bottom'].includes(c.pos)){s.d.pos=c.pos;had.push('pos');}
+  if(['left','center','right','justify'].includes(c.al)){s.d.align=c.al;s.d.half=0;had.push('align','half');}
+  if(s.ov)Object.keys(s.ov).forEach(k=>{const o=s.ov[k];if(o)had.forEach(f=>delete o[f])});
   save();drawGrid();push();
-  toast('Remote: text '+P.toLowerCase()+(A==='center'?'':' '+A));
+  toast('Remote: text '+(c.al||String(c.pos||'').toLowerCase()));
 }
 async function remoteBibleQuery(c){
   if(!RM)return;
