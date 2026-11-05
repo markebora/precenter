@@ -4373,8 +4373,19 @@ var RM=null,RMauth=false,RMerr=0;
 var RMB={cache:new Map(),busy:new Set()};
 /* ---- phone video backgrounds: a short, short looping 720p copy goes to a Cloudflare R2 bucket; only its public link goes in Firestore (bg.u) ---- */
 var RMV={q:[],cur:'',fail:{},status:'',done:(()=>{try{return JSON.parse(localStorage.getItem('lp-r2done')||'{}')}catch(e){return{}}})()};
+RMV.at=(()=>{try{return JSON.parse(localStorage.getItem('lp-r2at')||'{}')||{}}catch(e){return{}}})();
+function rmSaveDone(){try{localStorage.setItem('lp-r2done',JSON.stringify(RMV.done));localStorage.setItem('lp-r2at',JSON.stringify(RMV.at))}catch(e){}}
+/* forget uploads older than the number of days set for the R2 lifecycle rule, so PreCenter re-uploads a clip R2 has deleted */
+function rmPrune(c){
+  const days=+(c&&c.days)||0;let ch=false;const now=Date.now();
+  for(const k of Object.keys(RMV.done)){
+    if(!RMV.at[k]){RMV.at[k]=now;ch=true}
+    if(days>0&&now-RMV.at[k]>days*864e5-216e5){delete RMV.done[k];delete RMV.at[k];ch=true}
+  }
+  if(ch)rmSaveDone();
+}
 function rmCfg(){try{const c=JSON.parse(localStorage.getItem('lp-r2')||'null');return c&&c.on&&c.acct&&c.bucket&&c.id&&c.secret&&c.base?c:null}catch(e){return null}}
-function rmVidUrl(c,vk){const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?String(k).split(',').filter(Boolean).map(x=>c.base.replace(/\/+$/,'')+'/'+x):[]}
+function rmVidUrl(c,vk){rmPrune(c);const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?String(k).split(',').filter(Boolean).map(x=>c.base.replace(/\/+$/,'')+'/'+x):[]}
 async function r2Put(c,key,blob,type){
   const enc=new TextEncoder(),host=c.acct+'.r2.cloudflarestorage.com',path='/'+c.bucket+'/'+key.split('/').map(encodeURIComponent).join('/');
   const amz=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''),ds=amz.slice(0,8),ph='UNSIGNED-PAYLOAD',cc='public, max-age=31536000, immutable';
@@ -4410,10 +4421,28 @@ async function rmEncode(src){
   v.pause();recs.forEach(r=>r.rec.stop());await Promise.all(recs.map(r=>r.stopped));v.removeAttribute('src');v.load();
   return recs.map(r=>({blob:new Blob(r.parts,{type:r.mt.split(';')[0]}),ext:/mp4/.test(r.mt)?'mp4':'webm'})).filter(x=>x.blob.size>2000);
 }
+async function rmEncodeImg(src,contain){
+  const im=new Image();if(!/^(blob:|data:)/i.test(src))im.crossOrigin='anonymous';
+  await new Promise((ok,no)=>{im.onload=ok;im.onerror=()=>no(new Error('image could not be read'));im.src=src;setTimeout(()=>no(new Error('image took too long to load')),10000)});
+  const W=1280,H=720,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  const w=im.naturalWidth||W,h=im.naturalHeight||H,sc=contain?Math.min(W/w,H/h):Math.max(W/w,H/h),dw=w*sc,dh=h*sc;
+  g.fillStyle='#000';g.fillRect(0,0,W,H);g.drawImage(im,(W-dw)/2,(H-dh)/2,dw,dh);
+  const blob=await new Promise(ok=>cv.toBlob(ok,'image/jpeg',.88));
+  if(!blob||blob.size<1000)throw new Error('the image copy was empty');
+  return blob;
+}
 async function rmVidRun(){
   if(RMV.cur)return;const j=RMV.q.shift();if(!j)return;RMV.cur=j.vk;
   try{
     const c=rmCfg();if(!c)throw new Error('turned off');
+    if(j.kind==='img'){
+      RMV.status='Making a 720p picture\u2026';
+      const blob=await rmEncodeImg(j.src,j.contain),key='img/'+j.vk+'.jpg';
+      RMV.status='Uploading picture '+Math.round(blob.size/1024)+' KB\u2026';
+      await r2Put(c,key,blob,'image/jpeg');
+      {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=key;RMV.at[dk]=Date.now();rmSaveDone()}
+      RMV.status='Last upload OK (picture, '+Math.round(blob.size/1024)+' KB)';remotePublish();RMV.cur='';rmVidRun();return;
+    }
     RMV.status='Making a short clip\u2026';
     const outs=await rmEncode(j.src);if(!outs.length)throw new Error('the recorded clip was empty');
     const keys=[];let kb=0;
@@ -4422,7 +4451,7 @@ async function rmVidRun(){
       RMV.status='Uploading '+o.ext+' '+Math.round(o.blob.size/1024)+' KB\u2026';
       await r2Put(c,key,o.blob,o.blob.type);keys.push(key);
     }
-    RMV.done[c.acct+'/'+c.bucket+'/'+j.vk]=keys.join(',');try{localStorage.setItem('lp-r2done',JSON.stringify(RMV.done))}catch(e){}
+    {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=keys.join(',');RMV.at[dk]=Date.now();rmSaveDone()}
     RMV.status='Last upload OK ('+keys.map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB)';remotePublish();
   }catch(e){RMV.fail[j.vk]=1;RMV.status='Failed: '+(e&&e.message||e);toast('Phone video background: '+RMV.status)}
   RMV.cur='';rmVidRun();
@@ -4430,20 +4459,22 @@ async function rmVidRun(){
 function rmVidCfg(){
   let c={};try{c=JSON.parse(localStorage.getItem('lp-r2')||'{}')||{}}catch(e){}
   const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Phone video backgrounds</b><button class="x">Close</button></div>'
-    +'<p class="hint">The phone remote can play a short looping copy of a slide\u2019s video background. PreCenter makes a 6-second 720p clip (about 2 MB) and uploads it to your Cloudflare R2 bucket; only its web link goes to the phone. Photos and colours do not need this.</p>'
+    +'<p class="hint">The phone remote can play a short looping copy of a slide\u2019s video background. PreCenter makes a 6-second 720p clip (about 2 MB) for videos, and a 720p picture (about 150 KB, in the img/ folder) for images, and uploads them to your Cloudflare R2 bucket; only its web link goes to the phone. Photos and colours do not need this.</p>'
     +'<label class="row" style="gap:6px;align-items:center"><input type="checkbox" id="r2On"'+(c.on?' checked':'')+' style="width:auto"> Send video backgrounds to the phone</label>'
     +'<label>Account ID<input id="r2A" value="'+dscEsc(c.acct||'')+'" placeholder="from the R2 overview page"></label>'
     +'<label>Bucket name<input id="r2B" value="'+dscEsc(c.bucket||'')+'"></label>'
     +'<label>Access Key ID<input id="r2I" value="'+dscEsc(c.id||'')+'"></label>'
     +'<label>Secret Access Key<input id="r2S" type="password" value="'+dscEsc(c.secret||'')+'"></label>'
     +'<label>Public link of the bucket<input id="r2U" value="'+dscEsc(c.base||'')+'" placeholder="https://pub-xxxx.r2.dev  or  https://media.yourdomain.com"></label>'
+    +'<label>Forget uploaded clips after (days)<input id="r2D" type="number" min="0" max="365" value="'+dscEsc(String(c.days||0))+'" placeholder="same days as the R2 lifecycle rule, 0 = never"></label>'
     +'<div class="hint" id="r2St" style="margin:4px 0">'+dscEsc(RMV.status||'')+'</div>'
-    +'<div class="row"><button id="r2T">Test</button><button id="r2Sv" class="pri">Save</button></div>'
+    +'<div class="row"><button id="r2T">Test</button><button id="r2C">Clear uploaded clips</button><button id="r2Sv" class="pri">Save</button></div>'
     +'<p class="hint">The keys stay on this computer only. In the bucket settings turn on public access and add this CORS rule: <code>[{"AllowedOrigins":["*"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedHeaders":["*"],"MaxAgeSeconds":3600}]</code></p>');
-  const val=()=>({on:m.q('#r2On').checked,acct:m.q('#r2A').value.trim(),bucket:m.q('#r2B').value.trim(),id:m.q('#r2I').value.trim(),secret:m.q('#r2S').value.trim(),base:m.q('#r2U').value.trim()});
+  const val=()=>({on:m.q('#r2On').checked,acct:m.q('#r2A').value.trim(),bucket:m.q('#r2B').value.trim(),id:m.q('#r2I').value.trim(),secret:m.q('#r2S').value.trim(),base:m.q('#r2U').value.trim(),days:Math.max(0,Math.min(365,parseInt(m.q('#r2D').value,10)||0))});
   const st=t=>{m.q('#r2St').textContent=t};
   m.q('.x').onclick=m.done;
   m.q('#r2Sv').onclick=()=>{localStorage.setItem('lp-r2',JSON.stringify(val()));RMV.fail={};st('Saved.');try{remotePublish(true)}catch(e){}};
+  m.q('#r2C').onclick=()=>{RMV.done={};RMV.at={};RMV.fail={};rmSaveDone();st('Cleared. Clips will be made and uploaded again when a video slide goes live.');try{remotePublish(true)}catch(e){}};
   m.q('#r2T').onclick=async()=>{
     const v=val();if(!(v.acct&&v.bucket&&v.id&&v.secret&&v.base)){st('Fill in every box first.');return}
     st('Testing\u2026');
@@ -4503,6 +4534,13 @@ function remoteBg(p){
         if(c){
           const ln=d.lib,f=ln&&libFile[ln],vk='x.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),us=rmVidUrl(c,vk);
           if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}else if(!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
+        }
+      }
+      if(kind==='img'&&d.bg==='Image'){
+        const c=rmCfg();
+        if(c){
+          const ik='i.'+rmHash(d.fit==='contain'?'c|':'f|'+(src.length>200?src.slice(0,100)+src.length+src.slice(-100):src)),us=rmVidUrl(c,ik);
+          if(us.length)o.iu=us[0];else if(!RMV.fail[ik]&&!RMV.q.some(j=>j.vk===ik)&&RMV.cur!==ik)RMV.q.push({vk:ik,src,kind:'img',contain:d.fit==='contain'}),rmVidRun();
         }
       }
       return o;
