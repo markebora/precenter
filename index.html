@@ -4374,7 +4374,7 @@ var RMB={cache:new Map(),busy:new Set()};
 /* ---- phone video backgrounds: a short, short looping 720p copy goes to a Cloudflare R2 bucket; only its public link goes in Firestore (bg.u) ---- */
 var RMV={q:[],cur:'',fail:{},status:'',done:(()=>{try{return JSON.parse(localStorage.getItem('lp-r2done')||'{}')}catch(e){return{}}})()};
 function rmCfg(){try{const c=JSON.parse(localStorage.getItem('lp-r2')||'null');return c&&c.on&&c.acct&&c.bucket&&c.id&&c.secret&&c.base?c:null}catch(e){return null}}
-function rmVidUrl(c,vk){const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?c.base.replace(/\/+$/,'')+'/'+k:''}
+function rmVidUrl(c,vk){const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?String(k).split(',').filter(Boolean).map(x=>c.base.replace(/\/+$/,'')+'/'+x):[]}
 async function r2Put(c,key,blob,type){
   const enc=new TextEncoder(),host=c.acct+'.r2.cloudflarestorage.com',path='/'+c.bucket+'/'+key.split('/').map(encodeURIComponent).join('/');
   const amz=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''),ds=amz.slice(0,8),ph='UNSIGNED-PAYLOAD',cc='public, max-age=31536000, immutable';
@@ -4395,28 +4395,35 @@ async function rmEncode(src){
   const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=src;
   await new Promise((ok,no)=>{v.onloadeddata=ok;v.onerror=()=>no(new Error('video could not be read'));setTimeout(()=>no(new Error('video took too long to load')),10000)});
   const W=1280,H=720,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
-  const mt=['video/mp4;codecs=avc1.42E01F','video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
-  if(!mt)throw new Error('this computer cannot record video clips');
-  const rec=new MediaRecorder(cv.captureStream(30),{mimeType:mt,videoBitsPerSecond:3000000}),parts=[];
-  rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
-  const stopped=new Promise(ok=>{rec.onstop=ok});
+  /* record BOTH a WebM and an MP4 copy: phones differ in which one they can play, and the remote tries each */
+  const pick=l=>l.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  const mts=[pick(['video/webm;codecs=vp8','video/webm;codecs=vp9','video/webm']),pick(['video/mp4;codecs=avc1.42E01F','video/mp4;codecs=avc1.42E01E','video/mp4'])].filter(Boolean);
+  if(!mts.length)throw new Error('this computer cannot record video clips');
+  const stream=cv.captureStream(30);
+  const recs=mts.map(mt=>{const rec=new MediaRecorder(stream,{mimeType:mt,videoBitsPerSecond:3000000}),parts=[];
+    rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
+    return{rec,parts,mt,stopped:new Promise(ok=>{rec.onstop=ok})}});
   const dur=isFinite(v.duration)&&v.duration>0?Math.min(6,v.duration):6;
   const draw=()=>{const w=v.videoWidth||W,h=v.videoHeight||H,sc=Math.max(W/w,H/h),dw=w*sc,dh=h*sc;g.fillStyle='#000';g.fillRect(0,0,W,H);g.drawImage(v,(W-dw)/2,(H-dh)/2,dw,dh)};
-  v.currentTime=0;await v.play();rec.start(250);
+  v.currentTime=0;await v.play();recs.forEach(r=>r.rec.start(250));
   await new Promise(ok=>{const t=setInterval(()=>{draw();if(v.currentTime>=dur||v.ended){clearInterval(t);ok()}},33)});
-  v.pause();rec.stop();await stopped;v.removeAttribute('src');v.load();
-  return new Blob(parts,{type:mt.split(';')[0]});
+  v.pause();recs.forEach(r=>r.rec.stop());await Promise.all(recs.map(r=>r.stopped));v.removeAttribute('src');v.load();
+  return recs.map(r=>({blob:new Blob(r.parts,{type:r.mt.split(';')[0]}),ext:/mp4/.test(r.mt)?'mp4':'webm'})).filter(x=>x.blob.size>2000);
 }
 async function rmVidRun(){
   if(RMV.cur)return;const j=RMV.q.shift();if(!j)return;RMV.cur=j.vk;
   try{
     const c=rmCfg();if(!c)throw new Error('turned off');
     RMV.status='Making a short clip\u2026';
-    const b=await rmEncode(j.src),ext=/mp4/.test(b.type)?'mp4':'webm',key='bg/'+j.vk+'.'+ext;
-    RMV.status='Uploading '+Math.round(b.size/1024)+' KB\u2026';
-    await r2Put(c,key,b,b.type);
-    RMV.done[c.acct+'/'+c.bucket+'/'+j.vk]=key;try{localStorage.setItem('lp-r2done',JSON.stringify(RMV.done))}catch(e){}
-    RMV.status='Last upload OK ('+Math.round(b.size/1024)+' KB)';remotePublish();
+    const outs=await rmEncode(j.src);if(!outs.length)throw new Error('the recorded clip was empty');
+    const keys=[];let kb=0;
+    for(const o of outs){
+      const key='bg/'+j.vk+'.'+o.ext;kb+=o.blob.size;
+      RMV.status='Uploading '+o.ext+' '+Math.round(o.blob.size/1024)+' KB\u2026';
+      await r2Put(c,key,o.blob,o.blob.type);keys.push(key);
+    }
+    RMV.done[c.acct+'/'+c.bucket+'/'+j.vk]=keys.join(',');try{localStorage.setItem('lp-r2done',JSON.stringify(RMV.done))}catch(e){}
+    RMV.status='Last upload OK ('+keys.map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB)';remotePublish();
   }catch(e){RMV.fail[j.vk]=1;RMV.status='Failed: '+(e&&e.message||e);toast('Phone video background: '+RMV.status)}
   RMV.cur='';rmVidRun();
 }
@@ -4494,8 +4501,8 @@ function remoteBg(p){
       if(kind==='vid'){
         const c=rmCfg();
         if(c){
-          const ln=d.lib,f=ln&&libFile[ln],vk='w.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),u=rmVidUrl(c,vk);
-          if(u)o.u=u;else if(!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
+          const ln=d.lib,f=ln&&libFile[ln],vk='x.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),us=rmVidUrl(c,vk);
+          if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}else if(!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
         }
       }
       return o;
