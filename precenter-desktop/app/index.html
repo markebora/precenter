@@ -2422,7 +2422,8 @@ function payload(){
 function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
   const ln=p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
   bc.postMessage(p);
-  markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd();remotePublish();scrPrev()}
+  try{markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd()}catch(e){console.error(e)}
+  remotePublish();scrPrev()}
 function drawGrid(){
   const s=cur(),sl=expand(s);
   $('#songTitle').textContent=s.title||'Untitled';
@@ -4488,20 +4489,29 @@ function remoteState(){
     items:flatItems().map(x=>({id:x.id,t:x.title||'Untitled',y:x.type||'song',g:secOf(x)})),
     bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
     black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):'',
-    bv:BIBLES.map(b=>[b[0],b[2]]),
+    bv:BIBLES.map(b=>({i:b[0],n:b[2]})),
     bq:(RM&&RM.bq&&Date.now()-RM.bq.at<900000)?RM.bq:null
   };
 }
 function remotePublish(force){
   if(!RM||!dscDb)return;
   clearTimeout(RM.t);
+  /* wait 150 ms so a burst of changes becomes one write, but never keep postponing for more than 1 s */
+  if(!RM.pend)RM.pend=Date.now();
+  const wait=force?0:(Date.now()-RM.pend>1000?0:150);
   RM.t=setTimeout(()=>{
     if(!RM)return;
-    const st=remoteState(),key=JSON.stringify(Object.assign({},st,{hb:0}));
+    RM.pend=0;
+    let st,key;
+    try{st=remoteState();key=JSON.stringify(Object.assign({},st,{hb:0}))}
+    catch(e){console.error(e);const now=Date.now();if(!RM.errAt||now-RM.errAt>10000){RM.errAt=now;toast('Remote could not read the screen: '+((e&&e.message)||e))}return}
     if(!force&&key===RM.key)return;
     RM.key=key;
-    dscDb.collection('presenter').doc(RM.team).set(st).catch(remoteErr);
-  },force?0:150);
+    dscDb.collection('presenter').doc(RM.team).set(st).catch(e=>{
+      if(RM&&RM.key===key){RM.key='';clearTimeout(RM.rt);RM.rt=setTimeout(()=>remotePublish(true),2500)}
+      remoteErr(e);
+    });
+  },wait);
 }
 function remoteErr(e){
   const now=Date.now();if(now-RMerr<8000)return;RMerr=now;
@@ -4593,6 +4603,7 @@ function remoteListen(){
       if(!c||!c.t)return;
       if(Math.abs(Date.now()-(+c.ts||0))>30000){toast('Ignored an old remote button press. If this keeps happening, check the clock on this computer and the phone.');return}
       remoteRun(c);
+      remotePublish();setTimeout(()=>remotePublish(),500);
     });
   },remoteErr);
 }
@@ -4610,7 +4621,7 @@ function remotePickTeam(teams){return new Promise(res=>{
   w.appendChild(b);document.body.appendChild(w)})}
 function remoteOff(quiet){
   if(RM){
-    clearTimeout(RM.t);clearInterval(RM.hbT);if(RM.unsub)RM.unsub();
+    clearTimeout(RM.t);clearTimeout(RM.rt);clearInterval(RM.hbT);if(RM.unsub)RM.unsub();
     if(!quiet&&dscDb)dscDb.collection('presenter').doc(RM.team).set({on:false,hb:Date.now()}).catch(()=>{});
     RM=null;
   }
