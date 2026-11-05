@@ -4371,7 +4371,7 @@ var RM=null,RMauth=false,RMerr=0;
      grad/color : t and v both hold the CSS colour / gradient string
    The thumbnail is made once per picture and cached, then the state is published again. */
 var RMB={cache:new Map(),busy:new Set()};
-/* ---- phone video backgrounds: a short, small looping copy goes to a Cloudflare R2 bucket; only its public link goes in Firestore (bg.u) ---- */
+/* ---- phone video backgrounds: a short, short looping 720p copy goes to a Cloudflare R2 bucket; only its public link goes in Firestore (bg.u) ---- */
 var RMV={q:[],cur:'',fail:{},status:'',done:(()=>{try{return JSON.parse(localStorage.getItem('lp-r2done')||'{}')}catch(e){return{}}})()};
 function rmCfg(){try{const c=JSON.parse(localStorage.getItem('lp-r2')||'null');return c&&c.on&&c.acct&&c.bucket&&c.id&&c.secret&&c.base?c:null}catch(e){return null}}
 function rmVidUrl(c,vk){const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?c.base.replace(/\/+$/,'')+'/'+k:''}
@@ -4394,16 +4394,16 @@ async function r2Put(c,key,blob,type){
 async function rmEncode(src){
   const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=src;
   await new Promise((ok,no)=>{v.onloadeddata=ok;v.onerror=()=>no(new Error('video could not be read'));setTimeout(()=>no(new Error('video took too long to load')),10000)});
-  const W=640,H=360,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
-  const mt=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  const W=1280,H=720,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  const mt=['video/mp4;codecs=avc1.42E01F','video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
   if(!mt)throw new Error('this computer cannot record video clips');
-  const rec=new MediaRecorder(cv.captureStream(24),{mimeType:mt,videoBitsPerSecond:900000}),parts=[];
+  const rec=new MediaRecorder(cv.captureStream(30),{mimeType:mt,videoBitsPerSecond:3000000}),parts=[];
   rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
   const stopped=new Promise(ok=>{rec.onstop=ok});
   const dur=isFinite(v.duration)&&v.duration>0?Math.min(6,v.duration):6;
   const draw=()=>{const w=v.videoWidth||W,h=v.videoHeight||H,sc=Math.max(W/w,H/h),dw=w*sc,dh=h*sc;g.fillStyle='#000';g.fillRect(0,0,W,H);g.drawImage(v,(W-dw)/2,(H-dh)/2,dw,dh)};
   v.currentTime=0;await v.play();rec.start(250);
-  await new Promise(ok=>{const t=setInterval(()=>{draw();if(v.currentTime>=dur||v.ended){clearInterval(t);ok()}},42)});
+  await new Promise(ok=>{const t=setInterval(()=>{draw();if(v.currentTime>=dur||v.ended){clearInterval(t);ok()}},33)});
   v.pause();rec.stop();await stopped;v.removeAttribute('src');v.load();
   return new Blob(parts,{type:mt.split(';')[0]});
 }
@@ -4423,7 +4423,7 @@ async function rmVidRun(){
 function rmVidCfg(){
   let c={};try{c=JSON.parse(localStorage.getItem('lp-r2')||'{}')||{}}catch(e){}
   const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Phone video backgrounds</b><button class="x">Close</button></div>'
-    +'<p class="hint">The phone remote can play a short looping copy of a slide\u2019s video background. PreCenter makes a tiny 6-second clip and uploads it to your Cloudflare R2 bucket; only its web link goes to the phone. Photos and colours do not need this.</p>'
+    +'<p class="hint">The phone remote can play a short looping copy of a slide\u2019s video background. PreCenter makes a 6-second 720p clip (about 2 MB) and uploads it to your Cloudflare R2 bucket; only its web link goes to the phone. Photos and colours do not need this.</p>'
     +'<label class="row" style="gap:6px;align-items:center"><input type="checkbox" id="r2On"'+(c.on?' checked':'')+' style="width:auto"> Send video backgrounds to the phone</label>'
     +'<label>Account ID<input id="r2A" value="'+dscEsc(c.acct||'')+'" placeholder="from the R2 overview page"></label>'
     +'<label>Bucket name<input id="r2B" value="'+dscEsc(c.bucket||'')+'"></label>'
@@ -4466,11 +4466,11 @@ async function rmThumb(key,kind,src,contain){
       await el.decode();w=el.naturalWidth;h=el.naturalHeight;
     }
     if(w&&h){
-      const c=document.createElement('canvas');c.width=320;c.height=180;const g=c.getContext('2d');
-      g.fillStyle='#000';g.fillRect(0,0,320,180);
-      const sc=contain?Math.min(320/w,180/h):Math.max(320/w,180/h),dw=w*sc,dh=h*sc;
-      g.drawImage(el,(320-dw)/2,(180-dh)/2,dw,dh);
-      out=c.toDataURL('image/jpeg',.6);if(out.length>45000)out=c.toDataURL('image/jpeg',.4);
+      const c=document.createElement('canvas');c.width=640;c.height=360;const g=c.getContext('2d');
+      g.fillStyle='#000';g.fillRect(0,0,640,360);
+      const sc=contain?Math.min(640/w,360/h):Math.max(640/w,360/h),dw=w*sc,dh=h*sc;
+      g.drawImage(el,(640-dw)/2,(360-dh)/2,dw,dh);
+      out=c.toDataURL('image/jpeg',.7);if(out.length>120000)out=c.toDataURL('image/jpeg',.5);if(out.length>120000)out=c.toDataURL('image/jpeg',.35);
     }
     if(kind==='vid'){el.removeAttribute('src');el.load()}
   }catch(e){out=''}
@@ -4494,7 +4494,7 @@ function remoteBg(p){
       if(kind==='vid'){
         const c=rmCfg();
         if(c){
-          const ln=d.lib,f=ln&&libFile[ln],vk='v.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),u=rmVidUrl(c,vk);
+          const ln=d.lib,f=ln&&libFile[ln],vk='w.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),u=rmVidUrl(c,vk);
           if(u)o.u=u;else if(!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
         }
       }
