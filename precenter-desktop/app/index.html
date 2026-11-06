@@ -4581,7 +4581,7 @@ function r2Stream(force){
       const s=cur(),p=payload(),d=p.d||{};pp=p;sg=c.pics===false?null:r2picSigs(p);
       st={v:1,on:true,at:Date.now(),title:s.title||'',type:s.type||'song',
         text:rtStrip(String(p.text||'')).slice(0,1200),ref:s.type==='scripture'?String(s.title||''):'',
-        black:!!black,clear:!!clear,dim:Math.min(.9,Math.max(0,(d.dim||0)/100)),bg:remoteBg(p)};
+        black:!!black,clear:!!clear,dim:Math.min(.9,Math.max(0,(d.dim||0)/100)),bg:remoteBg(p),ty:{sz:+((d.size||60)/10.8).toFixed(2),fg:d.fg||'#ffffff',pos:d.pos||'Middle'}};
       key=JSON.stringify(Object.assign({},st,{at:0}))+(sg?JSON.stringify(sg):'');
     }catch(e){return}
     if(!force&&key===R2S.key)return;
@@ -10224,10 +10224,10 @@ window.dscNdiGuide=async function(){
       const o={k:b.k,v:b.v};
       if(b.k==='color'||b.k==='grad')o.t=b.t;
       else{if(b.u){o.u=b.u;if(b.u2)o.u2=b.u2}if(b.iu)o.iu=b.iu;if(!o.u&&!o.iu&&b.t)o.t=b.t}
-      return{bg:o,dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100))};
+      return{bg:o,dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),ty:{sz:+(((p.d&&p.d.size)||60)/10.8).toFixed(2),fg:(p.d&&p.d.fg)||'#ffffff',pos:(p.d&&p.d.pos)||'Middle'}};
     }catch(e){return null}
   };
-  const state=()=>{const s=cur();return black?{t:'black',on:true}:clear?Object.assign({t:'clear'},bgOf()):Object.assign({t:'slide',text:slideText(s,idx),ref:(s&&s.title)||''},bgOf())};
+  const state=()=>{const s=cur(),pb=(rmCfg()||{}).base||'';return Object.assign({pb:String(pb).replace(/\/+$/,'')},black?{t:'black',on:true}:clear?Object.assign({t:'clear'},bgOf()):Object.assign({t:'slide',text:slideText(s,idx),ref:(s&&s.title)||''},bgOf()))};
   function send(force){if(!ws||ws.readyState!==1)return;const k=JSON.stringify(state());if(!force&&k===last)return;last=k;ws.send(k)}
   function setS(x){stt=x;const e=document.getElementById('slSt');if(e)e.textContent=x;const b=document.getElementById('slB');if(b)b.textContent=C.on?'Disconnect':'Connect'}
   /* In the desktop app the connection is opened by the app itself: an https page may not open ws:// to another computer. */
