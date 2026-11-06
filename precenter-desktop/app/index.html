@@ -4491,22 +4491,103 @@ function rmVidCfg(){
   };
 }
 /* live slide for Disciples Stream: one small JSON file in the same R2 bucket; Stream reads it from the public link */
+
+/* ---- Stream pictures: the live slide drawn as 4 pictures and put on R2 (text itself stays on Firebase) ---- */
+var R2P={ver:{},sig:{},img:new Map};
+const R2P_KEYS={full:'stream/full.jpg',bg:'stream/bg.jpg',lyrics:'stream/lyrics.png',bottom:'stream/bottom.jpg'};
+function r2picSigs(p){
+  const d=p.d||{},u=p.u||'';
+  const big=v=>typeof v==='string'&&v.length>200?v.length+':'+v.slice(0,40)+v.slice(-40):v;
+  const bgS=JSON.stringify([d.bg,d.color,d.grad,big(d.img),u,d.dim,d.fit,d.pat,d.tex,d.bgop,d.tile,d.nobg,d.yt,remoteBg(p).t?1:0]);
+  const dd={};for(const k in d){if(!/^(img|bg|color|grad|pat|tex|lib|yt|fit|tile|bgop|dim|nobg)$/.test(k))dd[k]=big(d[k])}
+  const txS=JSON.stringify([dd,p.clear?'':p.text,!!p.clear,!!p.black]);
+  const pr=JSON.stringify((p.props||[]).map(x=>[x.t,x.pos,x.size,big(x.img),x.text]))+(p.msg||'');
+  return{bg:bgS+(p.black?'k':''),lyrics:txS,full:bgS+txS+pr,bottom:bgS+txS};
+}
+async function r2Inline(url,w){
+  if(!url||/^data:/.test(url))return url;
+  const k=url+'|'+w;if(R2P.img.has(k))return R2P.img.get(k);
+  let out='';
+  try{
+    const b=await(await fetch(url)).blob(),bm=await createImageBitmap(b);
+    const sc=Math.min(1,w/bm.width),cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(bm.width*sc));cv.height=Math.max(1,Math.round(bm.height*sc));
+    cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);
+    out=cv.toDataURL(/png|gif|webp|svg/.test(b.type)?'image/png':'image/jpeg',.88);
+  }catch(e){out=''}
+  R2P.img.set(k,out);if(R2P.img.size>16)R2P.img.delete(R2P.img.keys().next().value);
+  return out;
+}
+async function r2Raster(p,variant){
+  const W=1280,H=720,d0=p.d||{};
+  const host=document.createElement('div');host.style.cssText='position:fixed;left:-20000px;top:0;width:'+W+'px;height:'+H+'px;pointer-events:none;opacity:0';
+  const st=document.createElement('div');st.className='stage';st.style.cssText='width:'+W+'px;height:'+H+'px;aspect-ratio:auto;font-family:'+getComputedStyle(document.body).fontFamily;
+  host.appendChild(st);document.body.appendChild(host);
+  try{
+    const q={...p,sid:'',ast:null,msg:variant==='full'?p.msg:'',te:0,cd:null,cam:null,og:null,mp:null,look:null,hideLive:false};
+    if(variant!=='full')q.props=[];
+    let d={...d0};
+    if(variant!=='lyrics'){
+      const rb=remoteBg(p);
+      if(d.bg==='Video'||d.bg==='YouTube'){if(rb&&rb.t&&rb.k!=='grad'&&rb.k!=='color'){d={...d,bg:'Image',img:rb.t};q.u=''}else d={...d,bg:'Color',color:'#000000',nobg:0,img:''}}
+      if(d.nobg||d.bg==='None')d={...d,bg:'Color',color:'#000000',nobg:0};
+    }
+    if(variant==='bg')q.clear=true;
+    if(variant==='bottom'){d={...d,pos:'Bottom',lay:null}}
+    q.d=d;
+    paint(st,q);
+    if(variant==='lyrics'){st.querySelectorAll(':scope>.bg,:scope>.dim,:scope>video,:scope>img').forEach(e=>e.remove());st.style.background='transparent'}
+    st.querySelectorAll('video').forEach(e=>e.remove());
+    st.style.background=variant==='lyrics'?'transparent':(p.black?'#000':st.style.background);
+    try{await document.fonts.ready}catch(e){}
+    if(!p.black&&q.d.font)await new Promise(r=>setTimeout(r,60));
+    /* the SVG picture cannot reach out for files, so every image is put inside it */
+    for(const e of st.querySelectorAll('*')){
+      const bi=e.style&&e.style.backgroundImage,m=bi&&bi.match(/url\((['"]?)(.*?)\1\)/);
+      if(m&&!/^data:/.test(m[2])){const dv=await r2Inline(m[2],W);e.style.backgroundImage=dv?bi.replace(m[0],'url("'+dv+'")'):'none'}
+      if(e.tagName==='IMG'){const dv=await r2Inline(e.getAttribute('src'),W);if(dv)e.setAttribute('src',dv);else e.remove()}
+    }
+    let css='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)css+=r.cssText+'\n'}catch(e){}}
+    css=css.replace(/@import[^;]*;/g,'').replace(/]]>/g,'] ]>');
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'"><foreignObject width="100%" height="100%"><style><![CDATA['+css+']]></style>'+new XMLSerializer().serializeToString(st)+'</foreignObject></svg>';
+    const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    try{
+      const im=new Image();im.decoding='async';
+      await new Promise((ok,no)=>{im.onload=ok;im.onerror=()=>no(new Error('picture draw failed'));im.src=url});
+      const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+      if(variant!=='lyrics'){x.fillStyle='#000';x.fillRect(0,0,W,H)}
+      x.drawImage(im,0,0,W,H);
+      return await new Promise((ok,no)=>cv.toBlob(b=>b?ok(b):no(new Error('picture encode failed')),variant==='lyrics'?'image/png':'image/jpeg',.88));
+    }finally{}
+  }finally{host.remove()}
+}
+/* draws and uploads only the pictures whose content changed; returns {full:ver,...} for state.json */
+async function r2Pics(c,p,sigs){
+  for(const v of Object.keys(R2P_KEYS)){
+    if(R2P.sig[v]===sigs[v]&&R2P.ver[v])continue;
+    try{
+      const b=await r2Raster(p,v);
+      await r2Put(c,R2P_KEYS[v],b,v==='lyrics'?'image/png':'image/jpeg','no-store, max-age=0');
+      R2P.sig[v]=sigs[v];R2P.ver[v]=Date.now().toString(36);
+    }catch(e){console.warn('stream picture',v,e);if(!R2P.errAt||Date.now()-R2P.errAt>20000){R2P.errAt=Date.now();toast('Stream picture ('+v+'): '+((e&&e.message)||e))}}
+  }
+  return{...R2P.ver};
+}
 var R2S={t:0,key:'',busy:0,again:0};
 function r2Stream(force){
   const c=rmCfg();if(!c||c.stm===false)return;
   clearTimeout(R2S.t);R2S.t=setTimeout(async()=>{
-    let st,key;
+    let st,key,pp,sg;
     try{
-      const s=cur(),p=payload(),d=p.d||{};
+      const s=cur(),p=payload(),d=p.d||{};pp=p;sg=c.pics===false?null:r2picSigs(p);
       st={v:1,on:true,at:Date.now(),title:s.title||'',type:s.type||'song',
         text:rtStrip(String(p.text||'')).slice(0,1200),ref:s.type==='scripture'?String(s.title||''):'',
         black:!!black,clear:!!clear,dim:Math.min(.9,Math.max(0,(d.dim||0)/100)),bg:remoteBg(p)};
-      key=JSON.stringify(Object.assign({},st,{at:0}));
+      key=JSON.stringify(Object.assign({},st,{at:0}))+(sg?JSON.stringify(sg):'');
     }catch(e){return}
     if(!force&&key===R2S.key)return;
     if(R2S.busy){R2S.again=1;return}
     R2S.busy=1;
-    try{await r2Put(c,'stream/state.json',new Blob([JSON.stringify(st)],{type:'application/json'}),'application/json','no-store, max-age=0');R2S.key=key}
+    try{if(sg)st.pics=await r2Pics(c,pp,sg);await r2Put(c,'stream/state.json',new Blob([JSON.stringify(st)],{type:'application/json'}),'application/json','no-store, max-age=0');R2S.key=key}
     catch(e){R2S.key='';if(!R2S.errAt||Date.now()-R2S.errAt>15000){R2S.errAt=Date.now();toast('Stream link: '+((e&&e.message)||e))}}
     R2S.busy=0;if(R2S.again){R2S.again=0;r2Stream()}
   },force?0:200);
