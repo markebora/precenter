@@ -4517,6 +4517,22 @@ async function r2Inline(url,w){
   R2P.img.set(k,out);if(R2P.img.size>16)R2P.img.delete(R2P.img.keys().next().value);
   return out;
 }
+var R2F={};
+/* the picture is drawn inside an SVG, which cannot use the page's web fonts: fetch the font files and put them inside the SVG itself */
+async function r2Font(name){
+  if(R2F[name]!==undefined)return R2F[name];
+  let out='';
+  try{
+    const css=await(await fetch('https://fonts.googleapis.com/css2?family='+name.replace(/ /g,'+')+':wght@'+GF[name]+'&display=swap')).text();
+    const blocks=css.split('/*').filter(b=>/^\s*latin\s*\*\//.test(b)).map(b=>b.slice(b.indexOf('*/')+2));
+    for(let b of blocks){
+      const m=b.match(/url\((https?:[^)]+)\)/);
+      if(m){const bl=await(await fetch(m[1])).blob(),du=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(bl)});b=b.replace(m[1],du)}
+      out+=b+'\n';
+    }
+  }catch(e){out=''}
+  R2F[name]=out;return out;
+}
 async function r2Raster(p,variant){
   const W=1280,H=720,d0=p.d||{};
   const host=document.createElement('div');host.style.cssText='position:fixed;left:-20000px;top:0;width:'+W+'px;height:'+H+'px;pointer-events:none;opacity:0';
@@ -4546,7 +4562,9 @@ async function r2Raster(p,variant){
       if(m&&!/^data:/.test(m[2])){const dv=await r2Inline(m[2],W);e.style.backgroundImage=dv?bi.replace(m[0],'url("'+dv+'")'):'none'}
       if(e.tagName==='IMG'){const dv=await r2Inline(e.getAttribute('src'),W);if(dv)e.setAttribute('src',dv);else e.remove()}
     }
-    let css='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)css+=r.cssText+'\n'}catch(e){}}
+    const fams=new Set();st.querySelectorAll('*').forEach(e=>{String(getComputedStyle(e).fontFamily||'').split(',').forEach(n=>{n=n.trim().replace(/^["']|["']$/g,'');if(typeof GF!=='undefined'&&GF[n])fams.add(n)})});
+    let css='';for(const n of fams)css+=await r2Font(n);
+    for(const sh of document.styleSheets){try{for(const r of sh.cssRules)css+=r.cssText+'\n'}catch(e){}}
     css=css.replace(/@import[^;]*;/g,'').replace(/]]>/g,'] ]>');
     const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'"><foreignObject width="100%" height="100%"><style><![CDATA['+css+']]></style>'+new XMLSerializer().serializeToString(st)+'</foreignObject></svg>';
     const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
@@ -4556,6 +4574,7 @@ async function r2Raster(p,variant){
       const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
       if(variant!=='lyrics'){x.fillStyle='#000';x.fillRect(0,0,W,H)}
       x.drawImage(im,0,0,W,H);
+      if(fams.size){await new Promise(r=>setTimeout(r,120));x.clearRect(0,0,W,H);if(variant!=='lyrics'){x.fillStyle='#000';x.fillRect(0,0,W,H)}x.drawImage(im,0,0,W,H)}
       return await new Promise((ok,no)=>cv.toBlob(b=>b?ok(b):no(new Error('picture encode failed')),variant==='lyrics'?'image/png':'image/jpeg',.88));
     }finally{}
   }finally{host.remove()}
