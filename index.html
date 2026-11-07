@@ -2412,6 +2412,7 @@ function drawList(){
         {t:'Duplicate',fn:()=>{const c=JSON.parse(JSON.stringify(it));c.id=Date.now();c.title=(it.title||'Untitled')+' copy';S.songs.splice(S.songs.indexOf(it)+1,0,c);S.sel=c.id;idx=0;save();drawAll()}},
         {t:'Export item\u2026',fn:()=>dscExportItems([it],it.title)},...((it.type||'song')==='song'?[{t:'Arrangement',sub:dscArrMenu(it)}]:[]),{t:'Move to',sub:S.secs.map(z=>({t:(secOf(it)===z?'\u2713 ':'')+z,fn:()=>{it.sec=z;save();drawList()}}))},
         {sep:1},{t:'Remove from playlist\u2026',fn:del}])};
+      r._del=del;
       r.onpointerdown=e=>{if(e.button===0)startLP(e,r,it)};
       L.appendChild(r);
     });
@@ -14520,6 +14521,77 @@ window.openYouTube=function(i){
   };
   const ids=['auPl','auT','vdBk','vdPl','vdFw','vdSc','vdT','vtBk','vtPl','vtSt','vtFw','vtSc','vtT','vtS','msgLib','prList','mcList','auList','mqBox','ytr','pTm','pAu','pAn','pMsg','pSl','pPr','pMc'];
   ids.forEach(i=>quiet(document.getElementById(i)));
+})();
+</script>
+
+<script id="keysJs">
+/* ---- Keyboard: Delete / Backspace, copy, cut, paste, duplicate, undo, up / down, new slide, hide ----
+   (Space, arrows left / right, [ ] , 1-9, Home, End, B, C, G and F1-F7 were already there.) */
+(function(){
+if(/^#(output|stage|layout)/.test(location.hash))return;
+let zone='slides',undo=[],redo=[];
+const $q=s=>document.querySelector(s);
+document.addEventListener('pointerdown',e=>{zone=e.target.closest&&e.target.closest('#list')?'list':'slides'},true);
+document.addEventListener('focusin',e=>{if(e.target.closest&&e.target.closest('#list'))zone='list';else if(e.target.closest&&e.target.closest('#grid'))zone='slides'},true);
+const snap=()=>{try{undo.push({id:cur().id,j:JSON.stringify(cur()),idx});if(undo.length>30)undo.shift();redo=[]}catch(e){}};
+function restore(from,to){
+  const t=from.pop();if(!t)return false;
+  const k=S.songs.findIndex(z=>z.id===t.id);if(k<0)return false;
+  to.push({id:t.id,j:JSON.stringify(S.songs[k]),idx});
+  S.songs[k]=JSON.parse(t.j);S.sel=t.id;idx=t.idx;save();drawAll();push();return true;
+}
+const busy=e=>{
+  if(typeof E!=='undefined'&&E)return true;
+  const tg=e.target.tagName;if(/INPUT|TEXTAREA|SELECT/.test(tg)||e.target.isContentEditable)return true;
+  const sed=$q('#sed');if(sed&&!sed.hidden)return true;
+  if($q('.qe:not([hidden])'))return true;
+  const ab=$q('#askbar');if(ab&&!ab.hidden)return true;
+  if($q('#dscGate')||$q('.dscModal:not([hidden])'))return true;
+  try{if(kioskOn())return true}catch(x){}
+  return false;
+};
+const sel=()=>{try{return String(getSelection())}catch(x){return''}};
+const n=()=>expand(cur()).length;
+function mv(d){
+  const cards=[...document.querySelectorAll('#grid .slide')];if(!cards.length)return;
+  const live=gview==='live';
+  const me=live?$q('#grid .slide.cur'):cards[idx];if(!me){go(Math.max(0,Math.min(n()-1,idx+d)));return}
+  const r=me.getBoundingClientRect(),cx=r.left+r.width/2;
+  let best=null,bd=1e9;
+  cards.forEach(c=>{if(c===me)return;const q=c.getBoundingClientRect();if(!q.width)return;
+    const dy=(q.top+q.height/2)-(r.top+r.height/2);if(d>0?dy<r.height*.5:dy>-r.height*.5)return;
+    const sc=Math.abs(dy)+Math.abs((q.left+q.width/2)-cx)*.6;if(sc<bd){bd=sc;best=c}});
+  if(best)best.click();
+}
+document.addEventListener('keydown',e=>{
+  if(e.defaultPrevented||busy(e))return;
+  const cm=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
+  if(cm&&!e.altKey&&k==='z'){if(!sel()){e.preventDefault();if(e.shiftKey?restore(redo,undo):restore(undo,redo))toast(e.shiftKey?'Redone.':'Undone.');else toast('Nothing to '+(e.shiftKey?'redo':'undo')+'.')}return}
+  if(cm&&!e.altKey&&k==='y'){e.preventDefault();if(restore(redo,undo))toast('Redone.');return}
+  if(e.altKey)return;
+  if(!cm&&(e.key==='Delete'||e.key==='Backspace')){
+    e.preventDefault();
+    if(zone==='list'){const r=$q('#list .song.sel');if(r&&r._del){snap();r._del();return}}
+    if(!n())return;
+    try{if(arranged(cur())){lockArr(cur());return}}catch(x){}
+    snap();removeSlide(idx);toast('Slide deleted. Press Ctrl+Z to bring it back.');return;
+  }
+  if(zone==='list')return;
+  if(cm&&!e.shiftKey&&(k==='c'||k==='x')){
+    if(sel())return;if(!n())return;e.preventDefault();
+    slideClip=clipOf(idx);
+    if(k==='x'){try{if(arranged(cur())){lockArr(cur());return}}catch(x){}snap();removeSlide(idx);toast('Slide cut. Press Ctrl+V to paste it.')}else toast('Slide copied. Press Ctrl+V to paste it after this one.');
+    return;
+  }
+  if(cm&&!e.shiftKey&&k==='v'){if(!slideClip)return;e.preventDefault();snap();insertAfter(idx,[slideClip]);go(Math.min(idx+1,n()-1));return}
+  if(cm&&!e.shiftKey&&k==='d'){if(!n())return;e.preventDefault();snap();insertAfter(idx,[clipOf(idx)]);go(Math.min(idx+1,n()-1));return}
+  if(cm)return;
+  if(e.key==='Insert'){e.preventDefault();snap();insertAfter(Math.max(0,idx),[{label:'Slide',text:'​'}]);go(Math.min(idx+1,n()-1));toast('New slide added.');return}
+  if(e.key==='ArrowDown'){e.preventDefault();mv(1);return}
+  if(e.key==='ArrowUp'){e.preventDefault();mv(-1);return}
+  if(e.key==='h'||e.key==='H'){e.preventDefault();if(window.dscHideSlide){window.dscHideSlide(idx);}return}
+  if(e.key==='Enter'&&e.target===document.body&&n()){e.preventDefault();quickEdit(idx)}
+},false);
 })();
 </script>
 </body>
