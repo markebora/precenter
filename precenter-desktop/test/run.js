@@ -293,6 +293,112 @@ test('the link bridge refuses a bad address and a missing WebSocket', async () =
   finally { globalThis.WebSocket = saved; }
 });
 
+// ---- saving a service through the system Save window ----
+const saveBridge = require('../lib/savebridge');
+const bytes = (...a) => Uint8Array.from(a);
+test('a save is written in pieces and only appears under its real name when complete', async () => {
+  const d = tmp(), target = path.join(d, 'Sunday.dscservice'), fs_ = new saveBridge.FileSaver();
+  const id = await fs_.begin(1, target);
+  assert.ok(!fs.existsSync(target), 'nothing under the real name yet');
+  await fs_.write(1, id, bytes(1, 2, 3)); await fs_.write(1, id, bytes(4, 5));
+  const r = await fs_.end(1, id);
+  assert.strictEqual(r.bytes, 5);
+  assert.deepStrictEqual([...fs.readFileSync(target)], [1, 2, 3, 4, 5]);
+  assert.deepStrictEqual(fs.readdirSync(d), ['Sunday.dscservice'], 'no leftover temporary file');
+});
+test('an empty save is refused and leaves no file at all', async () => {
+  const d = tmp(), target = path.join(d, 'a.dscservice'), s_ = new saveBridge.FileSaver();
+  const id = await s_.begin(1, target);
+  await assert.rejects(() => s_.end(1, id), /Nothing was written/);
+  assert.deepStrictEqual(fs.readdirSync(d), []);
+});
+test('cancelling a save keeps an older file of the same name untouched', async () => {
+  const d = tmp(), target = path.join(d, 'a.dscservice'), s_ = new saveBridge.FileSaver();
+  fs.writeFileSync(target, 'OLD');
+  const id = await s_.begin(1, target);
+  await s_.write(1, id, bytes(9, 9, 9));
+  await s_.abort(1, id);
+  assert.strictEqual(fs.readFileSync(target, 'utf8'), 'OLD');
+  assert.deepStrictEqual(fs.readdirSync(d), ['a.dscservice']);
+});
+test('a finished save replaces an older file of the same name', async () => {
+  const d = tmp(), target = path.join(d, 'a.dscservice'), s_ = new saveBridge.FileSaver();
+  fs.writeFileSync(target, 'OLD OLD OLD OLD');
+  const id = await s_.begin(1, target); await s_.write(1, id, bytes(65, 66)); await s_.end(1, id);
+  assert.strictEqual(fs.readFileSync(target, 'utf8'), 'AB');
+});
+test('one window cannot write into another window\'s save', async () => {
+  const d = tmp(), s_ = new saveBridge.FileSaver();
+  const id = await s_.begin(1, path.join(d, 'a.dscservice'));
+  await assert.rejects(() => s_.write(2, id, bytes(1)), /not open/);
+  await s_.abortOwner(1);
+  assert.deepStrictEqual(fs.readdirSync(d), []);
+});
+test('only real byte data is accepted', async () => {
+  const d = tmp(), s_ = new saveBridge.FileSaver();
+  const id = await s_.begin(1, path.join(d, 'a.dscservice'));
+  await assert.rejects(() => s_.write(1, id, 'text'), /Nothing to write/);
+  await assert.rejects(() => s_.write(1, id, { length: 3 }), /Nothing to write/);
+  await s_.abort(1, id);
+});
+test('the save bridge: begin, write, end, and it remembers the folder', async () => {
+  const ipc = fakeIpc(), d = tmp(), dest = path.join(d, 'out'); fs.mkdirSync(dest);
+  let asked = null;
+  saveBridge.create(ipc, { dir: d, documents: d, showSaveDialog: async (_s, o) => { asked = o; return { canceled: false, filePath: path.join(dest, 'Service.dscservice') }; }, showOpenDialog: async () => ({ canceled: true }) });
+  const e = { sender: { id: 5, once() {} } };
+  const b = await ipc.call('save:begin', e, { name: 'Sunday: 12/Oct?.dscservice', title: 'Save service' });
+  assert.strictEqual(b.ok, true);
+  assert.ok(!/[\\/:?]/.test(path.basename(asked.defaultPath)), 'the suggested name is a safe file name');
+  assert.strictEqual(asked.filters[0].extensions[0], 'dscservice');
+  assert.deepStrictEqual(await ipc.call('save:write', e, b.id, bytes(1, 2, 3, 4)), { ok: true });
+  const r = await ipc.call('save:end', e, b.id);
+  assert.strictEqual(r.ok, true); assert.strictEqual(r.bytes, 4); assert.strictEqual(r.name, 'Service.dscservice'); assert.strictEqual(r.dir, dest);
+  await ipc.call('save:begin', e, { name: 'Next.dscservice' });
+  assert.strictEqual(path.dirname(asked.defaultPath), dest, 'the Save window opens in the folder used last time');
+});
+test('the save bridge: closing the Save window is not an error, a bad folder is reported', async () => {
+  const d = tmp(), e = { sender: { id: 5, once() {} } };
+  const ipc = fakeIpc();
+  saveBridge.create(ipc, { dir: d, documents: d, showSaveDialog: async () => ({ canceled: true }), showOpenDialog: async () => ({ canceled: true }) });
+  assert.deepStrictEqual(await ipc.call('save:begin', e, { name: 'a.dscservice' }), { canceled: true });
+  const ipc2 = fakeIpc();
+  saveBridge.create(ipc2, { dir: d, documents: d, showSaveDialog: async () => ({ canceled: false, filePath: path.join(d, 'no-such-folder', 'a.dscservice') }), showOpenDialog: async () => ({ canceled: true }) });
+  const r = await ipc2.call('save:begin', e, { name: 'a.dscservice' });
+  assert.strictEqual(r.ok, false); assert.ok(r.error);
+});
+test('a service saved without the zip library gets a .json name and filter', async () => {
+  const d = tmp(), e = { sender: { id: 5, once() {} } }, ipc = fakeIpc(); let asked;
+  saveBridge.create(ipc, { dir: d, documents: d, showSaveDialog: async (_s, o) => { asked = o; return { canceled: true }; }, showOpenDialog: async () => ({ canceled: true }) });
+  await ipc.call('save:begin', e, { name: 'Sunday.json' });
+  assert.strictEqual(asked.filters[0].extensions[0], 'json');
+});
+test('choosing a service folder is remembered and used', async () => {
+  const d = tmp(), pick = path.join(d, 'Services'); fs.mkdirSync(pick);
+  const e = { sender: { id: 5, once() {} } }, ipc = fakeIpc(); let asked;
+  const b = saveBridge.create(ipc, { dir: d, documents: d, showSaveDialog: async (_s, o) => { asked = o; return { canceled: true }; }, showOpenDialog: async () => ({ canceled: false, filePaths: [pick] }) });
+  const f = await ipc.call('save:folder', e);
+  assert.strictEqual(f.ok, true); assert.strictEqual(f.name, 'Services');
+  assert.strictEqual(b.remembered(), pick);
+  await ipc.call('save:begin', e, { name: 'a.dscservice' });
+  assert.strictEqual(path.dirname(asked.defaultPath), pick);
+});
+test('file names are made safe', () => {
+  assert.strictEqual(saveBridge.safeName('a/b\\c:d?.dscservice', 'x'), 'a-b-c-d-.dscservice');
+  assert.strictEqual(saveBridge.safeName('', 'fallback.dscservice'), 'fallback.dscservice');
+  assert.strictEqual(saveBridge.safeName('..', 'f'), 'f');
+});
+test('the app allows the file window by default (a saved service needs it)', () => {
+  assert.strictEqual(DEFAULTS.permissions.fileSystem, true);
+  const cfg = parseText('{}').config;
+  assert.ok(isPermissionAllowed(cfg, createUrlPolicy(cfg), 'fileSystem', cfg.startUrl));
+  assert.ok(!isPermissionAllowed(cfg, createUrlPolicy(cfg), 'fileSystem', 'https://evil.example/'));
+});
+test('the preload offers the save window to the page', () => {
+  const src = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
+  ['save:begin', 'save:write', 'save:end', 'save:abort', 'save:folder'].forEach(c => assert.ok(src.includes("'" + c + "'"), c));
+  assert.ok(fs.readFileSync(path.join(root, 'main.js'), 'utf8').includes("require('./lib/savebridge')"));
+});
+
 (async () => {
   for (const [name, fn] of queue) {
     try { await fn(); pass++; console.log('PASS ' + name); }

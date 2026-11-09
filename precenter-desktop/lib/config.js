@@ -13,7 +13,7 @@ const DEFAULTS = {
   window: { width: 1500, height: 900, maximized: true, menuBar: false, customTitleBar: true, backgroundColor: '#0e0f13' },
   permissions: {
     media: true, midi: true, midiSysex: false, 'clipboard-read': true, 'clipboard-sanitized-write': true,
-    'window-management': true, fullscreen: true, 'display-capture': true, notifications: false, geolocation: false
+    'window-management': true, fileSystem: true, fullscreen: true, 'display-capture': true, notifications: false, geolocation: false
   },
   corsRelaxHosts: ['worship-chords-rho.vercel.app', 'bible-api.com', 'api.planningcenteronline.com'],
   externalLinks: 'browser',

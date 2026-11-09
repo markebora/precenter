@@ -45,6 +45,14 @@ contextBridge.exposeInMainWorld('dscNative', {
     send: (id, text) => ipcRenderer.send('link:send', String(id), String(text)),
     close: id => { linkListeners.delete(String(id)); ipcRenderer.send('link:close', String(id)); }
   },
+  // Save a file in pieces through the system Save window (the page never gets a path of its own).
+  save: {
+    begin: o => ipcRenderer.invoke('save:begin', o),
+    write: (id, bytes) => ipcRenderer.invoke('save:write', String(id), bytes),
+    end: id => ipcRenderer.invoke('save:end', String(id)),
+    abort: id => ipcRenderer.invoke('save:abort', String(id)),
+    folder: () => ipcRenderer.invoke('save:folder')
+  },
   platform: process.platform,
   ndi: {
     sync: cfgs => ipcRenderer.invoke('ndi:sync', cfgs),

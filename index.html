@@ -337,18 +337,6 @@ body.stg .msg{background:#E8B923;color:#171200;font:700 3vw Poppins,Inter,sans-s
 .ly button:disabled{opacity:.35;cursor:default}
 .grid.easy{grid-template-columns:repeat(auto-fill,minmax(calc(var(--sz,150px)*1.35),1fr))}
 .grid.outline{grid-template-columns:1fr;gap:3px}
-.grid.live{display:block}
-.grid.live .lvGrp{margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--line)}
-.grid.live .lvGrp:last-child{border-bottom:0}
-.grid.live .lvH{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 4px;margin:0 0 6px;border-radius:8px;user-select:none}
-.grid.live .lvH:hover{background:var(--chip)}
-.grid.live .lvT{color:var(--accT);font-size:13px;width:14px}
-.grid.live .lvN{font-weight:800;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
-.grid.live .lvC{margin-left:auto;font-size:11px;color:var(--mute);background:var(--chip);border-radius:999px;padding:2px 9px}
-.grid.live .lvGrp.now .lvN{color:var(--accT)}
-.grid.live .lvGrp.now .lvH{background:rgba(232,184,38,.10)}
-.grid.live .lvRow{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--sz,150px),1fr));gap:8px}
-.grid.live .lvGrp.shut .lvRow{display:none}
 .slide.tv .lab{order:0;font-size:10px}
 .slide.tv .bd{flex:1;min-width:0}
 .slide.tv .tt{padding:6px 10px 8px;white-space:pre-wrap;font-weight:600;font-size:clamp(12px,calc(var(--sz,150px)/9),26px);line-height:1.3;overflow-wrap:anywhere}
@@ -571,7 +559,7 @@ body.lite :not(.stage):not(.stage *){animation:none!important;transition:none!im
     <div class="hd"><span id="songTitle">Slides</span><span class="hint" style="margin:0">Space or &rarr; next &middot; &larr; back &middot; 1-9 jump to section &middot; [ ] song &middot; B black &middot; C clear text &middot; G clear group</span></div>
     <div id="secBar"><div id="secChips" aria-label="Jump to section"></div><div id="secBtns"><button id="prevSong" title="Previous item in the service ( [ )">&#9664; Song</button><button id="nextSong" title="Next item in the service ( ] )">Song &#9654;</button><button id="autoNext" title="When on, pressing next on the last slide continues into the next item">Auto-next: off</button></div></div>
     <div class="scroll"><div class="grid" id="grid"></div></div>
-    <div class="row" style="padding:4px 8px;justify-content:flex-end;align-items:center;border-top:1px solid var(--line)"><span class="seg" id="vwSeg" style="margin-right:auto" role="group" aria-label="Slide view"><button data-v="grid" title="Slide thumbnails">Grid</button><button data-v="easy" title="Big text cards, no pictures: fastest for clicking lyrics">Easy</button><button data-v="outline" title="One row per slide, like a script">Outline</button><button data-v="live" title="Live: every item of the service on one page, with its slides in rows">Live</button></span><span class="hint" style="margin:0">Slide size</span><input id="sz" type="range" min="110" max="320" value="150" style="width:110px" aria-label="Slide size"></div>
+    <div class="row" style="padding:4px 8px;justify-content:flex-end;align-items:center;border-top:1px solid var(--line)"><span class="seg" id="vwSeg" style="margin-right:auto" role="group" aria-label="Slide view"><button data-v="grid" title="Slide thumbnails">Grid</button><button data-v="easy" title="Big text cards, no pictures: fastest for clicking lyrics">Easy</button><button data-v="outline" title="One row per slide, like a script">Outline</button></span><span class="hint" style="margin:0">Slide size</span><input id="sz" type="range" min="110" max="320" value="150" style="width:110px" aria-label="Slide size"></div>
   </section>
   <section class="col" id="rgt" aria-label="Preview and controls">
     <div class="right" style="padding-bottom:0">
@@ -2412,7 +2400,6 @@ function drawList(){
         {t:'Duplicate',fn:()=>{const c=JSON.parse(JSON.stringify(it));c.id=Date.now();c.title=(it.title||'Untitled')+' copy';S.songs.splice(S.songs.indexOf(it)+1,0,c);S.sel=c.id;idx=0;save();drawAll()}},
         {t:'Export item\u2026',fn:()=>dscExportItems([it],it.title)},...((it.type||'song')==='song'?[{t:'Arrangement',sub:dscArrMenu(it)}]:[]),{t:'Move to',sub:S.secs.map(z=>({t:(secOf(it)===z?'\u2713 ':'')+z,fn:()=>{it.sec=z;save();drawList()}}))},
         {sep:1},{t:'Remove from playlist\u2026',fn:del}])};
-      r._del=del;
       r.onpointerdown=e=>{if(e.button===0)startLP(e,r,it)};
       L.appendChild(r);
     });
@@ -2450,7 +2437,6 @@ function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
   try{markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd()}catch(e){console.error(e)}
   remotePublish();r2Stream();scrPrev()}
 function drawGrid(){
-  if(gview==='live')return drawLive();
   const s=cur(),sl=expand(s);
   $('#songTitle').textContent=s.title||'Untitled';
   drawSecBar(sl);
@@ -2497,65 +2483,9 @@ function drawGrid(){
   [...g.children].forEach((e,i)=>e.classList.toggle('cur',i===idx));
   g.dataset.k=kk;g._s=s;g._sig=sigs;gridDirty=false;
 }
-/* ---------- Live view: the whole service on one page, like a slide sorter: one group per item (song, verse, presentation), its slides in rows ---------- */
-var liveClosed={};
-function liveCur(){
-  const g=$('#grid'),id=String(cur().id);
-  if(gridDirty||!g._lv)return drawLive();
-  g.querySelectorAll('.slide').forEach(c=>c.classList.toggle('cur',c.dataset.sid===id&&+c.dataset.i===idx));
-  g.querySelectorAll('.lvGrp').forEach(e=>e.classList.toggle('now',e.dataset.sid===id));
-  drawSecBar(expand(cur()));
-  try{if(window.dscPaintHold)window.dscPaintHold()}catch(e){}
-}
-function drawLive(){
-  const g=$('#grid'),curS=cur();
-  $('#songTitle').textContent=curS.title||'Untitled';
-  drawSecBar(expand(curS));
-  document.querySelectorAll('#vwSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v==='live'));
-  if(g.className!=='grid live')g.className='grid live';
-  const cache=g._lvc||(g._lvc=new Map()),used=new Set(),strp=(k,v)=>typeof v==='string'&&v.length>200?v.length+':'+v.slice(0,60)+v.slice(-60):v,frag=document.createDocumentFragment();
-  let total=0;
-  flatItems().forEach(s=>{
-    const sl=expand(s);if(!sl.length)return;
-    const grp=document.createElement('div');grp.className='lvGrp'+(s.id===curS.id?' now':'')+(liveClosed[s.id]?' shut':'');grp.dataset.sid=s.id;
-    const hd=document.createElement('div');hd.className='lvH';hd.title='Click to fold or unfold this item';
-    const tr=document.createElement('span');tr.className='lvT';tr.textContent=liveClosed[s.id]?'\u25b8':'\u25be';
-    const nm=document.createElement('span');nm.className='lvN';nm.textContent=s.title||'Untitled';
-    const ct=document.createElement('span');ct.className='lvC';ct.textContent=sl.length+(sl.length===1?' slide':' slides');
-    hd.append(tr,nm,ct);hd.onclick=()=>{liveClosed[s.id]=!liveClosed[s.id];drawLive()};grp.appendChild(hd);
-    const row=document.createElement('div');row.className='lvRow';grp.appendChild(row);
-    if(!liveClosed[s.id])sl.forEach((x,i)=>{
-      total++;const key=s.id+':'+i,e=eff(s,i);
-      let sg;try{sg=JSON.stringify([x,e,libUrl(e),s.ov&&s.ov[i]?1:0,labColor(x.label)],strp)}catch(er){sg=String(Math.random())}
-      let c;const old=cache.get(key);
-      if(old&&old.sg===sg)c=old.el;
-      else{
-        c=document.createElement('div');c.className='slide';c.tabIndex=0;
-        c.innerHTML='<div class="lab" style="--c:'+labColor(x.label)+'"></div><div class="stage"></div>';
-        c.firstChild.textContent=(i+1)+'  '+(x.label||'')+(s.ov&&s.ov[i]?' \u25cf':'');
-        paint(c.lastChild,{d:e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0},u:libUrl(e),text:x.text});
-        c.dataset.sid=s.id;c.dataset.i=i;
-        c.onclick=()=>{if(S.sel!==s.id){S.sel=s.id;idx=0;black=false;clear=false;noMedia=false;save();drawAll()}go(i)};
-        c.onkeydown=ev=>{if(ev.key==='Enter')c.click()};
-        c.ondblclick=()=>{if(S.sel!==s.id){S.sel=s.id;save();drawAll()}openSed(i)};
-        c.oncontextmenu=ev=>{if(S.sel!==s.id){S.sel=s.id;idx=0;save();drawAll()}openCm(ev,i);c.classList.add('ctx')};
-        cache.set(key,{el:c,sg,fresh:1});
-      }
-      c.classList.toggle('cur',s.id===curS.id&&i===idx);used.add(key);row.appendChild(c);
-    });
-    frag.appendChild(grp);
-  });
-  for(const k of [...cache.keys()])if(!used.has(k))cache.delete(k);
-  g.innerHTML='';
-  if(!frag.firstChild){g.innerHTML='<div class="empty">No slides yet. Add a song to the service.</div>'}else g.appendChild(frag);
-  cache.forEach(v=>{if(v.fresh){v.fresh=0;try{fitStage(v.el.lastChild)}catch(e){}}});
-  g._lv=true;gridDirty=false;
-  const c=g.querySelector('.slide.cur');if(c&&!g._noScroll)c.scrollIntoView({block:'nearest'});
-}
 /* Fast path for moving between slides: only move the LIVE border instead of rebuilding every card.
    Falls back to the full drawGrid() whenever anything was edited (save() sets gridDirty) or the song/view/slide count differs. */
 function drawGridCur(){
-  if(gview==='live')return liveCur();
   const s=cur(),sl=expand(s),g=$('#grid');
   if(gridDirty||!sl.length||g.dataset.k!==s.id+'|'+gview+'|'+sl.length||g.children.length!==sl.length)return drawGrid();
   const kids=g.children;for(let i=0;i<kids.length;i++)kids[i].classList.toggle('cur',i===idx);
@@ -2625,7 +2555,7 @@ $('#autoNext').onclick=()=>{autoNext=!autoNext;try{localStorage.setItem('lp-auto
 
 function go(i){bgPopClose();const n=expand(cur()).length;if(!n)return;
   idx=Math.max(0,Math.min(n-1,i));animReset(cur().id+':'+idx);black=false;clear=false;noMedia=false;drawGridCur();push();armAdv(true);if(tab==='D')drawEditor();
-  const el=gview==='live'?$('#grid .slide.cur'):$('#grid').children[idx];if(el)el.scrollIntoView({block:'nearest'})}
+  const el=$('#grid').children[idx];if(el)el.scrollIntoView({block:'nearest'})}
 
 let lib={},libList=[],gsel=0,libFile={},sent={},bgScope='song';
 const libUrl=d=>(d.lib&&lib[d.lib])||(d.bg==='Video'?vurl:'');
@@ -3567,7 +3497,7 @@ function noteEdit(i){
 }
 
 /* ---------- slide views: Grid / Easy / Outline ---------- */
-$('#vwSeg').onclick=e=>{const v=e.target.dataset&&e.target.dataset.v;if(!v)return;gview=v;try{localStorage.setItem('lp-view',v)}catch(x){}drawGrid();const el=gview==='live'?$('#grid .slide.cur'):$('#grid').children[idx];if(el)el.scrollIntoView({block:'nearest'})};
+$('#vwSeg').onclick=e=>{const v=e.target.dataset&&e.target.dataset.v;if(!v)return;gview=v;try{localStorage.setItem('lp-view',v)}catch(x){}drawGrid();const el=$('#grid').children[idx];if(el)el.scrollIntoView({block:'nearest'})};
 
 /* ================= reflow editor ================= */
 const LABEL_RE=/^\[?(verse|chorus|bridge|pre-?chorus|intro|outro|tag|refrain|interlude)\b.*$/i;
@@ -4456,18 +4386,7 @@ function rmPrune(c){
 }
 function rmCfg(){try{const c=JSON.parse(localStorage.getItem('lp-r2')||'null');return c&&c.on&&c.acct&&c.bucket&&c.id&&c.secret&&c.base?c:null}catch(e){return null}}
 function rmVidUrl(c,vk){rmPrune(c);const k=RMV.done[c.acct+'/'+c.bucket+'/'+vk];return k?String(k).split(',').filter(Boolean).map(x=>c.base.replace(/\/+$/,'')+'/'+x):[]}
-function r2Why(code,status){
-  const m={SignatureDoesNotMatch:'The Secret Access Key does not match the Access Key ID. Create a new API token in Cloudflare (R2 > Manage API tokens), copy BOTH values again with no spaces, and paste them here. Also check this computer\u2019s date, time and time zone are correct.',
-    InvalidAccessKeyId:'The Access Key ID is not known to this account. Check it is the Access Key ID (not the token value) and that the Account ID is from the same Cloudflare account.',
-    RequestTimeTooSkewed:'This computer\u2019s clock is wrong. Turn on automatic date and time (and the right time zone) in Windows settings, then try again.',
-    AccessDenied:'The key is valid but is not allowed to write to this bucket. Make a token with Object Read & Write and apply it to this bucket (or all buckets).',
-    NoSuchBucket:'No bucket with this name in that account. Check the bucket name spelling.',
-    ExpiredToken:'The token has expired. Create a new one.'}[code];
-  return m||('Cloudflare answered '+status+(code?' ('+code+')':''));
-}
 async function r2Put(c,key,blob,type,ccOv){
-  if(!(window.crypto&&crypto.subtle))throw new Error('This page is not in a secure context, so it cannot sign the upload. Open PreCenter from an https:// address or from the installed app, not from http://\u2026 or a shared folder path.');
-  c={...c,acct:String(c.acct||'').trim().replace(/^https?:\/\//,'').replace(/\.r2\.cloudflarestorage\.com.*$/,''),bucket:String(c.bucket||'').trim(),id:String(c.id||'').trim(),secret:String(c.secret||'').trim()};
   const enc=new TextEncoder(),host=c.acct+'.r2.cloudflarestorage.com',path='/'+c.bucket+'/'+key.split('/').map(encodeURIComponent).join('/');
   const amz=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''),ds=amz.slice(0,8),ph='UNSIGNED-PAYLOAD',cc=ccOv||'public, max-age=31536000, immutable';
   const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -4480,7 +4399,7 @@ async function r2Put(c,key,blob,type,ccOv){
   const kd=await hm(enc.encode('AWS4'+c.secret),ds),kr=await hm(kd,'auto'),ks=await hm(kr,'s3'),kk=await hm(ks,'aws4_request');
   const sig=hex(await hm(kk,sts));
   const r=await fetch('https://'+host+path,{method:'PUT',headers:{'cache-control':cc,'content-type':type,'x-amz-content-sha256':ph,'x-amz-date':amz,'Authorization':'AWS4-HMAC-SHA256 Credential='+c.id+'/'+scope+', SignedHeaders='+sh+', Signature='+sig},body:blob});
-  if(!r.ok){const tx=await r.text().catch(()=>''),cd=(tx.match(/<Code>([^<]+)<\/Code>/)||[])[1]||'';throw new Error(r2Why(cd,r.status))}
+  if(!r.ok)throw new Error('R2 said '+r.status+' '+(await r.text().catch(()=>'')).slice(0,160));
 }
 /* plays the video once, redraws it small onto a canvas and records the first 6 seconds as a tiny muted clip */
 async function rmEncode(src){
@@ -4561,7 +4480,7 @@ function rmVidCfg(){
   m.q('#r2T').onclick=async()=>{
     const v=val();if(!(v.acct&&v.bucket&&v.id&&v.secret&&v.base)){st('Fill in every box first.');return}
     st('Testing\u2026');
-    try{await r2Put(v,'bg/test.txt',new Blob(['ok'],{type:'text/plain'}),'text/plain')}catch(e){const m=String(e&&e.message||e);st('Upload failed: '+(/Failed to fetch|NetworkError|Load failed/i.test(m)?'this computer could not reach Cloudflare. Either the Account ID is wrong (32 letters and numbers, from the R2 overview page), the internet or a firewall is blocking *.r2.cloudflarestorage.com, or the bucket CORS rule is missing (see the grey note below).':m));return}
+    try{await r2Put(v,'bg/test.txt',new Blob(['ok'],{type:'text/plain'}),'text/plain')}catch(e){st('Upload failed: '+(e&&e.message||e)+'  (check the keys, the Account ID, the bucket name and the CORS rule)');return}
     const url=v.base.replace(/\/+$/,'')+'/bg/test.txt?'+Date.now();
     try{const r=await fetch(url);st(r.ok?'Upload and public link both work.':'Upload works, but the public link answered '+r.status+'. Turn on public access for the bucket.')}
     catch(e){
@@ -5440,13 +5359,14 @@ async function build(name){
   /* only the backgrounds this service actually uses go into the file (not every saved folder) */
   const used=new Set((JSON.stringify(stt).match(/"lib":"[^"]+"/g)||[]).map(m=>m.slice(7,-1).replace(/\\\//g,'/')));
   const miss=new Set();used.forEach(n=>{if(!libFile[n])miss.add(n)});
-  if(!zip)return{json:true,blob:new Blob([JSON.stringify(data)],{type:'application/json'}),miss:miss.size};
+  const info={items:(stt.songs||[]).length,miss:miss.size,missNames:[...miss]};
+  if(!zip)return Object.assign(info,{json:true,blob:new Blob([JSON.stringify(data)],{type:'application/json'})});
   let i=0;
   for(const x of libList){if(!used.has(x.name))continue;const f=libFile[x.name];if(!f)continue;const pth='media/'+(i++)+'-'+safe(f.name);zip.file(pth,f,{compression:'STORE'});media.push({name:x.name,type:x.type,file:pth,mime:f.type})}
   i=0;
   for(const a of aud.list){try{const b=await(await fetch(a.url)).blob();const pth='audio/'+(i++)+'-'+safe(a.name);zip.file(pth,b,{compression:'STORE'});audio.push({name:a.name,file:pth,mime:b.type})}catch(e){}}
   zip.file('service.json',JSON.stringify(data),{compression:'DEFLATE'});
-  return{zip,miss:miss.size};
+  return Object.assign(info,{zip,media:media.length,audio:audio.length});
 }
 /* write the zip to disk piece by piece so big services do not need one giant block of memory */
 function zipToFile(zip,writable){
@@ -5461,13 +5381,63 @@ const sfDB=()=>new Promise((res,rej)=>{const r=indexedDB.open('dscSvcDir',1);r.o
 const sfGet=async()=>{try{const db=await sfDB();return await new Promise(res=>{const q=db.transaction('h').objectStore('h').get('dir');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}};
 const sfPut=async h=>{try{const db=await sfDB();await new Promise((res,rej)=>{const tx=db.transaction('h','readwrite');tx.objectStore('h').put(h,'dir');tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});return true}catch(e){return false}};
 window.dscSetSvcFolder=async function(){
+  const NS=window.dscNative&&window.dscNative.save;
+  if(NS&&NS.folder){   /* desktop app: the system folder window */
+    try{
+      const r=await NS.folder();
+      if(r&&r.ok){toast('Services will be saved in \u201c'+r.name+'\u201d. The Save window will open there next time.');return r}
+      if(r&&r.error)toast('Could not choose that folder: '+r.error);
+    }catch(e){toast('Could not choose that folder: '+(e&&e.message||e))}
+    return null;
+  }
   if(!window.showDirectoryPicker){toast('This browser cannot remember a folder. Services are saved to your Downloads.');return null}
   try{
     const h=await showDirectoryPicker({id:'dscService',mode:'readwrite',startIn:'documents'});
-    await sfPut(h);toast('Services will be saved in “'+h.name+'”. The Save window will open there next time.');return h;
+    await sfPut(h);toast('Services will be saved in \u201c'+h.name+'\u201d. The Save window will open there next time.');return h;
   }catch(e){if(!(e&&e.name==='AbortError'))toast('Could not choose that folder: '+(e&&e.message||e));return null}
 };
+const fmtSize=n=>n>=1073741824?(n/1073741824).toFixed(1)+' GB':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+/* what went into the file, so you can see it really holds the service */
+const inside=r=>r.items+' item'+(r.items===1?'':'s')+(r.media?', '+r.media+' background'+(r.media===1?'':'s'):'')+(r.audio?', '+r.audio+' audio file'+(r.audio===1?'':'s'):'');
+/* a background the service uses but that is not loaded on this computer cannot go into the file: say so BEFORE saving */
+const okToSave=r=>!r.miss||confirm(r.miss+' background'+(r.miss>1?'s':'')+' used by this service '+(r.miss>1?'are':'is')+' not loaded on this computer, so '+(r.miss>1?'they':'it')+' cannot be put in the file:\n\n'+r.missNames.slice(0,8).join('\n')+(r.miss>8?'\n\u2026':'')+'\n\nLoad the folder again (Media bin) to include '+(r.miss>1?'them':'it')+'.\n\nSave anyway?');
+const sumNote=r=>(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' \u2022 '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
+/* desktop app: send the zip to the app in pieces of a few MB; the app writes it next to its final name and only renames it when every byte has arrived */
+function zipToNative(zip,NS,id){
+  return new Promise((res,rej)=>{
+    const st=zip.generateInternalStream({type:'uint8array',streamFiles:true});
+    let parts=[],len=0,total=0;
+    const flush=async()=>{
+      if(!len)return;
+      const u=new Uint8Array(len);let o=0;parts.forEach(c=>{u.set(c,o);o+=c.length});parts=[];len=0;
+      const w=await NS.write(id,u);if(!w||!w.ok)throw new Error((w&&w.error)||'the file could not be written');
+      total+=u.length;
+    };
+    st.on('data',c=>{parts.push(c);len+=c.length;if(len>=4194304){st.pause();flush().then(()=>st.resume(),rej)}});
+    st.on('error',rej);st.on('end',()=>flush().then(()=>res(total),rej));st.resume();
+  });
+}
+async function saveSvcNative(name){
+  const NS=window.dscNative.save;
+  const fn=safe(name)+(typeof JSZip!=='undefined'?EXT:'.json');
+  let h;try{h=await NS.begin({name:fn,title:'Save service'})}catch(e){toast('Could not open the Save window: '+(e&&e.message||e));return}
+  if(!h||h.canceled)return;
+  if(!h.ok){toast('Could not save: '+(h.error||'the file could not be created'));return}
+  toast('Saving service\u2026');
+  let r;try{r=await build(name)}catch(e){await NS.abort(h.id);toast('Could not save: '+(e.message||e));return}
+  if(!okToSave(r)){await NS.abort(h.id);toast('Save cancelled.');return}
+  try{
+    let total;
+    if(r.zip)total=await zipToNative(r.zip,NS,h.id);
+    else{const u=new Uint8Array(await r.blob.arrayBuffer());const w=await NS.write(h.id,u);if(!w||!w.ok)throw new Error((w&&w.error)||'the file could not be written');total=u.length}
+    const e=await NS.end(h.id);
+    if(!e||!e.ok)throw new Error((e&&e.error)||'the file could not be finished');
+    if(e.bytes!==total)throw new Error('the file on disk is '+e.bytes+' bytes but '+total+' were sent');
+    toast('Saved '+e.name+' ('+fmtSize(e.bytes)+': '+inside(r)+') in \u201c'+e.dir+'\u201d'+sumNote(r));
+  }catch(e){try{await NS.abort(h.id)}catch(_){}toast('Could not save: '+(e&&e.message||e))}
+}
 async function saveSvc(name){
+  if(window.dscNative&&window.dscNative.save)return saveSvcNative(name);
   /* ask WHERE first, while the click is still fresh (browsers block the Save window if we wait until the zip is built) */
   const fn=safe(name)+(typeof JSZip!=='undefined'?EXT:'.json');
   let fh=null,pickErr=null,dir=null;
@@ -5478,23 +5448,24 @@ async function saveSvc(name){
       fh=await showSaveFilePicker(opt);
     }catch(e){if(e&&e.name==='AbortError')return;pickErr=e}
   }
-  toast('Saving service…');
+  toast('Saving service\u2026');
   const dropEmpty=async()=>{try{if(fh&&fh.remove)await fh.remove()}catch(e){}};
   let r;try{r=await build(name)}catch(e){await dropEmpty();toast('Could not save: '+(e.message||e));return}
-  const note=(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' • '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
+  if(!okToSave(r)){await dropEmpty();toast('Save cancelled.');return}
+  const note=sumNote(r);
   if(fh){
     try{
       const w=await fh.createWritable();
       try{if(r.zip)await zipToFile(r.zip,w);else await w.write(r.blob);await w.close()}catch(e){try{await w.abort()}catch(_){}throw e}
       let where='';
-      if(dir){try{const pth=await dir.resolve(fh);if(pth)where=' in “'+[dir.name,...pth.slice(0,-1)].join(' › ')+'”'}catch(e){}}
-      toast('Saved '+fh.name+where+note);return;
-    }catch(e){await dropEmpty();toast('Could not save: '+(e.message||e));return}
+      if(dir){try{const pth=await dir.resolve(fh);if(pth)where=' in \u201c'+[dir.name,...pth.slice(0,-1)].join(' \u203a ')+'\u201d'}catch(e){}}
+      toast('Saved '+fh.name+' ('+inside(r)+')'+where+note);return;
+    }catch(e){await dropEmpty();pickErr=e;fh=null}   /* the chosen file could not be written: still hand over a complete copy in Downloads, never an empty file */
   }
   let blob=r.blob;
   if(!blob){try{blob=await r.zip.generateAsync({type:'blob',streamFiles:true})}catch(e){toast('Could not save: '+(e.message||e));return}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
-  toast((pickErr?'The Save window could not open ('+(pickErr.message||pickErr.name||pickErr)+'). ':'')+'Saved '+fn+' to your Downloads folder'+note);
+  toast((pickErr?'Saving to the place you chose did not work ('+(pickErr.message||pickErr.name||pickErr)+'). ':'')+'Saved '+fn+' ('+fmtSize(blob.size)+': '+inside(r)+') to your Downloads folder'+note);
 }
 window.dscSaveFlow=function(forceAsk){
   if(S.svcName&&!forceAsk){saveSvc(S.svcName);return}
@@ -5639,7 +5610,7 @@ const MENUS=window.dscMENUS={
  File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  'Slide Show':()=>window.dscShowMenu?dscShowMenu():[],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
- View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{t:'Slides as live page (whole service)',fn:setView('live')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
+ View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
  Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Copy Stream access link (cloud)',fn:()=>remoteAccessLink()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Phone video backgrounds\u2026',fn:()=>rmVidCfg()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
@@ -6416,8 +6387,8 @@ function paintHold(){
   box.hidden=false;mark();
 }
 const slideOf=e=>{const c=e.target.closest&&e.target.closest('.slide');return c?[...c.parentNode.children].indexOf(c):-1};
-grid.addEventListener('click',e=>{if(!hold||gview==='live')return;const i=slideOf(e);if(i<0||i===idx)return;e.stopPropagation();e.preventDefault();pvI=i;paintHold()},true);
-grid.addEventListener('dblclick',e=>{if(!hold||gview==='live')return;const i=slideOf(e);if(i>=0){pvI=null;go(i)}},true);
+grid.addEventListener('click',e=>{if(!hold)return;const i=slideOf(e);if(i<0||i===idx)return;e.stopPropagation();e.preventDefault();pvI=i;paintHold()},true);
+grid.addEventListener('dblclick',e=>{if(!hold)return;const i=slideOf(e);if(i>=0){pvI=null;go(i)}},true);
 box.querySelector('.hbs').onclick=()=>{if(pvI!=null){const i=pvI;pvI=null;go(i)}};
 window.dscHold=v=>{hold=v==null?!hold:!!v;try{localStorage.setItem('lp-hold',hold?'1':'0')}catch(e){}pvI=null;paintHold();toast(hold?'Preview first is on. Click to preview, double-click or Enter to send.':'Preview first is off. Clicking sends the slide live.')};
 hb.onclick=()=>dscHold();
@@ -14521,77 +14492,6 @@ window.openYouTube=function(i){
   };
   const ids=['auPl','auT','vdBk','vdPl','vdFw','vdSc','vdT','vtBk','vtPl','vtSt','vtFw','vtSc','vtT','vtS','msgLib','prList','mcList','auList','mqBox','ytr','pTm','pAu','pAn','pMsg','pSl','pPr','pMc'];
   ids.forEach(i=>quiet(document.getElementById(i)));
-})();
-</script>
-
-<script id="keysJs">
-/* ---- Keyboard: Delete / Backspace, copy, cut, paste, duplicate, undo, up / down, new slide, hide ----
-   (Space, arrows left / right, [ ] , 1-9, Home, End, B, C, G and F1-F7 were already there.) */
-(function(){
-if(/^#(output|stage|layout)/.test(location.hash))return;
-let zone='slides',undo=[],redo=[];
-const $q=s=>document.querySelector(s);
-document.addEventListener('pointerdown',e=>{zone=e.target.closest&&e.target.closest('#list')?'list':'slides'},true);
-document.addEventListener('focusin',e=>{if(e.target.closest&&e.target.closest('#list'))zone='list';else if(e.target.closest&&e.target.closest('#grid'))zone='slides'},true);
-const snap=()=>{try{undo.push({id:cur().id,j:JSON.stringify(cur()),idx});if(undo.length>30)undo.shift();redo=[]}catch(e){}};
-function restore(from,to){
-  const t=from.pop();if(!t)return false;
-  const k=S.songs.findIndex(z=>z.id===t.id);if(k<0)return false;
-  to.push({id:t.id,j:JSON.stringify(S.songs[k]),idx});
-  S.songs[k]=JSON.parse(t.j);S.sel=t.id;idx=t.idx;save();drawAll();push();return true;
-}
-const busy=e=>{
-  if(typeof E!=='undefined'&&E)return true;
-  const tg=e.target.tagName;if(/INPUT|TEXTAREA|SELECT/.test(tg)||e.target.isContentEditable)return true;
-  const sed=$q('#sed');if(sed&&!sed.hidden)return true;
-  if($q('.qe:not([hidden])'))return true;
-  const ab=$q('#askbar');if(ab&&!ab.hidden)return true;
-  if($q('#dscGate')||$q('.dscModal:not([hidden])'))return true;
-  try{if(kioskOn())return true}catch(x){}
-  return false;
-};
-const sel=()=>{try{return String(getSelection())}catch(x){return''}};
-const n=()=>expand(cur()).length;
-function mv(d){
-  const cards=[...document.querySelectorAll('#grid .slide')];if(!cards.length)return;
-  const live=gview==='live';
-  const me=live?$q('#grid .slide.cur'):cards[idx];if(!me){go(Math.max(0,Math.min(n()-1,idx+d)));return}
-  const r=me.getBoundingClientRect(),cx=r.left+r.width/2;
-  let best=null,bd=1e9;
-  cards.forEach(c=>{if(c===me)return;const q=c.getBoundingClientRect();if(!q.width)return;
-    const dy=(q.top+q.height/2)-(r.top+r.height/2);if(d>0?dy<r.height*.5:dy>-r.height*.5)return;
-    const sc=Math.abs(dy)+Math.abs((q.left+q.width/2)-cx)*.6;if(sc<bd){bd=sc;best=c}});
-  if(best)best.click();
-}
-document.addEventListener('keydown',e=>{
-  if(e.defaultPrevented||busy(e))return;
-  const cm=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
-  if(cm&&!e.altKey&&k==='z'){if(!sel()){e.preventDefault();if(e.shiftKey?restore(redo,undo):restore(undo,redo))toast(e.shiftKey?'Redone.':'Undone.');else toast('Nothing to '+(e.shiftKey?'redo':'undo')+'.')}return}
-  if(cm&&!e.altKey&&k==='y'){e.preventDefault();if(restore(redo,undo))toast('Redone.');return}
-  if(e.altKey)return;
-  if(!cm&&(e.key==='Delete'||e.key==='Backspace')){
-    e.preventDefault();
-    if(zone==='list'){const r=$q('#list .song.sel');if(r&&r._del){snap();r._del();return}}
-    if(!n())return;
-    try{if(arranged(cur())){lockArr(cur());return}}catch(x){}
-    snap();removeSlide(idx);toast('Slide deleted. Press Ctrl+Z to bring it back.');return;
-  }
-  if(zone==='list')return;
-  if(cm&&!e.shiftKey&&(k==='c'||k==='x')){
-    if(sel())return;if(!n())return;e.preventDefault();
-    slideClip=clipOf(idx);
-    if(k==='x'){try{if(arranged(cur())){lockArr(cur());return}}catch(x){}snap();removeSlide(idx);toast('Slide cut. Press Ctrl+V to paste it.')}else toast('Slide copied. Press Ctrl+V to paste it after this one.');
-    return;
-  }
-  if(cm&&!e.shiftKey&&k==='v'){if(!slideClip)return;e.preventDefault();snap();insertAfter(idx,[slideClip]);go(Math.min(idx+1,n()-1));return}
-  if(cm&&!e.shiftKey&&k==='d'){if(!n())return;e.preventDefault();snap();insertAfter(idx,[clipOf(idx)]);go(Math.min(idx+1,n()-1));return}
-  if(cm)return;
-  if(e.key==='Insert'){e.preventDefault();snap();insertAfter(Math.max(0,idx),[{label:'Slide',text:'​'}]);go(Math.min(idx+1,n()-1));toast('New slide added.');return}
-  if(e.key==='ArrowDown'){e.preventDefault();mv(1);return}
-  if(e.key==='ArrowUp'){e.preventDefault();mv(-1);return}
-  if(e.key==='h'||e.key==='H'){e.preventDefault();if(window.dscHideSlide){window.dscHideSlide(idx);}return}
-  if(e.key==='Enter'&&e.target===document.body&&n()){e.preventDefault();quickEdit(idx)}
-},false);
 })();
 </script>
 </body>

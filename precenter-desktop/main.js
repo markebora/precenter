@@ -11,6 +11,7 @@ const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 const appUpdate = require('./lib/appupdate');
 const linkBridge = require('./lib/linkbridge');
+const saveBridge = require('./lib/savebridge');
  
 // The bundled app is served from its own address (dsc://app/) instead of file://, so storage,
 // BroadcastChannel between windows, file pickers and sign-in behave as they do on the web.
@@ -339,6 +340,14 @@ function showAbout() {
 // ---------- IPC from the page ----------
 function setupIpc() {
   linkBridge.create(ipcMain);
+  // Saving a service: the page streams the file to us and the person picks where in the system Save window.
+  const winOf = sender => BrowserWindow.fromWebContents(sender) || mainWin;
+  saveBridge.create(ipcMain, {
+    showSaveDialog: (sender, o) => dialog.showSaveDialog(winOf(sender), o),
+    showOpenDialog: (sender, o) => dialog.showOpenDialog(winOf(sender), o),
+    dir: app.getPath('userData'),
+    documents: app.getPath('documents')
+  });
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(), configPath: cfgResult.path, dataPath: app.getPath('userData'),
     mode: cfg.mode, ndiEnabled: !!cfg.ndi.enabled, ndiAvailable: ndiSender.available()

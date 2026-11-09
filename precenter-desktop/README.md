@@ -72,6 +72,23 @@ Logs are in `%APPDATA%\Disciples PreCenter\logs\main.log`.
 Double-clicking a `.dscservice` or `.dscitems` file (or "Open with") opens it in PreCenter, the same as
 choosing it from the File menu inside the app. The app asks before replacing your current service.
 
+### Saving a service
+
+**File > Save service to computer** (Ctrl+S) opens the system Save window and writes one `.dscservice` file that
+holds the whole service: every item, the backgrounds and audio it uses (at full size, so the file can be large),
+and your settings. The app tells you what went in, for example `Saved Sunday.dscservice (212.4 MB: 14 items, 6 backgrounds)`.
+
+* The file is written under a temporary name and only renamed when every byte has arrived and the size on disk
+  matches, so a failed or cancelled save never leaves an empty or half-written file, and never damages an older
+  file of the same name.
+* If a background used by the service is not loaded on this computer, the app lists it and asks before saving.
+  Load the media folder again (Media bin) to include it.
+* **Choose service save folder** sets where the Save window opens (the last folder you saved to is also remembered).
+* The page talks to the app through `save:begin / write / end / abort / folder` (`lib/savebridge.js`). The page can
+  only write into a file you just chose in the Save window; it never gets a path of its own and cannot read files.
+* The `fileSystem` permission in `config.json` is now on by default as well. An older `config.json` picks it up
+  automatically unless it sets `"fileSystem": false`.
+
 ## 5. Turning on NDI (optional, not tested)
 
 NDI is **off** in this build, so the installer builds reliably. The app side is ready: Screens set to
@@ -94,7 +111,8 @@ Not included: NDI audio. 4K at 60 fps may be too heavy for the way frames are co
 - [ ] Sign-in works (see the risk in section 3).
 - [ ] **Audience** opens on the projector (Extend displays) and **Stage** on its own screen, fullscreen, with no title strip.
 - [ ] Pasting a screenshot into the slide editor works.
-- [ ] **File > Save service to computer** writes one `.dscservice` file; double-clicking it opens it.
+- [ ] **File > Save service to computer** writes one `.dscservice` file (not empty: the message shows its size and what is inside); double-clicking it opens it.
+- [ ] Cancelling the Save window, or saving a service with an unloaded background and choosing Cancel, leaves no file behind.
 - [ ] Camera/microphone/MIDI prompts behave as set in `permissions`.
 - [ ] Program update works: install `v1.0.1`, publish `v1.0.2`, open the app, and after a minute the
       "Update is ready" notice appears. Close the app, open it again, and it is the new version.

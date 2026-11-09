@@ -36,6 +36,7 @@
     "clipboard-read": true,              // pasting pictures into the slide editor
     "clipboard-sanitized-write": true,
     "window-management": true,           // placing the Audience and Stage windows on the right screens
+    "fileSystem": true,                  // saving and opening files (a saved service) through the file window
     "fullscreen": true,
     "display-capture": true,             // sharing a screen or window
     "notifications": false,
