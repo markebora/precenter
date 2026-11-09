@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<title>PreCenter Remote</title>
+<style>:root{--accent:#E8B923;--accent-ink:#171200;--accent-strong:#f3c93c}
+html,body{margin:0;height:100%;background:#0b0b0c;color:#f7f7f7;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;cursor:pointer}
+.rmtWifi{display:none!important}
+#lanHome{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
+#lanHome h1{margin:0;font-size:22px}#lanHome p{margin:0;color:#9a9aa3;font-size:14px}
+#lanHome button{border:0;border-radius:12px;padding:13px 22px;font-weight:700;font-size:16px;background:rgba(255,255,255,.1);color:#fff;min-width:220px}
+#lanHome button.pri{background:var(--accent);color:var(--accent-ink)}
+</style>
+<style id="remoteCss">
+.topBtns{display:flex;align-items:center;gap:8px}
+.rmtOv{position:fixed;inset:0;z-index:10050;background:#0b0b0c;color:#f7f7f7;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);font-family:inherit}
+.rmtOv[hidden],.rmtOv [hidden]{display:none!important}
+.rmtBar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
+.rmtX{width:40px;height:40px;flex:none;border:0;border-radius:50%;background:rgba(255,255,255,.10);color:#fff;font-size:18px}
+.rmtTabs{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:999px;padding:3px}
+.rmtTabs button{border:0;background:none;color:#cfcfd4;font-weight:600;font-size:14px;padding:7px 16px;border-radius:999px}
+.rmtTabs button.on{background:var(--accent,#E8B923);color:var(--accent-ink,#171200)}
+.rmtStat{margin-left:auto;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:#cfcfd4;text-align:right;max-width:46%}
+.rmtStat.ok{background:rgba(48,209,88,.18);color:#6ee08a}
+.rmtStat.warn{background:rgba(255,159,10,.18);color:#ffb340}
+.rmtStat.bad{background:rgba(255,69,58,.18);color:#ff7a70}
+.rmtBody{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;display:flex;flex-direction:column;gap:12px}
+.rmtNow{background:rgba(255,255,255,.06);border-radius:16px;padding:12px 14px}
+.rmtHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rmtTitle{font-weight:700;font-size:16px;min-width:0}
+.rmtNum{flex:none;background:var(--accent,#E8B923);color:var(--accent-ink,#171200);font-weight:800;font-size:15px;padding:4px 12px;border-radius:999px;white-space:nowrap}
+.rmtNum:empty{display:none}
+.rmtText.dim{color:#8a8a93;font-size:15px;font-style:italic}
+.stgNum{color:var(--accent,#E8B923);font-size:18px;margin-right:12px}
+.rmtLab{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent,#E8B923)}
+.rmtText{margin-top:6px;font-size:18px;line-height:1.3;white-space:pre-wrap;word-break:break-word}
+.rmtPrev{position:relative;width:100%;aspect-ratio:16/9;margin-top:10px;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 0 0 1px rgba(255,255,255,.10)}
+.rmtPrev[hidden]{display:none}
+.rmtPrevBg{position:absolute;inset:0;background:#000}
+.rmtPrevVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent;pointer-events:none}
+.rmtPrevVid[hidden]{display:none}
+.rmtPrevDbg{position:absolute;left:6px;bottom:6px;z-index:3;font:600 10px/1.3 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.6);border-radius:6px;padding:2px 7px;pointer-events:none;max-width:90%}
+.rmtPrevDbg[hidden]{display:none}
+.rmtPrevDim{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.rmtPrevTx{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:4% 6%;text-align:center}
+.rmtPrevTxI{display:block;width:100%;font-weight:800;line-height:1.15;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.75);white-space:pre-wrap;word-break:break-word}
+.rmtNextTxt{margin-top:8px;font-size:13px;line-height:1.3;color:#9a9aa3;white-space:pre-wrap;border-top:1px solid rgba(255,255,255,.08);padding-top:8px}
+.rmtNextTxt:empty,.rmtLab:empty{display:none}
+.rmtNav{display:flex;gap:10px}
+.rmtBtn{border:0;border-radius:16px;background:rgba(255,255,255,.10);color:#fff;font-weight:700;font-size:16px;padding:14px 10px;-webkit-tap-highlight-color:transparent}
+.rmtBtn:active{filter:brightness(1.4)}
+.rmtBtn:disabled{opacity:.35}
+.rmtBtn.big{min-height:112px;font-size:22px}
+.rmtBtn.go{background:var(--accent,#E8B923);color:var(--accent-ink,#171200)}
+.rmtBtn.on{background:#ff453a;color:#fff}
+.rmtNav .rmtBtn:first-child{flex:1}
+.rmtNav .rmtBtn.go{flex:2}
+.rmtSecs{display:flex;flex-wrap:wrap;gap:8px}
+.rmtSec{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font-weight:700;font-size:15px;border-radius:999px;padding:8px 14px 8px 8px;min-height:44px}
+.rmtSec i{font-style:normal;width:26px;height:26px;border-radius:50%;background:var(--c,#4b5160);color:#fff;font-size:12px;line-height:26px;text-align:center}
+.rmtSec.cur{border-color:var(--accent,#E8B923);box-shadow:0 0 0 1px var(--accent,#E8B923)}
+.rmtRow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rmtRow .rmtBtn{font-size:14px;padding:12px 4px}
+.rmtList{background:rgba(255,255,255,.04);border-radius:14px;padding:4px 10px}
+.rmtList summary{padding:12px 2px;font-weight:700;font-size:14px;color:#cfcfd4}
+.rmtGrp{margin:10px 0 2px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a8a93}
+.rmtItem{display:block;width:100%;text-align:left;border:0;background:none;color:#fff;font-size:16px;padding:11px 6px;border-radius:10px}
+.rmtItem.cur{background:rgba(232,185,35,.16);color:var(--accent-strong,#F5CB3C);font-weight:700}
+.rmtMsg{text-align:center;color:#9a9aa3;font-size:14px;padding:30px 10px;line-height:1.4}
+.rmtSlH{margin-top:4px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a8a93}
+.rmtSlH b{background:rgba(232,185,35,.18);color:var(--accent,#E8B923);border-radius:999px;padding:2px 9px;font-size:12px}
+.rmtSl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rmtCard{display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid rgba(255,255,255,.12);background:#000;color:#fff;border-radius:14px;padding:10px 12px;min-height:92px;-webkit-tap-highlight-color:transparent}
+.rmtCard:active{filter:brightness(1.4)}
+.rmtCard.cur{border-color:var(--accent,#E8B923);box-shadow:0 0 0 1px var(--accent,#E8B923)}
+.rmtCH{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9a9aa3}
+.rmtCH i{font-style:normal;flex:none;min-width:22px;height:22px;border-radius:11px;background:rgba(255,255,255,.12);color:var(--accent,#E8B923);text-align:center;line-height:22px;font-size:11px;padding:0 4px}
+.rmtCT{font-size:13px;line-height:1.3;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.rmtStage{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 18px 16px;background:#000}
+.stgTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;color:#8a8a93;font-size:15px;font-weight:600}
+.stgLab{color:var(--accent,#E8B923);text-transform:uppercase;letter-spacing:.05em;font-size:14px;font-weight:700}
+.stgMain{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+.stgText{font-weight:700;line-height:1.18;white-space:pre-wrap;word-break:break-word;width:100%}
+.stgNext{border-top:1px solid rgba(255,255,255,.14);padding-top:10px;color:#a8a8b0;font-size:clamp(16px,4.6vmin,34px);line-height:1.25;white-space:pre-wrap;max-height:28%;overflow:hidden}
+.stgNext b{display:block;font-size:11px;letter-spacing:.12em;color:#6c6c75;margin-bottom:3px}
+.stgNext:empty{display:none}
+.stgMsg{margin-top:8px;background:var(--accent,#E8B923);color:var(--accent-ink,#171200);font-weight:700;font-size:clamp(16px,4vmin,30px);text-align:center;border-radius:10px;padding:8px 12px}
+.stgMsg:empty{display:none}
+
+/* --- remote v2: Flow / Slide / Bible / Stage tabs, preview pinned to the top --- */
+.rmtTabs{flex:1;min-width:0;justify-content:space-between}
+.rmtTabs button{flex:1;padding:7px 4px;font-size:13px}
+.rmtStat{margin-left:0;flex:none;width:12px;height:12px;min-width:12px;padding:0;border-radius:50%;background:#8a8a93;font-size:0;color:transparent;max-width:none}
+.rmtStat.ok{background:#30d158}.rmtStat.warn{background:#ff9f0a}.rmtStat.bad{background:#ff453a}
+.rmtTop{flex:none;padding:8px 12px 10px;background:#0b0b0c;border-bottom:1px solid rgba(255,255,255,.10)}
+.rmtTop[hidden]{display:none!important}
+.rmtTop .rmtTitle{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmtTop .rmtNum{font-size:13px;padding:3px 10px}
+.rmtTop .rmtLab{margin-top:2px}
+.rmtTop .rmtPrev{width:min(100%,calc(20vh*16/9));margin:8px auto 0}
+.rmtTop .rmtText{max-height:22vh;overflow:auto;font-size:16px;margin-top:8px}
+.rmtTop .rmtNextTxt{margin-top:6px;padding-top:6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmtTop .rmtNav{margin-top:8px}
+.rmtTop .rmtBtn.big{min-height:52px;font-size:18px;padding:8px}
+.rmtSecs{gap:10px}
+.rmtFlowBtn{min-width:64px;min-height:54px;padding:8px 16px;border:2px solid transparent;border-radius:14px;background:var(--c,#4b5160);color:#fff;font-weight:800;font-size:18px;-webkit-tap-highlight-color:transparent}
+.rmtFlowBtn:active{filter:brightness(1.35)}
+.rmtFlowBtn.cur{border-color:#fff;box-shadow:0 0 0 2px var(--accent,#E8B923)}
+.rmtCard{scroll-margin:12px}
+.rmtBq{display:flex;gap:8px}
+.rmtBq input[type=search],.rmtBq2 select{flex:1;min-width:0;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
+.rmtBq .rmtBtn{padding:10px 16px;flex:none}
+.rmtBq2{display:flex;gap:10px;align-items:center;margin-top:8px}
+.rmtPlH{margin-top:14px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a8a93}
+.rmtPlH span{font-weight:600;letter-spacing:0;text-transform:none}
+.rmtPlace{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px}
+.rmtPlRow{display:flex;gap:8px}
+.rmtPl{width:60px;height:46px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;border-radius:12px;-webkit-tap-highlight-color:transparent}
+.rmtPl:active{filter:brightness(1.4)}
+.rmtPl.cur{background:var(--accent,#E8B923);color:var(--accent-ink,#171200);border-color:var(--accent,#E8B923)}
+.rmtChk{display:flex;align-items:center;gap:6px;font-size:14px;color:#cfcfd4;flex:none}
+.rmtChk input{width:18px;height:18px}
+#rmtBqOut{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.rmtBR{display:block;width:100%;text-align:left;border:1px solid rgba(255,255,255,.12);background:#000;color:#fff;border-radius:14px;padding:10px 12px;-webkit-tap-highlight-color:transparent}
+.rmtBR:active{filter:brightness(1.4)}
+.rmtBR.sent{border-color:var(--accent,#E8B923);box-shadow:0 0 0 1px var(--accent,#E8B923)}
+.rmtBRh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.rmtBRh b{color:var(--accent,#E8B923)}
+.rmtBRh span{font-size:11px;font-weight:800;letter-spacing:.06em;color:#9a9aa3}
+.rmtBRt{margin-top:6px;font-size:15px;line-height:1.35;white-space:pre-wrap;word-break:break-word;color:#e8e8ec}
+.rmtWifi{margin-top:16px;display:flex;flex-direction:column;gap:8px}.rmtWifi .rmtBtn{font-size:13px;opacity:.9}
+.rmtScan{position:fixed;inset:0;z-index:10100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:12px;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.rmtScan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rmtScanFrame{position:absolute;left:50%;top:42%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid var(--accent,#E8B923);border-radius:20px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+.rmtScanMsg{position:relative;color:#fff;font-weight:600;text-align:center;font-size:14px;text-shadow:0 1px 3px #000;max-width:90%}
+.rmtScan .rmtBtn{position:relative;min-width:200px}
+</style></head>
+<body>
+<div id="lanHome" hidden><h1>PreCenter Remote</h1><p>Connected over this Wi-Fi.</p><button class="pri" id="lanGo">Open remote</button><button id="lanSite">Back to Disciples</button></div>
+<button id="remoteOpenBtn" hidden aria-hidden="true" tabindex="-1"></button>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search),pin=q.get('pin')||'';
+  try{if(pin){localStorage.setItem('dscLanPin',pin);history.replaceState(null,'',location.pathname)}else pin=localStorage.getItem('dscLanPin')||''}catch(e){}
+  var ws=null,subs=[],last=null,isOpen=false,everOpen=false,fails=0,timer=0,pingBad=false;
+  function snap(){return{exists:!!last,data:function(){return last}}}
+  function emitErr(code){subs.slice().forEach(function(s){try{s.err&&s.err({code:code})}catch(e){}})}
+  function connect(){
+    if(ws&&(ws.readyState===0||ws.readyState===1))return;
+    clearTimeout(timer);
+    try{ws=new WebSocket('ws://'+location.host+'/ws?pin='+encodeURIComponent(pin))}catch(e){retry();return}
+    var w=ws;
+    w.onopen=function(){isOpen=true;everOpen=true;fails=0};
+    w.onmessage=function(e){var m;try{m=JSON.parse(e.data)}catch(x){return}
+      if(m.t==='state'){last=m.d;subs.slice().forEach(function(s){try{s.cb(snap())}catch(x){console.error(x)}})}};
+    w.onclose=function(){if(w!==ws)return;isOpen=false;fails++;
+      /* closed before ever opening: wrong PIN (the computer answers 401) or the computer is not reachable */
+      fetch('/ping',{cache:'no-store'}).then(function(r){return r.ok}).catch(function(){return false}).then(function(up){
+        emitErr(up&&!everOpen&&fails>1?'permission-denied':'unavailable');retry()})};
+    w.onerror=function(){try{w.close()}catch(e){}};
+  }
+  function retry(){clearTimeout(timer);timer=setTimeout(connect,Math.min(5000,700*fails+700))}
+  setInterval(function(){if(isOpen)try{ws.send('{"t":"hb"}')}catch(e){}},8000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&!isOpen){fails=0;connect()}});
+  window.addEventListener('online',function(){fails=0;connect()});
+  window.firestoreDb={collection:function(c){return{doc:function(){return{
+    onSnapshot:function(cb,err){var s={cb:cb,err:err};subs.push(s);connect();if(last)setTimeout(function(){try{cb(snap())}catch(e){}},0);
+      return function(){subs=subs.filter(function(x){return x!==s})}},
+    collection:function(){return{add:function(doc){return new Promise(function(ok,no){
+      if(!isOpen){no({code:'unavailable'});return}
+      try{ws.send(JSON.stringify({t:'cmd',c:doc}));ok()}catch(e){no(e)}})}}}
+  }}}}};
+  window.firebaseAuth={currentUser:{uid:'lan'}};
+  window.firebaseReadyPromise=Promise.resolve();
+  window.getActiveTeamId=function(){return'lan'};
+  window.showToast=function(m){var t=document.getElementById('lanToast');if(!t){t=document.createElement('div');t.id='lanToast';t.style.cssText='position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20000;background:#26262b;color:#fff;border:1px solid rgba(255,255,255,.15);padding:9px 16px;border-radius:999px;font:600 14px system-ui,sans-serif;max-width:86vw;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none';document.body.appendChild(t)}
+    t.textContent=m;t.style.opacity=1;clearTimeout(t._h);t._h=setTimeout(function(){t.style.opacity=0},1800)};
+})();
+</script>
+<script id="remoteJs">
+/* ===== Remote control for PreCenter (the lyrics presenter on the computer) =====
+   Reads presenter/{teamId} (what the computer is showing) and sends button
+   presses to presenterCmd/{teamId}/q. Same Disciples team = automatically paired.
+
+   BACKGROUND (optional) — presenter/{teamId} may carry:
+     bg:  { k:'img'|'vid'|'grad'|'color', t:<value>, v:<version id> }
+          img/vid -> t is a SMALL data:image/jpeg;base64 thumbnail (a video sends its poster
+                     frame); grad -> t is a linear/radial-gradient(...) string; color -> t is #hex.
+          v lets the sender omit t on later slides when the background hasn't changed — the
+          phone remembers the last t it saw for each v.
+     dim: 0..0.9  how much black to lay over the background so the words stay readable.
+   No bg in the doc = the remote looks exactly as it did before. */
+(function(){
+  const $=id=>document.getElementById(id);
+  let ov=null,unsub=null,state=null,tab='flow',lastScroll='',teamId='',wake=null,tick=null,fatal='',signed=false;
+
+  function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+  function say(m){try{if(typeof showToast==='function')showToast(m)}catch(e){}}
+
+  /* ---- slide background preview ---- */
+  const bgCache={};
+  function bgResolve(b){
+    if(!b||typeof b!=='object')return null;
+    if(typeof b.t==='string'&&b.t){if(b.v)bgCache[b.v]=b;return b}
+    return b.v&&bgCache[b.v]?bgCache[b.v]:null;
+  }
+  /* Only paint values we recognise — never an arbitrary URL from the doc. */
+  function bgCss(b){
+    if(!b||typeof b.t!=='string')return '';
+    const t=b.t;
+    if((b.k==='img'||b.k==='vid')&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(t))return 'url("'+t+'") center/cover no-repeat';
+    if(b.k==='grad'&&/^(linear|radial)-gradient\([#0-9a-zA-Z%.,()\s\-]+\)$/.test(t))return t;
+    if(b.k==='color'&&/^#[0-9a-fA-F]{3,8}$/.test(t))return t;
+    return '';
+  }
+  function fitPrev(){
+    const box=$('rmtPv'),sp=$('rmtPrevTxI');
+    if(!box||box.hidden||!sp)return;
+    const maxH=box.clientHeight*0.84;
+    let lo=7,hi=box.clientHeight*0.42,best=lo;
+    for(let i=0;i<10;i++){
+      const mid=(lo+hi)/2;sp.style.fontSize=mid+'px';
+      if(sp.offsetHeight<=maxH&&sp.scrollWidth<=sp.clientWidth+1){best=mid;lo=mid}else hi=mid;
+    }
+    sp.style.fontSize=best+'px';
+  }
+  /* The computer uploads a short looping clip and sends its https link in bg.u (only for k:'vid').
+     Only https links to .mp4/.webm files are played; the thumbnail stays underneath until the clip is really playing. */
+  const VID_RE=/^https:\/\/[^\s"'<>()]+\.(mp4|webm)(\?[^\s"'<>()]*)?$/i;
+  /* candidate clip links: PreCenter may send a WebM and an MP4 copy (bg.u, bg.u2); try the one this phone says it can play first */
+  function bgVidList(){
+    const b=state&&state.bg;
+    if(!b||b.k!=='vid')return [];
+    const l=[b.u,b.u2].filter(x=>typeof x==='string'&&VID_RE.test(x));
+    const v=document.createElement('video');
+    const ok=x=>{const m=/\.webm(\?|$)/i.test(x)?'video/webm; codecs="vp8"':'video/mp4';return v.canPlayType(m)?0:1};
+    return l.sort((x,y)=>ok(x)-ok(y)||(/\.webm/i.test(y)?1:0)-(/\.webm/i.test(x)?1:0));
+  }
+  function vidDbg(t){const d=$('rmtPrevDbg');if(!d)return;d.hidden=!t;d.textContent=t||''}
+  async function vidWhy(u){
+    let host='',file='';try{const x=new URL(u);host=x.host;file=x.pathname.split('/').pop()}catch(e){}
+    try{const r=await fetch(u,{method:'HEAD'});return 'HTTP '+r.status+' '+(r.headers.get('content-type')||'no type')+' '+(r.headers.get('content-length')||'?')+' B ('+host+'/'+file+')'}
+    catch(e){
+      try{await fetch(u,{method:'HEAD',mode:'no-cors'});return 'link answers but the app cannot read it (CORS). Open '+host+'/\u2026/'+file+' in the browser to see the error'}
+      catch(e2){return 'cannot reach '+host+' (wrong public link, or blocked network)'}
+    }
+  }
+  const IMG_RE=/^https:\/\/[^\s"'<>()]+\.(jpe?g|png|webp)(\?[^\s"'<>()]*)?$/i;
+  /* sharper 720p picture from the computer's R2 bucket (bg.iu); the small thumbnail stays until it has loaded */
+  function paintImg(){
+    const b=state&&state.bg,el=$('rmtPrevBg');if(!el)return;
+    const u=b&&b.k==='img'&&typeof b.iu==='string'&&IMG_RE.test(b.iu)&&!state.black?b.iu:'';
+    const css='url("'+u+'") center/cover no-repeat';
+    if(!u){el._iu='';el._ok='';return}
+    if(el._iu===u){if(el._ok===u)el.style.background=css;return}
+    el._iu=u;el._ok='';
+    const im=new Image();im.onload=()=>{if(el._iu===u){el._ok=u;el.style.background=css}};im.src=u;
+  }
+  function paintVid(show){
+    const v=$('rmtPrevVid');if(!v)return;
+    const list=show?bgVidList():[];
+    const raw=state&&state.bg&&state.bg.k==='vid'?state.bg.u:'';
+    if(!list.length){
+      if(v.getAttribute('src')){try{v.pause()}catch(e){}v.removeAttribute('src');try{v.load()}catch(e){}}
+      v._k='';v.hidden=true;
+      vidDbg(!show||!(state&&state.bg&&state.bg.k==='vid')?'':(raw?'Video link rejected (must be https .mp4/.webm)':'Video: no clip link from PreCenter yet'));
+      return;
+    }
+    const k=list.join('|');
+    if(v._k!==k){
+      v._k=k;v._l=list;v._i=0;v.hidden=true;
+      v.muted=true;v.defaultMuted=true;v.loop=true;v.playsInline=true;
+      v.setAttribute('muted','');v.setAttribute('playsinline','');v.setAttribute('webkit-playsinline','');
+      v.onplaying=()=>{v.hidden=false;vidDbg('')};
+      v.onwaiting=()=>vidDbg('Video: buffering\u2026');
+      v.onerror=async()=>{
+        v.hidden=true;const e=v.error,cur=v._l[v._i];
+        if(v._i<v._l.length-1){v._i++;vidDbg('Video: trying other format\u2026');v.src=v._l[v._i];return}
+        vidDbg('Video error '+(e?e.code:'?')+' \u2014 checking link\u2026');
+        const why=await vidWhy(cur);
+        vidDbg('Video error '+(e?e.code:'?')+': '+why+' \u2014 tap to retry');
+      };
+      v.src=list[0];
+      vidDbg('Video: loading clip\u2026');
+    }
+    const pr=v.play();if(pr&&pr.catch)pr.catch(err=>{if(v.hidden)vidDbg('Tap the preview to play video ('+(err&&err.name||'blocked')+')')});
+  }
+  function tapVid(){
+    const v=$('rmtPrevVid');if(!v||!v._l)return;
+    if(v.error||!v.getAttribute('src')){v._i=0;v.removeAttribute('src');v.load();v.src=v._l[0]}
+    const pr=v.play();if(pr&&pr.catch)pr.catch(()=>{});
+  }
+  function paintPrev(){
+    const prev=$('rmtPv'),plain=$('rmtText');
+    if(!prev)return;
+    const b=bgResolve(state&&state.bg),css=bgCss(b),vu=bgVidList().length;
+    const show=!!(css||vu);
+    prev.hidden=!show;
+    plain.hidden=show;             /* the preview already shows the words */
+    if(!show){paintVid(false);return}
+    $('rmtPrevBg').style.background=state.black?'#000':(css||'#000');
+    paintVid(!state.black);paintImg();
+    const dim=Math.min(0.9,Math.max(0,+state.dim));
+    $('rmtPrevDim').style.background='rgba(0,0,0,'+(state.black?0:(isFinite(dim)?dim:0.35))+')';
+    $('rmtPrevTxI').textContent=(state.black||state.clear)?'':(state.text||'');
+    fitPrev();
+  }
+
+  function build(){
+    if(ov)return;
+    ov=el('div','rmtOv');ov.id='rmtOv';ov.hidden=true;ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Remote control');
+    ov.innerHTML=
+      '<div class="rmtBar"><button type="button" class="rmtX" id="rmtClose" aria-label="Close">✕</button>'+
+      '<div class="rmtTabs"><button type="button" data-tab="flow" class="on">Flow</button><button type="button" data-tab="slide">Slide</button><button type="button" data-tab="bible">Bible</button><button type="button" data-tab="stage">Stage</button></div>'+
+      '<div class="rmtStat" id="rmtStat" role="status"></div></div>'+
+      '<div class="rmtTop" id="rmtTop" hidden>'+
+        '<div class="rmtHead"><div class="rmtTitle" id="rmtTitle"></div><div class="rmtNum" id="rmtNum"></div></div><div class="rmtLab" id="rmtLab"></div>'+
+        '<div class="rmtPrev" id="rmtPv" hidden><div class="rmtPrevBg" id="rmtPrevBg"></div><video class="rmtPrevVid" id="rmtPrevVid" muted playsinline loop autoplay preload="auto" hidden></video><div class="rmtPrevDim" id="rmtPrevDim"></div><div class="rmtPrevTx"><span class="rmtPrevTxI" id="rmtPrevTxI"></span></div><div class="rmtPrevDbg" id="rmtPrevDbg" hidden></div></div>'+
+        '<div class="rmtText" id="rmtText"></div><div class="rmtNextTxt" id="rmtNextTxt"></div>'+
+        '<div class="rmtNav"><button type="button" class="rmtBtn big" id="rmtPrev">◀ Back</button><button type="button" class="rmtBtn big go" id="rmtNext">Next ▶</button></div>'+
+      '</div>'+
+      '<div class="rmtBody" id="rmtRemote">'+
+        '<div class="rmtMsg" id="rmtMsg" hidden></div>'+
+        '<div id="rmtLive">'+
+          '<div id="rmtFlow">'+
+            '<div class="rmtSecs" id="rmtSecs"></div><div class="rmtMsg" id="rmtNoSec" hidden>No sections in this item. Use the Slide tab to pick a slide.</div>'+
+            '<div class="rmtRow" style="margin-top:16px"><button type="button" class="rmtBtn" id="rmtSongPrev">◀ Song</button><button type="button" class="rmtBtn" id="rmtSongNext">Song ▶</button><button type="button" class="rmtBtn" id="rmtBlack">Black</button><button type="button" class="rmtBtn" id="rmtClear">Clear</button></div>'+
+            '<details class="rmtList" id="rmtListBox" style="margin-top:12px"><summary>Songs &amp; items</summary><div id="rmtList"></div></details>'+
+          '</div>'+
+          '<div id="rmtSlideP" hidden><div class="rmtSlH" id="rmtSlH" hidden>Slides <b id="rmtSlN"></b></div><div class="rmtSl" id="rmtSl"></div></div>'+
+          '<div id="rmtBibleP" hidden>'+
+            '<div class="rmtBq"><input type="search" id="rmtBqIn" enterkeyhint="search" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="John 3:16, Psalm 23, or a word"><button type="button" class="rmtBtn go" id="rmtBqGo">Search</button></div>'+
+            '<div class="rmtBq2"><select id="rmtBqVer" aria-label="Bible version"></select><label class="rmtChk"><input type="checkbox" id="rmtBqW"> Words</label></div>'+
+            '<div class="rmtPlH">Text <span>(this item)</span></div><div class="rmtPlace" id="rmtPlace"></div>'+
+            '<div id="rmtBqOut"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="rmtWifi"><button type="button" class="rmtBtn" id="rmtWifi">Faster on the same Wi-Fi: scan the QR in PreCenter</button><button type="button" class="rmtBtn" id="rmtWifiLast" hidden>Open the last Wi-Fi remote</button></div>'+
+      '</div>'+
+      '<div class="rmtStage" id="rmtStageV" hidden><div class="stgTop"><span class="stgLab" id="stgLab"></span><span id="stgTitle"></span><span><b class="stgNum" id="stgNum"></b><span id="stgClock"></span></span></div>'+
+      '<div class="stgMain" id="stgMain"><div class="stgText" id="stgText"></div></div><div class="stgMsg" id="stgMsg"></div><div class="stgNext" id="stgNext"></div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#rmtClose').onclick=close;
+    $('rmtPv').onclick=tapVid;
+    $('rmtWifi').onclick=wifiScan;
+    try{const last=localStorage.getItem('dscLanLast');if(last&&/^http:\/\/[0-9.]+:\d+\//.test(last)){const b=$('rmtWifiLast');b.hidden=false;b.onclick=()=>{location.href=last}}}catch(e){}
+    $('rmtStat').onclick=()=>{subscribe();say('Reconnecting\u2026')};
+    ov.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;lastScroll='';render()});
+    $('rmtNext').onclick=()=>send('next');
+    $('rmtPrev').onclick=()=>send('prev');
+    $('rmtSongNext').onclick=()=>send('songNext');
+    $('rmtSongPrev').onclick=()=>send('songPrev');
+    $('rmtBlack').onclick=()=>send('black',{v:!(state&&state.black)});
+    $('rmtClear').onclick=()=>send('clear',{v:!(state&&state.clear)});
+    $('rmtBqGo').onclick=bqSearch;
+    $('rmtBqIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();bqSearch()}};
+    $('rmtBqVer').onchange=()=>{try{localStorage.setItem('rmtBibleVer',$('rmtBqVer').value)}catch(e){}if($('rmtBqIn').value.trim())bqSearch()};
+    window.addEventListener('resize',()=>{if(ov&&!ov.hidden&&tab==='stage')fit();if(ov&&!ov.hidden)fitPrev()});
+    document.addEventListener('visibilitychange',()=>{if(ov&&!ov.hidden&&document.visibilityState==='visible'){keepAwake();try{paintVid(!(state&&state.black))}catch(e){}}});
+  }
+
+  /* ---- Bible tab: the search runs on the computer (it has the Bible files); the answer comes back in state.bq ---- */
+  const BV_DEF=[{i:'kjv',n:'KJV'},{i:'asv',n:'ASV'},{i:'bbe',n:'BBE'},{i:'abtag',n:'AB1905'},{i:'mbb',n:'MBB'},{i:'asnd',n:'ASND'},{i:'niv',n:'NIV'},{i:'nkrv',n:'NKRV'}];
+  let bqPend=null,sentKey='',plMine=null,plSid='';
+  const bibleVer=()=>{try{return localStorage.getItem('rmtBibleVer')||'kjv'}catch(e){return'kjv'}};
+  function bqSearch(){
+    const q=$('rmtBqIn').value.trim();if(!q)return;
+    const rid=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    bqPend={rid,at:Date.now()};sentKey='';
+    send('bq',{q,ver:$('rmtBqVer').value,w:$('rmtBqW').checked?1:0,rid});
+    $('rmtBqIn').blur();render();
+    setTimeout(()=>{if(bqPend&&bqPend.rid===rid)render()},12500);
+  }
+  /* text position: alignment icons (left, center, right, justify) + a vertical row (top, middle, bottom) */
+  const IC=d=>'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="'+d+'"/></svg>';
+  const PL_AL=[['left','Align left','M3 4h14M3 8h18M3 12h14M3 16h18M3 20h14'],['center','Align center','M5 4h14M3 8h18M5 12h14M3 16h18M5 20h14'],['right','Align right','M7 4h14M3 8h18M7 12h14M3 16h18M7 20h14'],['justify','Justify','M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18']];
+  const PL_V=[['Top','Text at the top','M4 4h16M8 8h8'],['Middle','Text in the middle','M4 10h16M8 14h8'],['Bottom','Text at the bottom','M4 16h16M8 20h8']];
+  function renderPlace(){
+    const box=$('rmtPlace');if(!box)return;
+    if(!box.dataset.built){
+      box.dataset.built='1';
+      const mk=(list,key,wrap)=>{
+        const row=el('div','rmtPlRow');
+        list.forEach(x=>{
+          const b=el('button','rmtPl');b.type='button';b.innerHTML=IC(x[2]);b.title=x[1];b.setAttribute('aria-label',x[1]);b.dataset.k=key;b.dataset.v=x[0];
+          b.onclick=()=>{if(!state)return;
+            const msg=key==='a'?{sid:state.sid,al:x[0]}:{sid:state.sid,pos:x[0]};
+            send('place',msg);plMine=Object.assign(plMine||{},key==='a'?{a:x[0]}:{p:x[0]});say(x[1]);renderPlace()};
+          row.appendChild(b);
+        });
+        box.appendChild(row);
+      };
+      mk(PL_V,'p');mk(PL_AL,'a');
+    }
+    const cur=Object.assign({},state&&state.pl?{p:state.pl.p,a:state.pl.a}:{},plMine||{});
+    box.querySelectorAll('.rmtPl').forEach(b=>b.classList.toggle('cur',cur[b.dataset.k]===b.dataset.v));
+  }
+  function renderBible(){
+    if(state&&state.sid!==plSid){plSid=state.sid;plMine=null}
+    renderPlace();
+    const sel=$('rmtBqVer'),list=(Array.isArray(state.bv)&&state.bv.length)?state.bv:BV_DEF,sg=JSON.stringify(list);
+    if(sel.dataset.sig!==sg){
+      sel.dataset.sig=sg;sel.textContent='';
+      list.forEach(v=>{const o=el('option',null,Array.isArray(v)?v[1]:v.n);o.value=Array.isArray(v)?v[0]:v.i;sel.appendChild(o)});
+      sel.value=bibleVer();if(sel.value!==bibleVer())sel.selectedIndex=0;
+    }
+    const out=$('rmtBqOut'),want=bqPend?bqPend.rid:(state.bq&&state.bq.rid),r=(state.bq&&state.bq.rid===want)?state.bq:null;
+    const late=!!(bqPend&&!r&&Date.now()-bqPend.at>12000);
+    const sig=JSON.stringify([want,r,late,sentKey]);
+    if(out.dataset.sig===sig)return;
+    out.dataset.sig=sig;out.textContent='';
+    if(!want){out.append(el('div','rmtMsg','Type a verse (John 3:16) or a word, then tap Search. Tap a result to show it on the screen.'));return}
+    if(!r){out.append(el('div','rmtMsg',late?'The computer did not answer. Check that PreCenter is open and up to date, with Remote on.':'Searching…'));return}
+    if(r.busy){out.append(el('div','rmtMsg','Searching…'));return}
+    if(r.err){out.append(el('div','rmtMsg',r.err));return}
+    (r.res||[]).forEach(x=>{
+      const k=r.ver+'|'+x.r,b=el('button','rmtBR'+(k===sentKey?' sent':''));b.type='button';
+      const h=el('div','rmtBRh');h.append(el('b',null,x.r+(x.n>1?' ('+x.n+' verses)':'')),el('span',null,k===sentKey?'SHOWING':'SHOW ▶'));
+      b.append(h,el('div','rmtBRt',x.t||''));
+      b.onclick=()=>{sentKey=k;send('bgo',{ver:r.ver,ref:x.r});say('Sent '+x.r);render()};
+      out.appendChild(b);
+    });
+    if(r.more)out.append(el('div','rmtMsg','Showing the first 25. Add another word to narrow it down.'));
+  }
+
+  function send(t,extra){
+    if(!state||state.on===false){say('The laptop has Remote switched off.');return}
+    if(typeof firestoreDb==='undefined'||!firestoreDb||!teamId)return;
+    const u=(typeof firebaseAuth!=='undefined'&&firebaseAuth&&firebaseAuth.currentUser)||null;
+    const doc=Object.assign({t,ts:Date.now(),by:u?u.uid:''},extra||{});
+    firestoreDb.collection('presenterCmd').doc(teamId).collection('q').add(doc).catch(e=>{
+      const c=e&&e.code?String(e.code):'';
+      say(/permission-denied/.test(c)?'PIN not accepted. Scan the QR code again.':'Could not send. Check the Wi-Fi.');
+    });
+    if(navigator.vibrate)try{navigator.vibrate(12)}catch(e){}
+    /* if the screen did not change after a press, re-attach the listener to fetch the latest */
+    const before=stamp();
+    setTimeout(()=>{if(ov&&!ov.hidden&&state&&stamp()===before)subscribe()},2500);
+  }
+
+  function status(){
+    if(fatal)return[fatal,'bad'];
+    if(!signed)return['Sign in to use the remote','bad'];
+    if(!teamId)return['Join a team first','bad'];
+    if(!state)return['Waiting for the laptop','warn'];
+    if(state.on===false)return['Remote is off on the laptop','warn'];
+    if(Date.now()-(+state.hb||0)>120000)return['No recent signal from the laptop','warn'];
+    return['Connected','ok'];
+  }
+
+  function msgFor(){
+    if(fatal)return fatal;
+    if(!signed)return'Sign in to Disciples on this phone, then open the remote again.';
+    if(!teamId)return'This account is not on a team yet.';
+    if(!state)return'Open PreCenter on the computer, sign in with the same Disciples team, and press the Remote button so it lights up.';
+    if(state.on===false)return'The computer turned Remote off. Press the Remote button in PreCenter to turn it back on.';
+    return'';
+  }
+
+  function setStat(){
+    const st=status(),sb=$('rmtStat');if(!sb)return;
+    sb.className='rmtStat '+st[1];sb.title=st[0];sb.setAttribute('aria-label',st[0]);
+  }
+  function render(){
+    if(!ov||ov.hidden)return;
+    ov.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+    setStat();
+    const live=!!(state&&state.on!==false);
+    $('rmtStageV').hidden=tab!=='stage';
+    $('rmtRemote').hidden=tab==='stage';
+    $('rmtTop').hidden=tab==='stage'||!live;
+    $('rmtFlow').hidden=tab!=='flow';$('rmtSlideP').hidden=tab!=='slide';$('rmtBibleP').hidden=tab!=='bible';
+    const m=msgFor();$('rmtMsg').hidden=!m||live;$('rmtMsg').textContent=m;
+    $('rmtLive').hidden=!live;
+    if(!live){if(tab==='stage'){$('stgText').textContent=m;$('stgLab').textContent='';$('stgTitle').textContent='';$('stgNext').textContent='';$('stgMsg').textContent='';fit()}return}
+    $('rmtTitle').textContent=state.title||'';
+    $('rmtLab').textContent=state.label||'';
+    const n=+state.n||0,at=(+state.idx||0)+1;
+    $('rmtNum').textContent=n?('Slide '+at+' / '+n):'';
+    const tx=$('rmtText');
+    tx.textContent=state.text||(state.black?'(black screen)':'(no text on this slide)');
+    tx.classList.toggle('dim',!state.text);
+    paintPrev();
+    $('rmtNextTxt').textContent=state.next?('Next: '+state.next):(at<n?('Next: Slide '+(at+1)):'');
+    /* Flow: one button per section (V1, V2, C ...) */
+    {
+      const box=$('rmtSecs');box.textContent='';
+      const secs=Array.isArray(state.secs)?state.secs:[];
+      $('rmtNoSec').hidden=secs.length>0;
+      let ck=-1;secs.forEach((x,k)=>{if(x.i<=state.idx)ck=k});
+      secs.forEach((x,k)=>{
+        const b=el('button','rmtFlowBtn'+(k===ck?' cur':''),x.k||x.l);b.type='button';b.title=x.l||'';
+        b.style.setProperty('--c',x.c||'#4b5160');
+        b.onclick=()=>send('go',{i:x.i,sid:state.sid});box.appendChild(b);
+      });
+    }
+    /* Slide: text-only cards, tap one to jump to it; the list follows the live slide */
+    {
+      const cards=Array.isArray(state.sl)?state.sl:[],slBox=$('rmtSl');
+      $('rmtSlH').hidden=!cards.length;$('rmtSlN').textContent=cards.length||'';
+      const sig=JSON.stringify([state.sid,cards]);
+      if(slBox.dataset.sig!==sig){
+        slBox.dataset.sig=sig;slBox.textContent='';
+        cards.forEach((c,k)=>{
+          const b=el('button','rmtCard');b.type='button';
+          const hd=el('div','rmtCH');hd.append(el('i',null,String(k+1)),el('span',null,c.l||('Slide '+(k+1))));
+          b.append(hd,el('div','rmtCT',c.t||'(blank slide)'));
+          b.onclick=()=>send('go',{i:k,sid:state&&state.sid});
+          slBox.appendChild(b);
+        });
+      }
+      const cur=+state.idx||0;
+      for(let k=0;k<slBox.children.length;k++)slBox.children[k].classList.toggle('cur',k===cur);
+      if(tab==='slide'){
+        const key=state.sid+':'+cur+':'+cards.length;
+        if(key!==lastScroll){
+          const first=!lastScroll;lastScroll=key;
+          const c=slBox.children[cur];
+          if(c)requestAnimationFrame(()=>{try{c.scrollIntoView({block:'nearest',behavior:first?'auto':'smooth'})}catch(e){c.scrollIntoView()}});
+        }
+      }
+    }
+    $('rmtBlack').classList.toggle('on',!!state.black);
+    $('rmtClear').classList.toggle('on',!!state.clear);
+    const list=$('rmtList');
+    if(!list.dataset.sig||list.dataset.sig!==JSON.stringify([state.items,state.sid])){
+      list.dataset.sig=JSON.stringify([state.items,state.sid]);list.textContent='';
+      let g=null;
+      (state.items||[]).forEach(x=>{
+        if(x.g!==g){g=x.g;list.appendChild(el('div','rmtGrp',g||''))}
+        const b=el('button','rmtItem'+(x.id===state.sid?' cur':''),x.t);b.type='button';
+        b.onclick=()=>{send('song',{id:x.id});$('rmtListBox').open=false};list.appendChild(b);
+      });
+    }
+    if(tab==='bible')renderBible();
+    $('stgLab').textContent=state.label||'';
+    $('stgTitle').textContent=state.title||'';
+    $('stgText').textContent=state.black?'':(state.text||'');
+    $('stgMsg').textContent=state.msg||'';
+    $('stgNum').textContent=n?(at+' / '+n):'';
+    const nx=$('stgNext');nx.textContent='';
+    const nxt=state.next||(at<n?('Slide '+(at+1)):'');
+    if(nxt){nx.append(el('b',null,'NEXT'),document.createTextNode(nxt))}
+    clock();
+    if(tab==='stage')fit();
+  }
+
+  function clock(){
+    const c=$('stgClock');if(c)c.textContent=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    if(ov&&!ov.hidden)setStat();
+  }
+
+  function fit(){
+    const box=$('stgMain'),t=$('stgText');if(!box||!t)return;
+    let lo=14,hi=Math.min(box.clientWidth,box.clientHeight)*0.62||60,best=lo;
+    for(let i=0;i<12;i++){
+      const mid=(lo+hi)/2;t.style.fontSize=mid+'px';
+      if(t.scrollHeight<=box.clientHeight&&t.scrollWidth<=box.clientWidth){best=mid;lo=mid}else hi=mid;
+    }
+    t.style.fontSize=best+'px';
+  }
+
+  /* Wi-Fi remote: PreCenter (desktop app) shows a QR holding http://<computer>:<port>/?pin=123456. The page it opens is served by
+     the computer itself and works with no internet. A secure page cannot open a plain ws:// link, so we open that page instead. */
+  function wifiGo(txt){
+    const t=String(txt||'').trim();
+    if(!/^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d{2,5}\/\?pin=\d{6}$/.test(t))return false;
+    try{localStorage.setItem('dscLanLast',t)}catch(e){}
+    say('Connecting over Wi-Fi\u2026');location.href=t;return true;
+  }
+  async function wifiScan(){
+    if(!('BarcodeDetector' in window)||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      const v=prompt('This phone cannot scan inside the app. Scan the QR with the phone camera, or paste the link from PreCenter (Screens \u203a Phone remote on this Wi-Fi):','');
+      if(v&&!wifiGo(v))say('That is not a PreCenter Wi-Fi link.');return;
+    }
+    let stream=null,det=null,stop=false;
+    const box=el('div','rmtScan');box.innerHTML='<video playsinline muted autoplay></video><div class="rmtScanFrame"></div><div class="rmtScanMsg">Point the camera at the QR code in PreCenter</div><button type="button" class="rmtBtn big">Cancel</button>';
+    document.body.appendChild(box);
+    const end=()=>{stop=true;try{stream&&stream.getTracks().forEach(t=>t.stop())}catch(e){}box.remove()};
+    box.querySelector('button').onclick=end;
+    try{
+      det=new BarcodeDetector({formats:['qr_code']});
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      const vid=box.querySelector('video');vid.srcObject=stream;await vid.play();
+      const tick=async()=>{
+        if(stop)return;
+        try{const r=await det.detect(vid);for(const c of r){if(wifiGo(c.rawValue)){end();return}else{box.querySelector('.rmtScanMsg').textContent='That QR is not from PreCenter. Try the one in Screens \u203a Phone remote on this Wi-Fi.'}}}catch(e){}
+        setTimeout(tick,250);
+      };
+      tick();
+    }catch(e){end();say(/denied|NotAllowed/i.test(String(e&&e.name||e))?'Allow the camera to scan.':'Could not open the camera.')}
+  }
+  async function keepAwake(){
+    try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null})}}catch(e){}
+  }
+
+  /* (re)attach the listener. Re-attaching makes Firestore hand over the latest copy straight away. */
+  function subscribe(){
+    if(unsub){try{unsub()}catch(e){}unsub=null}
+    if(!teamId||typeof firestoreDb==='undefined'||!firestoreDb)return;
+    unsub=firestoreDb.collection('presenter').doc(teamId).onSnapshot(snap=>{
+      state=snap.exists?snap.data():null;fatal='';render();
+    },err=>{
+      const c=err&&err.code?String(err.code):'';
+      const denied=/permission-denied/.test(c);
+      fatal=denied?'PIN not accepted. Scan the QR code again.':'Connection lost, reconnecting…';
+      render();
+      if(!denied)setTimeout(()=>{if(ov&&!ov.hidden&&fatal)subscribe()},4000);
+    });
+  }
+  const stamp=()=>state?[state.sid,state.idx,state.black,state.clear,state.hb,state.bq&&state.bq.rid].join('|'):'';
+
+  async function open(){
+    build();ov.hidden=false;document.documentElement.style.overflow='hidden';
+    state=null;fatal='';render();keepAwake();
+    tick=setInterval(clock,1000);
+    try{await firebaseReadyPromise}catch(e){}
+    const ok=typeof firestoreDb!=='undefined'&&firestoreDb&&typeof firebaseAuth!=='undefined'&&firebaseAuth&&firebaseAuth.currentUser;
+    signed=!!ok;
+    teamId=ok&&typeof getActiveTeamId==='function'?(getActiveTeamId()||''):'';
+    if(!ok||!teamId){render();return}
+    subscribe();
+  }
+
+  function close(){
+    if(unsub){unsub();unsub=null}
+    clearInterval(tick);tick=null;
+    if(wake){try{wake.release()}catch(e){}wake=null}
+    if(ov)ov.hidden=true;
+    lastScroll='';
+    document.documentElement.style.overflow='';
+  }
+
+  document.addEventListener('click',e=>{
+    if(e.target.closest&&e.target.closest('#remoteOpenBtn')){e.preventDefault();open()}
+  });
+})();
+</script>
+<script>
+(function(){
+  var SITE='https://worship-chords-rho.vercel.app';
+  var home=document.getElementById('lanHome');
+  function openRemote(){home.hidden=true;document.getElementById('remoteOpenBtn').click()}
+  document.getElementById('lanGo').onclick=openRemote;
+  document.getElementById('lanSite').onclick=function(){location.href=SITE};
+  /* closing the remote shows the start screen again, so the phone is never left on a blank page */
+  new MutationObserver(function(){var o=document.getElementById('rmtOv');if(o&&o.hidden)home.hidden=false}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden']});
+  openRemote();
+})();
+</script>
+</body></html>

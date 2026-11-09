@@ -399,10 +399,108 @@ test('the preload offers the save window to the page', () => {
   assert.ok(fs.readFileSync(path.join(root, 'main.js'), 'utf8').includes("require('./lib/savebridge')"));
 });
 
+// ---- Wi-Fi remote (lib/lanserver.js) ----
+const lan = require('../lib/lanserver');
+const http = require('http');
+const crypto = require('crypto');
+function wsClient(port, pin) {
+  return new Promise((resolve, reject) => {
+    const key = crypto.randomBytes(16).toString('base64');
+    const req = http.request({ host: '127.0.0.1', port, path: '/ws?pin=' + pin, headers: { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Key': key, 'Sec-WebSocket-Version': '13' } });
+    req.on('response', res => { res.resume(); reject(new Error('HTTP ' + res.statusCode)); });
+    req.on('upgrade', (res, socket, head) => {
+      const msgs = []; let buf = Buffer.alloc(0);
+      const onData = d => {
+        buf = Buffer.concat([buf, d]);
+        for (;;) {
+          if (buf.length < 2) return;
+          let len = buf[1] & 0x7f, off = 2;
+          if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); off = 4; }
+          else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); off = 10; }
+          if (buf.length < off + len) return;
+          if ((buf[0] & 0x0f) === 1) msgs.push(JSON.parse(buf.subarray(off, off + len).toString()));
+          buf = buf.subarray(off + len);
+        }
+      };
+      socket.on('data', onData);
+      if (head && head.length) onData(head);
+      const send = text => {
+        const pay = Buffer.from(text), mask = crypto.randomBytes(4);
+        let head;
+        if (pay.length < 126) head = Buffer.from([0x81, 0x80 | pay.length]);
+        else { head = Buffer.alloc(4); head[0] = 0x81; head[1] = 0x80 | 126; head.writeUInt16BE(pay.length, 2); }
+        const body = Buffer.from(pay); for (let i = 0; i < body.length; i++) body[i] ^= mask[i & 3];
+        socket.write(Buffer.concat([head, mask, body]));
+      };
+      resolve({ msgs, send, socket });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+test('Wi-Fi remote: a phone with the right PIN gets the state and its button presses reach the app', async () => {
+  const got = [], counts = [];
+  const srv = lan.create({ pin: '123456', port: 0, pageFile: path.join(root, 'lan', 'remote.html'), onCommand: c => got.push(c), onClients: n => counts.push(n) });
+  const port = await srv.start();
+  try {
+    srv.setState({ title: 'Song', idx: 2 });
+    const c = await wsClient(port, '123456');
+    await wait(80);
+    assert.strictEqual(c.msgs[0].t, 'hello');
+    assert.deepStrictEqual(c.msgs[1], { t: 'state', d: { title: 'Song', idx: 2 } });
+    srv.setState({ title: 'Song', idx: 3 });
+    await wait(80);
+    assert.strictEqual(c.msgs[c.msgs.length - 1].d.idx, 3);
+    c.send(JSON.stringify({ t: 'cmd', c: { t: 'next' } }));
+    c.send(JSON.stringify({ t: 'cmd', c: { t: 'x'.repeat(40) } }));   // too long: ignored
+    c.send('not json');
+    await wait(80);
+    assert.deepStrictEqual(got, [{ t: 'next' }]);
+    assert.strictEqual(srv.count(), 1);
+    c.socket.destroy(); await wait(80);
+    assert.strictEqual(srv.count(), 0);
+    assert.ok(counts.includes(1) && counts[counts.length - 1] === 0);
+  } finally { srv.stop(); }
+});
+test('Wi-Fi remote: a wrong PIN is refused, and too many wrong tries are blocked', async () => {
+  const srv = lan.create({ pin: '654321', port: 0, pageFile: 'x' });
+  const port = await srv.start();
+  try {
+    for (let i = 0; i < 8; i++) await assert.rejects(wsClient(port, '000000'), /401/);
+    await assert.rejects(wsClient(port, '654321'), /401/);   // blocked for a minute even with the right PIN
+  } finally { srv.stop(); }
+});
+test('Wi-Fi remote: new PIN disconnects paired phones; the page and /ping are served', async () => {
+  const srv = lan.create({ pin: '111111', port: 0, pageFile: path.join(root, 'lan', 'remote.html') });
+  const port = await srv.start();
+  try {
+    const c = await wsClient(port, '111111'); await wait(50);
+    const np = srv.newPin(); await wait(80);
+    assert.ok(/^\d{6}$/.test(np) && np !== '111111');
+    assert.strictEqual(srv.count(), 0);
+    const get = p => new Promise((res, rej) => http.get({ host: '127.0.0.1', port, path: p }, r => { let b = ''; r.on('data', d => b += d); r.on('end', () => res({ code: r.statusCode, body: b })); }).on('error', rej));
+    assert.strictEqual((await get('/ping')).body, 'ok');
+    assert.strictEqual((await get('/nothing')).code, 404);
+    assert.strictEqual((await get('/')).code, 200);
+    assert.ok(srv.info().urls.every(u => u.url.includes('pin=' + np)));
+  } finally { srv.stop(); }
+});
+test('Wi-Fi remote: home-network addresses come first, loopback and link-local are skipped', () => {
+  const l = lan.lanAddresses({ 'vEthernet (WSL)': [{ family: 'IPv4', address: '172.20.0.1', internal: false }], 'Wi-Fi': [{ family: 'IPv4', address: '192.168.1.175', internal: false }, { family: 'IPv6', address: 'fe80::1', internal: false }], lo: [{ family: 'IPv4', address: '127.0.0.1', internal: true }], eth: [{ family: 'IPv4', address: '169.254.3.3', internal: false }] });
+  assert.deepStrictEqual(l.map(x => x.address), ['192.168.1.175', '172.20.0.1']);
+});
+test('Wi-Fi remote is on by default and the app wires it up', () => {
+  assert.strictEqual(DEFAULTS.lan.enabled, true);
+  assert.strictEqual(parseText('{ "lan": { "enabled": false } }').config.lan.enabled, false);
+  const main = fs.readFileSync(path.join(root, 'main.js'), 'utf8'), pre = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
+  ["lan:info", "lan:state", "lan:newPin", "lan:cmd"].forEach(c => { assert.ok(main.includes("'" + c + "'"), 'main ' + c); assert.ok(pre.includes("'" + c + "'"), 'preload ' + c); });
+});
+
 (async () => {
   for (const [name, fn] of queue) {
     try { await fn(); pass++; console.log('PASS ' + name); }
-    catch (e) { fail++; console.log('FAIL ' + name + '\n     ' + String(e.message).split('\n')[0]); }
+    catch (e) { fail++; console.log('FAIL ' + name + '\n     ' + String(e.message).split('\n').slice(0, 6).join(' | ')); }
   }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

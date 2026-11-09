@@ -68,5 +68,9 @@
   "devTools": false,
  
   // NDI video output. Needs the NDI add-on described in README.md. Off by default.
-  "ndi": { "enabled": false }
+  "ndi": { "enabled": false },
+
+  // Wi-Fi remote: lets a phone on the same Wi-Fi control PreCenter by scanning a QR code (Screens menu, Phone remote on this Wi-Fi).
+  // Nothing goes through the internet. The first time, Windows may ask to allow PreCenter on private networks: choose Allow.
+  "lan": { "enabled": true, "port": 8765 }
 }

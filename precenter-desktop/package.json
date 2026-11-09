@@ -34,6 +34,7 @@
       "preload.js",
       "lib/**",
       "ndi/**",
+      "lan/**",
       "config/**",
       "app/**",
       "build/icon.png",

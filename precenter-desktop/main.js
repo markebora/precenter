@@ -12,6 +12,7 @@ const ndiSender = require('./ndi/sender');
 const appUpdate = require('./lib/appupdate');
 const linkBridge = require('./lib/linkbridge');
 const saveBridge = require('./lib/savebridge');
+const lanServer = require('./lib/lanserver');
  
 // The bundled app is served from its own address (dsc://app/) instead of file://, so storage,
 // BroadcastChannel between windows, file pickers and sign-in behave as they do on the web.
@@ -29,6 +30,7 @@ let policy = null;
 let mainWin = null;
 let pendingFiles = [];
 let rendererReady = false;
+let lan = null;           // Wi-Fi remote server (null when turned off in config.json)
  
 function defaultConfigFile() {
   const packaged = path.join(process.resourcesPath || '', 'config.default.json');
@@ -262,7 +264,7 @@ function createMain() {
     }
   });
   mainWin.webContents.on('render-process-gone', (_e, d) => log.error('Renderer gone: ' + d.reason));
-  mainWin.on('closed', () => { ndi.stopAll(); mainWin = null; app.quit(); });
+  mainWin.on('closed', () => { ndi.stopAll(); if (lan) lan.stop(); mainWin = null; app.quit(); });
   mainWin.loadURL(policy.startUrl());
 }
  
@@ -338,8 +340,30 @@ function showAbout() {
 }
  
 // ---------- IPC from the page ----------
+// ---------- Wi-Fi remote: phones on the same network, no internet ----------
+function setupLan() {
+  const fromMain = e => mainWin && !mainWin.isDestroyed() && e.sender === mainWin.webContents;
+  const toPage = (ch, ...a) => { try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(ch, ...a); } catch (e) { /* closing */ } };
+  ipcMain.handle('lan:info', e => (fromMain(e) && lan) ? lan.info() : { running: false, port: 0, pin: '', urls: [], clients: 0 });
+  ipcMain.handle('lan:newPin', e => { if (fromMain(e) && lan) { lan.newPin(); return lan.info(); } return null; });
+  ipcMain.on('lan:state', (e, json) => {
+    if (!lan || !fromMain(e) || typeof json !== 'string' || json.length > 2 * 1024 * 1024) return;
+    try { lan.setState(JSON.parse(json)); } catch (err) { /* bad state: ignore */ }
+  });
+  if (!cfg.lan || !cfg.lan.enabled) return;
+  lan = lanServer.create({
+    port: cfg.lan.port,
+    dir: app.getPath('userData'),
+    pageFile: path.join(__dirname, 'lan', 'remote.html'),
+    onCommand: c => toPage('lan:cmd', c),
+    onClients: n => toPage('lan:clients', n)
+  });
+  lan.start().then(p => log.info('Wi-Fi remote listening on port ' + p)).catch(err => { log.error('Wi-Fi remote could not start: ' + err.message); lan = null; });
+}
+
 function setupIpc() {
   linkBridge.create(ipcMain);
+  setupLan();
   // Saving a service: the page streams the file to us and the person picks where in the system Save window.
   const winOf = sender => BrowserWindow.fromWebContents(sender) || mainWin;
   saveBridge.create(ipcMain, {

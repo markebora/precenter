@@ -530,9 +530,1264 @@ body.lite :not(.stage):not(.stage *){animation:none!important;transition:none!im
   document.addEventListener('keydown',function k(e){if(done){document.removeEventListener('keydown',k,true);return}if(e.key==='Escape'||e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();end()}},true);
 })();
 </script>
+<script id="dscQrLib">
+/* QR code generator: QRCode for JavaScript, Copyright (c) 2009 Kazuhiko Arase, MIT License (via qrcode-terminal) */
+(function(){var M={},D={};
+function R(n){n=n.replace("./","");if(M[n])return M[n].exports;var m=M[n]={exports:{}};D[n](m,m.exports,R);return m.exports}
+D["QRMode"]=function(module,exports,require){module.exports = {
+    MODE_NUMBER :       1 << 0,
+    MODE_ALPHA_NUM :    1 << 1,
+    MODE_8BIT_BYTE :    1 << 2,
+    MODE_KANJI :        1 << 3
+};
+
+};
+D["QR8bitByte"]=function(module,exports,require){var QRMode = require('./QRMode');
+
+function QR8bitByte(data) {
+	this.mode = QRMode.MODE_8BIT_BYTE;
+	this.data = data;
+}
+
+QR8bitByte.prototype = {
+
+	getLength : function() {
+		return this.data.length;
+	},
+	
+	write : function(buffer) {
+		for (var i = 0; i < this.data.length; i++) {
+			// not JIS ...
+			buffer.put(this.data.charCodeAt(i), 8);
+		}
+	}
+};
+
+module.exports = QR8bitByte;
+
+};
+D["QRBitBuffer"]=function(module,exports,require){function QRBitBuffer() {
+	this.buffer = [];
+	this.length = 0;
+}
+
+QRBitBuffer.prototype = {
+
+	get : function(index) {
+		var bufIndex = Math.floor(index / 8);
+		return ( (this.buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+	},
+	
+	put : function(num, length) {
+		for (var i = 0; i < length; i++) {
+			this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+		}
+	},
+	
+	getLengthInBits : function() {
+		return this.length;
+	},
+	
+	putBit : function(bit) {
+	
+		var bufIndex = Math.floor(this.length / 8);
+		if (this.buffer.length <= bufIndex) {
+			this.buffer.push(0);
+		}
+	
+		if (bit) {
+			this.buffer[bufIndex] |= (0x80 >>> (this.length % 8) );
+		}
+	
+		this.length++;
+	}
+};
+
+module.exports = QRBitBuffer;
+
+};
+D["QRErrorCorrectLevel"]=function(module,exports,require){module.exports = {
+	L : 1,
+	M : 0,
+	Q : 3,
+	H : 2
+};
+
+
+};
+D["QRMaskPattern"]=function(module,exports,require){module.exports = {
+	PATTERN000 : 0,
+	PATTERN001 : 1,
+	PATTERN010 : 2,
+	PATTERN011 : 3,
+	PATTERN100 : 4,
+	PATTERN101 : 5,
+	PATTERN110 : 6,
+	PATTERN111 : 7
+};
+
+};
+D["QRMath"]=function(module,exports,require){var QRMath = {
+
+	glog : function(n) {
+	
+		if (n < 1) {
+			throw new Error("glog(" + n + ")");
+		}
+		
+		return QRMath.LOG_TABLE[n];
+	},
+	
+	gexp : function(n) {
+	
+		while (n < 0) {
+			n += 255;
+		}
+	
+		while (n >= 256) {
+			n -= 255;
+		}
+	
+		return QRMath.EXP_TABLE[n];
+	},
+	
+	EXP_TABLE : new Array(256),
+	
+	LOG_TABLE : new Array(256)
+
+};
+	
+for (var i = 0; i < 8; i++) {
+	QRMath.EXP_TABLE[i] = 1 << i;
+}
+for (var i = 8; i < 256; i++) {
+	QRMath.EXP_TABLE[i] = QRMath.EXP_TABLE[i - 4]
+		^ QRMath.EXP_TABLE[i - 5]
+		^ QRMath.EXP_TABLE[i - 6]
+		^ QRMath.EXP_TABLE[i - 8];
+}
+for (var i = 0; i < 255; i++) {
+	QRMath.LOG_TABLE[QRMath.EXP_TABLE[i] ] = i;
+}
+
+module.exports = QRMath;
+
+};
+D["QRPolynomial"]=function(module,exports,require){var QRMath = require('./QRMath');
+
+function QRPolynomial(num, shift) {
+	if (num.length === undefined) {
+		throw new Error(num.length + "/" + shift);
+	}
+
+	var offset = 0;
+
+	while (offset < num.length && num[offset] === 0) {
+		offset++;
+	}
+
+	this.num = new Array(num.length - offset + shift);
+	for (var i = 0; i < num.length - offset; i++) {
+		this.num[i] = num[i + offset];
+	}
+}
+
+QRPolynomial.prototype = {
+
+	get : function(index) {
+		return this.num[index];
+	},
+	
+	getLength : function() {
+		return this.num.length;
+	},
+	
+	multiply : function(e) {
+	
+		var num = new Array(this.getLength() + e.getLength() - 1);
+	
+		for (var i = 0; i < this.getLength(); i++) {
+			for (var j = 0; j < e.getLength(); j++) {
+				num[i + j] ^= QRMath.gexp(QRMath.glog(this.get(i) ) + QRMath.glog(e.get(j) ) );
+			}
+		}
+	
+		return new QRPolynomial(num, 0);
+	},
+	
+	mod : function(e) {
+	
+		if (this.getLength() - e.getLength() < 0) {
+			return this;
+		}
+	
+		var ratio = QRMath.glog(this.get(0) ) - QRMath.glog(e.get(0) );
+	
+		var num = new Array(this.getLength() );
+		
+		for (var i = 0; i < this.getLength(); i++) {
+			num[i] = this.get(i);
+		}
+		
+		for (var x = 0; x < e.getLength(); x++) {
+			num[x] ^= QRMath.gexp(QRMath.glog(e.get(x) ) + ratio);
+		}
+	
+		// recursive call
+		return new QRPolynomial(num, 0).mod(e);
+	}
+};
+
+module.exports = QRPolynomial;
+
+};
+D["QRRSBlock"]=function(module,exports,require){var QRErrorCorrectLevel = require('./QRErrorCorrectLevel');
+
+function QRRSBlock(totalCount, dataCount) {
+	this.totalCount = totalCount;
+	this.dataCount  = dataCount;
+}
+
+QRRSBlock.RS_BLOCK_TABLE = [
+
+	// L
+	// M
+	// Q
+	// H
+
+	// 1
+	[1, 26, 19],
+	[1, 26, 16],
+	[1, 26, 13],
+	[1, 26, 9],
+	
+	// 2
+	[1, 44, 34],
+	[1, 44, 28],
+	[1, 44, 22],
+	[1, 44, 16],
+
+	// 3
+	[1, 70, 55],
+	[1, 70, 44],
+	[2, 35, 17],
+	[2, 35, 13],
+
+	// 4		
+	[1, 100, 80],
+	[2, 50, 32],
+	[2, 50, 24],
+	[4, 25, 9],
+	
+	// 5
+	[1, 134, 108],
+	[2, 67, 43],
+	[2, 33, 15, 2, 34, 16],
+	[2, 33, 11, 2, 34, 12],
+	
+	// 6
+	[2, 86, 68],
+	[4, 43, 27],
+	[4, 43, 19],
+	[4, 43, 15],
+	
+	// 7		
+	[2, 98, 78],
+	[4, 49, 31],
+	[2, 32, 14, 4, 33, 15],
+	[4, 39, 13, 1, 40, 14],
+	
+	// 8
+	[2, 121, 97],
+	[2, 60, 38, 2, 61, 39],
+	[4, 40, 18, 2, 41, 19],
+	[4, 40, 14, 2, 41, 15],
+	
+	// 9
+	[2, 146, 116],
+	[3, 58, 36, 2, 59, 37],
+	[4, 36, 16, 4, 37, 17],
+	[4, 36, 12, 4, 37, 13],
+	
+	// 10		
+	[2, 86, 68, 2, 87, 69],
+	[4, 69, 43, 1, 70, 44],
+	[6, 43, 19, 2, 44, 20],
+	[6, 43, 15, 2, 44, 16],
+
+	// 11
+	[4, 101, 81],
+	[1, 80, 50, 4, 81, 51],
+	[4, 50, 22, 4, 51, 23],
+	[3, 36, 12, 8, 37, 13],
+
+	// 12
+	[2, 116, 92, 2, 117, 93],
+	[6, 58, 36, 2, 59, 37],
+	[4, 46, 20, 6, 47, 21],
+	[7, 42, 14, 4, 43, 15],
+
+	// 13
+	[4, 133, 107],
+	[8, 59, 37, 1, 60, 38],
+	[8, 44, 20, 4, 45, 21],
+	[12, 33, 11, 4, 34, 12],
+
+	// 14
+	[3, 145, 115, 1, 146, 116],
+	[4, 64, 40, 5, 65, 41],
+	[11, 36, 16, 5, 37, 17],
+	[11, 36, 12, 5, 37, 13],
+
+	// 15
+	[5, 109, 87, 1, 110, 88],
+	[5, 65, 41, 5, 66, 42],
+	[5, 54, 24, 7, 55, 25],
+	[11, 36, 12],
+
+	// 16
+	[5, 122, 98, 1, 123, 99],
+	[7, 73, 45, 3, 74, 46],
+	[15, 43, 19, 2, 44, 20],
+	[3, 45, 15, 13, 46, 16],
+
+	// 17
+	[1, 135, 107, 5, 136, 108],
+	[10, 74, 46, 1, 75, 47],
+	[1, 50, 22, 15, 51, 23],
+	[2, 42, 14, 17, 43, 15],
+
+	// 18
+	[5, 150, 120, 1, 151, 121],
+	[9, 69, 43, 4, 70, 44],
+	[17, 50, 22, 1, 51, 23],
+	[2, 42, 14, 19, 43, 15],
+
+	// 19
+	[3, 141, 113, 4, 142, 114],
+	[3, 70, 44, 11, 71, 45],
+	[17, 47, 21, 4, 48, 22],
+	[9, 39, 13, 16, 40, 14],
+
+	// 20
+	[3, 135, 107, 5, 136, 108],
+	[3, 67, 41, 13, 68, 42],
+	[15, 54, 24, 5, 55, 25],
+	[15, 43, 15, 10, 44, 16],
+
+	// 21
+	[4, 144, 116, 4, 145, 117],
+	[17, 68, 42],
+	[17, 50, 22, 6, 51, 23],
+	[19, 46, 16, 6, 47, 17],
+
+	// 22
+	[2, 139, 111, 7, 140, 112],
+	[17, 74, 46],
+	[7, 54, 24, 16, 55, 25],
+	[34, 37, 13],
+
+	// 23
+	[4, 151, 121, 5, 152, 122],
+	[4, 75, 47, 14, 76, 48],
+	[11, 54, 24, 14, 55, 25],
+	[16, 45, 15, 14, 46, 16],
+
+	// 24
+	[6, 147, 117, 4, 148, 118],
+	[6, 73, 45, 14, 74, 46],
+	[11, 54, 24, 16, 55, 25],
+	[30, 46, 16, 2, 47, 17],
+
+	// 25
+	[8, 132, 106, 4, 133, 107],
+	[8, 75, 47, 13, 76, 48],
+	[7, 54, 24, 22, 55, 25],
+	[22, 45, 15, 13, 46, 16],
+
+	// 26
+	[10, 142, 114, 2, 143, 115],
+	[19, 74, 46, 4, 75, 47],
+	[28, 50, 22, 6, 51, 23],
+	[33, 46, 16, 4, 47, 17],
+
+	// 27
+	[8, 152, 122, 4, 153, 123],
+	[22, 73, 45, 3, 74, 46],
+	[8, 53, 23, 26, 54, 24],
+	[12, 45, 15, 28, 46, 16],
+
+	// 28
+	[3, 147, 117, 10, 148, 118],
+	[3, 73, 45, 23, 74, 46],
+	[4, 54, 24, 31, 55, 25],
+	[11, 45, 15, 31, 46, 16],
+
+	// 29
+	[7, 146, 116, 7, 147, 117],
+	[21, 73, 45, 7, 74, 46],
+	[1, 53, 23, 37, 54, 24],
+	[19, 45, 15, 26, 46, 16],
+
+	// 30
+	[5, 145, 115, 10, 146, 116],
+	[19, 75, 47, 10, 76, 48],
+	[15, 54, 24, 25, 55, 25],
+	[23, 45, 15, 25, 46, 16],
+
+	// 31
+	[13, 145, 115, 3, 146, 116],
+	[2, 74, 46, 29, 75, 47],
+	[42, 54, 24, 1, 55, 25],
+	[23, 45, 15, 28, 46, 16],
+
+	// 32
+	[17, 145, 115],
+	[10, 74, 46, 23, 75, 47],
+	[10, 54, 24, 35, 55, 25],
+	[19, 45, 15, 35, 46, 16],
+
+	// 33
+	[17, 145, 115, 1, 146, 116],
+	[14, 74, 46, 21, 75, 47],
+	[29, 54, 24, 19, 55, 25],
+	[11, 45, 15, 46, 46, 16],
+
+	// 34
+	[13, 145, 115, 6, 146, 116],
+	[14, 74, 46, 23, 75, 47],
+	[44, 54, 24, 7, 55, 25],
+	[59, 46, 16, 1, 47, 17],
+
+	// 35
+	[12, 151, 121, 7, 152, 122],
+	[12, 75, 47, 26, 76, 48],
+	[39, 54, 24, 14, 55, 25],
+	[22, 45, 15, 41, 46, 16],
+
+	// 36
+	[6, 151, 121, 14, 152, 122],
+	[6, 75, 47, 34, 76, 48],
+	[46, 54, 24, 10, 55, 25],
+	[2, 45, 15, 64, 46, 16],
+
+	// 37
+	[17, 152, 122, 4, 153, 123],
+	[29, 74, 46, 14, 75, 47],
+	[49, 54, 24, 10, 55, 25],
+	[24, 45, 15, 46, 46, 16],
+
+	// 38
+	[4, 152, 122, 18, 153, 123],
+	[13, 74, 46, 32, 75, 47],
+	[48, 54, 24, 14, 55, 25],
+	[42, 45, 15, 32, 46, 16],
+
+	// 39
+	[20, 147, 117, 4, 148, 118],
+	[40, 75, 47, 7, 76, 48],
+	[43, 54, 24, 22, 55, 25],
+	[10, 45, 15, 67, 46, 16],
+
+	// 40
+	[19, 148, 118, 6, 149, 119],
+	[18, 75, 47, 31, 76, 48],
+	[34, 54, 24, 34, 55, 25],
+	[20, 45, 15, 61, 46, 16]
+];
+
+QRRSBlock.getRSBlocks = function(typeNumber, errorCorrectLevel) {
+	
+	var rsBlock = QRRSBlock.getRsBlockTable(typeNumber, errorCorrectLevel);
+	
+	if (rsBlock === undefined) {
+		throw new Error("bad rs block @ typeNumber:" + typeNumber + "/errorCorrectLevel:" + errorCorrectLevel);
+	}
+
+	var length = rsBlock.length / 3;
+	
+	var list = [];
+	
+	for (var i = 0; i < length; i++) {
+
+		var count = rsBlock[i * 3 + 0];
+		var totalCount = rsBlock[i * 3 + 1];
+		var dataCount  = rsBlock[i * 3 + 2];
+
+		for (var j = 0; j < count; j++) {
+			list.push(new QRRSBlock(totalCount, dataCount) );	
+		}
+	}
+	
+	return list;
+};
+
+QRRSBlock.getRsBlockTable = function(typeNumber, errorCorrectLevel) {
+
+	switch(errorCorrectLevel) {
+	case QRErrorCorrectLevel.L :
+		return QRRSBlock.RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+	case QRErrorCorrectLevel.M :
+		return QRRSBlock.RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+	case QRErrorCorrectLevel.Q :
+		return QRRSBlock.RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+	case QRErrorCorrectLevel.H :
+		return QRRSBlock.RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+	default :
+		return undefined;
+	}
+};
+
+module.exports = QRRSBlock;
+
+};
+D["QRUtil"]=function(module,exports,require){var QRMode = require('./QRMode');
+var QRPolynomial = require('./QRPolynomial');
+var QRMath = require('./QRMath');
+var QRMaskPattern = require('./QRMaskPattern');
+
+var QRUtil = {
+
+    PATTERN_POSITION_TABLE : [
+        [],
+        [6, 18],
+        [6, 22],
+        [6, 26],
+        [6, 30],
+        [6, 34],
+        [6, 22, 38],
+        [6, 24, 42],
+        [6, 26, 46],
+        [6, 28, 50],
+        [6, 30, 54],        
+        [6, 32, 58],
+        [6, 34, 62],
+        [6, 26, 46, 66],
+        [6, 26, 48, 70],
+        [6, 26, 50, 74],
+        [6, 30, 54, 78],
+        [6, 30, 56, 82],
+        [6, 30, 58, 86],
+        [6, 34, 62, 90],
+        [6, 28, 50, 72, 94],
+        [6, 26, 50, 74, 98],
+        [6, 30, 54, 78, 102],
+        [6, 28, 54, 80, 106],
+        [6, 32, 58, 84, 110],
+        [6, 30, 58, 86, 114],
+        [6, 34, 62, 90, 118],
+        [6, 26, 50, 74, 98, 122],
+        [6, 30, 54, 78, 102, 126],
+        [6, 26, 52, 78, 104, 130],
+        [6, 30, 56, 82, 108, 134],
+        [6, 34, 60, 86, 112, 138],
+        [6, 30, 58, 86, 114, 142],
+        [6, 34, 62, 90, 118, 146],
+        [6, 30, 54, 78, 102, 126, 150],
+        [6, 24, 50, 76, 102, 128, 154],
+        [6, 28, 54, 80, 106, 132, 158],
+        [6, 32, 58, 84, 110, 136, 162],
+        [6, 26, 54, 82, 110, 138, 166],
+        [6, 30, 58, 86, 114, 142, 170]
+    ],
+
+    G15 : (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0),
+    G18 : (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0),
+    G15_MASK : (1 << 14) | (1 << 12) | (1 << 10)    | (1 << 4) | (1 << 1),
+
+    getBCHTypeInfo : function(data) {
+        var d = data << 10;
+        while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15) >= 0) {
+            d ^= (QRUtil.G15 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15) ) );    
+        }
+        return ( (data << 10) | d) ^ QRUtil.G15_MASK;
+    },
+
+    getBCHTypeNumber : function(data) {
+        var d = data << 12;
+        while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18) >= 0) {
+            d ^= (QRUtil.G18 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18) ) );    
+        }
+        return (data << 12) | d;
+    },
+
+    getBCHDigit : function(data) {
+
+        var digit = 0;
+
+        while (data !== 0) {
+            digit++;
+            data >>>= 1;
+        }
+
+        return digit;
+    },
+
+    getPatternPosition : function(typeNumber) {
+        return QRUtil.PATTERN_POSITION_TABLE[typeNumber - 1];
+    },
+
+    getMask : function(maskPattern, i, j) {
+        
+        switch (maskPattern) {
+            
+        case QRMaskPattern.PATTERN000 : return (i + j) % 2 === 0;
+        case QRMaskPattern.PATTERN001 : return i % 2 === 0;
+        case QRMaskPattern.PATTERN010 : return j % 3 === 0;
+        case QRMaskPattern.PATTERN011 : return (i + j) % 3 === 0;
+        case QRMaskPattern.PATTERN100 : return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 === 0;
+        case QRMaskPattern.PATTERN101 : return (i * j) % 2 + (i * j) % 3 === 0;
+        case QRMaskPattern.PATTERN110 : return ( (i * j) % 2 + (i * j) % 3) % 2 === 0;
+        case QRMaskPattern.PATTERN111 : return ( (i * j) % 3 + (i + j) % 2) % 2 === 0;
+
+        default :
+            throw new Error("bad maskPattern:" + maskPattern);
+        }
+    },
+
+    getErrorCorrectPolynomial : function(errorCorrectLength) {
+
+        var a = new QRPolynomial([1], 0);
+
+        for (var i = 0; i < errorCorrectLength; i++) {
+            a = a.multiply(new QRPolynomial([1, QRMath.gexp(i)], 0) );
+        }
+
+        return a;
+    },
+
+    getLengthInBits : function(mode, type) {
+
+        if (1 <= type && type < 10) {
+
+            // 1 - 9
+
+            switch(mode) {
+            case QRMode.MODE_NUMBER     : return 10;
+            case QRMode.MODE_ALPHA_NUM  : return 9;
+            case QRMode.MODE_8BIT_BYTE  : return 8;
+            case QRMode.MODE_KANJI      : return 8;
+            default :
+                throw new Error("mode:" + mode);
+            }
+
+        } else if (type < 27) {
+
+            // 10 - 26
+
+            switch(mode) {
+            case QRMode.MODE_NUMBER     : return 12;
+            case QRMode.MODE_ALPHA_NUM  : return 11;
+            case QRMode.MODE_8BIT_BYTE  : return 16;
+            case QRMode.MODE_KANJI      : return 10;
+            default :
+                throw new Error("mode:" + mode);
+            }
+
+        } else if (type < 41) {
+
+            // 27 - 40
+
+            switch(mode) {
+            case QRMode.MODE_NUMBER     : return 14;
+            case QRMode.MODE_ALPHA_NUM  : return 13;
+            case QRMode.MODE_8BIT_BYTE  : return 16;
+            case QRMode.MODE_KANJI      : return 12;
+            default :
+                throw new Error("mode:" + mode);
+            }
+
+        } else {
+            throw new Error("type:" + type);
+        }
+    },
+
+    getLostPoint : function(qrCode) {
+        
+        var moduleCount = qrCode.getModuleCount();
+        var lostPoint = 0;
+        var row = 0; 
+        var col = 0;
+
+        
+        // LEVEL1
+        
+        for (row = 0; row < moduleCount; row++) {
+
+            for (col = 0; col < moduleCount; col++) {
+
+                var sameCount = 0;
+                var dark = qrCode.isDark(row, col);
+
+                for (var r = -1; r <= 1; r++) {
+
+                    if (row + r < 0 || moduleCount <= row + r) {
+                        continue;
+                    }
+
+                    for (var c = -1; c <= 1; c++) {
+
+                        if (col + c < 0 || moduleCount <= col + c) {
+                            continue;
+                        }
+
+                        if (r === 0 && c === 0) {
+                            continue;
+                        }
+
+                        if (dark === qrCode.isDark(row + r, col + c) ) {
+                            sameCount++;
+                        }
+                    }
+                }
+
+                if (sameCount > 5) {
+                    lostPoint += (3 + sameCount - 5);
+                }
+            }
+        }
+
+        // LEVEL2
+
+        for (row = 0; row < moduleCount - 1; row++) {
+            for (col = 0; col < moduleCount - 1; col++) {
+                var count = 0;
+                if (qrCode.isDark(row,     col    ) ) count++;
+                if (qrCode.isDark(row + 1, col    ) ) count++;
+                if (qrCode.isDark(row,     col + 1) ) count++;
+                if (qrCode.isDark(row + 1, col + 1) ) count++;
+                if (count === 0 || count === 4) {
+                    lostPoint += 3;
+                }
+            }
+        }
+
+        // LEVEL3
+
+        for (row = 0; row < moduleCount; row++) {
+            for (col = 0; col < moduleCount - 6; col++) {
+                if (qrCode.isDark(row, col) && 
+                        !qrCode.isDark(row, col + 1) && 
+                         qrCode.isDark(row, col + 2) && 
+                         qrCode.isDark(row, col + 3) && 
+                         qrCode.isDark(row, col + 4) && 
+                        !qrCode.isDark(row, col + 5) && 
+                         qrCode.isDark(row, col + 6) ) {
+                    lostPoint += 40;
+                }
+            }
+        }
+
+        for (col = 0; col < moduleCount; col++) {
+            for (row = 0; row < moduleCount - 6; row++) {
+                if (qrCode.isDark(row, col) &&
+                        !qrCode.isDark(row + 1, col) &&
+                         qrCode.isDark(row + 2, col) &&
+                         qrCode.isDark(row + 3, col) &&
+                         qrCode.isDark(row + 4, col) &&
+                        !qrCode.isDark(row + 5, col) &&
+                         qrCode.isDark(row + 6, col) ) {
+                    lostPoint += 40;
+                }
+            }
+        }
+
+        // LEVEL4
+        
+        var darkCount = 0;
+
+        for (col = 0; col < moduleCount; col++) {
+            for (row = 0; row < moduleCount; row++) {
+                if (qrCode.isDark(row, col) ) {
+                    darkCount++;
+                }
+            }
+        }
+        
+        var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+        lostPoint += ratio * 10;
+
+        return lostPoint;       
+    }
+
+};
+
+module.exports = QRUtil;
+
+};
+D["index"]=function(module,exports,require){//---------------------------------------------------------------------
+// QRCode for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//   http://www.opensource.org/licenses/mit-license.php
+//
+// The word "QR Code" is registered trademark of 
+// DENSO WAVE INCORPORATED
+//   http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+// Modified to work in node for this project (and some refactoring)
+//---------------------------------------------------------------------
+
+var QR8bitByte = require('./QR8bitByte');
+var QRUtil = require('./QRUtil');
+var QRPolynomial = require('./QRPolynomial');
+var QRRSBlock = require('./QRRSBlock');
+var QRBitBuffer = require('./QRBitBuffer');
+
+function QRCode(typeNumber, errorCorrectLevel) {
+	this.typeNumber = typeNumber;
+	this.errorCorrectLevel = errorCorrectLevel;
+	this.modules = null;
+	this.moduleCount = 0;
+	this.dataCache = null;
+	this.dataList = [];
+}
+
+QRCode.prototype = {
+	
+	addData : function(data) {
+		var newData = new QR8bitByte(data);
+		this.dataList.push(newData);
+		this.dataCache = null;
+	},
+	
+	isDark : function(row, col) {
+		if (row < 0 || this.moduleCount <= row || col < 0 || this.moduleCount <= col) {
+			throw new Error(row + "," + col);
+		}
+		return this.modules[row][col];
+	},
+
+	getModuleCount : function() {
+		return this.moduleCount;
+	},
+	
+	make : function() {
+		// Calculate automatically typeNumber if provided is < 1
+		if (this.typeNumber < 1 ){
+			var typeNumber = 1;
+			for (typeNumber = 1; typeNumber < 40; typeNumber++) {
+				var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, this.errorCorrectLevel);
+
+				var buffer = new QRBitBuffer();
+				var totalDataCount = 0;
+				for (var i = 0; i < rsBlocks.length; i++) {
+					totalDataCount += rsBlocks[i].dataCount;
+				}
+
+				for (var x = 0; x < this.dataList.length; x++) {
+					var data = this.dataList[x];
+					buffer.put(data.mode, 4);
+					buffer.put(data.getLength(), QRUtil.getLengthInBits(data.mode, typeNumber) );
+					data.write(buffer);
+				}
+				if (buffer.getLengthInBits() <= totalDataCount * 8)
+					break;
+			}
+			this.typeNumber = typeNumber;
+		}
+		this.makeImpl(false, this.getBestMaskPattern() );
+	},
+	
+	makeImpl : function(test, maskPattern) {
+		
+		this.moduleCount = this.typeNumber * 4 + 17;
+		this.modules = new Array(this.moduleCount);
+		
+		for (var row = 0; row < this.moduleCount; row++) {
+			
+			this.modules[row] = new Array(this.moduleCount);
+			
+			for (var col = 0; col < this.moduleCount; col++) {
+				this.modules[row][col] = null;//(col + row) % 3;
+			}
+		}
+	
+		this.setupPositionProbePattern(0, 0);
+		this.setupPositionProbePattern(this.moduleCount - 7, 0);
+		this.setupPositionProbePattern(0, this.moduleCount - 7);
+		this.setupPositionAdjustPattern();
+		this.setupTimingPattern();
+		this.setupTypeInfo(test, maskPattern);
+		
+		if (this.typeNumber >= 7) {
+			this.setupTypeNumber(test);
+		}
+	
+		if (this.dataCache === null) {
+			this.dataCache = QRCode.createData(this.typeNumber, this.errorCorrectLevel, this.dataList);
+		}
+	
+		this.mapData(this.dataCache, maskPattern);
+	},
+
+	setupPositionProbePattern : function(row, col)  {
+		
+		for (var r = -1; r <= 7; r++) {
+			
+			if (row + r <= -1 || this.moduleCount <= row + r) continue;
+			
+			for (var c = -1; c <= 7; c++) {
+				
+				if (col + c <= -1 || this.moduleCount <= col + c) continue;
+				
+				if ( (0 <= r && r <= 6 && (c === 0 || c === 6) ) || 
+                     (0 <= c && c <= 6 && (r === 0 || r === 6) ) || 
+                     (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+					this.modules[row + r][col + c] = true;
+				} else {
+					this.modules[row + r][col + c] = false;
+				}
+			}		
+		}		
+	},
+	
+	getBestMaskPattern : function() {
+	
+		var minLostPoint = 0;
+		var pattern = 0;
+	
+		for (var i = 0; i < 8; i++) {
+			
+			this.makeImpl(true, i);
+	
+			var lostPoint = QRUtil.getLostPoint(this);
+	
+			if (i === 0 || minLostPoint >  lostPoint) {
+				minLostPoint = lostPoint;
+				pattern = i;
+			}
+		}
+	
+		return pattern;
+	},
+	
+	createMovieClip : function(target_mc, instance_name, depth) {
+	
+		var qr_mc = target_mc.createEmptyMovieClip(instance_name, depth);
+		var cs = 1;
+	
+		this.make();
+
+		for (var row = 0; row < this.modules.length; row++) {
+			
+			var y = row * cs;
+			
+			for (var col = 0; col < this.modules[row].length; col++) {
+	
+				var x = col * cs;
+				var dark = this.modules[row][col];
+			
+				if (dark) {
+					qr_mc.beginFill(0, 100);
+					qr_mc.moveTo(x, y);
+					qr_mc.lineTo(x + cs, y);
+					qr_mc.lineTo(x + cs, y + cs);
+					qr_mc.lineTo(x, y + cs);
+					qr_mc.endFill();
+				}
+			}
+		}
+		
+		return qr_mc;
+	},
+
+	setupTimingPattern : function() {
+		
+		for (var r = 8; r < this.moduleCount - 8; r++) {
+			if (this.modules[r][6] !== null) {
+				continue;
+			}
+			this.modules[r][6] = (r % 2 === 0);
+		}
+	
+		for (var c = 8; c < this.moduleCount - 8; c++) {
+			if (this.modules[6][c] !== null) {
+				continue;
+			}
+			this.modules[6][c] = (c % 2 === 0);
+		}
+	},
+	
+	setupPositionAdjustPattern : function() {
+	
+		var pos = QRUtil.getPatternPosition(this.typeNumber);
+		
+		for (var i = 0; i < pos.length; i++) {
+		
+			for (var j = 0; j < pos.length; j++) {
+			
+				var row = pos[i];
+				var col = pos[j];
+				
+				if (this.modules[row][col] !== null) {
+					continue;
+				}
+				
+				for (var r = -2; r <= 2; r++) {
+				
+					for (var c = -2; c <= 2; c++) {
+					
+						if (Math.abs(r) === 2 || 
+                            Math.abs(c) === 2 ||
+                            (r === 0 && c === 0) ) {
+							this.modules[row + r][col + c] = true;
+						} else {
+							this.modules[row + r][col + c] = false;
+						}
+					}
+				}
+			}
+		}
+	},
+	
+	setupTypeNumber : function(test) {
+	
+		var bits = QRUtil.getBCHTypeNumber(this.typeNumber);
+        var mod;
+	
+		for (var i = 0; i < 18; i++) {
+			mod = (!test && ( (bits >> i) & 1) === 1);
+			this.modules[Math.floor(i / 3)][i % 3 + this.moduleCount - 8 - 3] = mod;
+		}
+	
+		for (var x = 0; x < 18; x++) {
+			mod = (!test && ( (bits >> x) & 1) === 1);
+			this.modules[x % 3 + this.moduleCount - 8 - 3][Math.floor(x / 3)] = mod;
+		}
+	},
+	
+	setupTypeInfo : function(test, maskPattern) {
+	
+		var data = (this.errorCorrectLevel << 3) | maskPattern;
+		var bits = QRUtil.getBCHTypeInfo(data);
+        var mod;
+	
+		// vertical		
+		for (var v = 0; v < 15; v++) {
+	
+			mod = (!test && ( (bits >> v) & 1) === 1);
+	
+			if (v < 6) {
+				this.modules[v][8] = mod;
+			} else if (v < 8) {
+				this.modules[v + 1][8] = mod;
+			} else {
+				this.modules[this.moduleCount - 15 + v][8] = mod;
+			}
+		}
+	
+		// horizontal
+		for (var h = 0; h < 15; h++) {
+	
+			mod = (!test && ( (bits >> h) & 1) === 1);
+			
+			if (h < 8) {
+				this.modules[8][this.moduleCount - h - 1] = mod;
+			} else if (h < 9) {
+				this.modules[8][15 - h - 1 + 1] = mod;
+			} else {
+				this.modules[8][15 - h - 1] = mod;
+			}
+		}
+	
+		// fixed module
+		this.modules[this.moduleCount - 8][8] = (!test);
+	
+	},
+	
+	mapData : function(data, maskPattern) {
+		
+		var inc = -1;
+		var row = this.moduleCount - 1;
+		var bitIndex = 7;
+		var byteIndex = 0;
+		
+		for (var col = this.moduleCount - 1; col > 0; col -= 2) {
+	
+			if (col === 6) col--;
+	
+			while (true) {
+	
+				for (var c = 0; c < 2; c++) {
+					
+					if (this.modules[row][col - c] === null) {
+						
+						var dark = false;
+	
+						if (byteIndex < data.length) {
+							dark = ( ( (data[byteIndex] >>> bitIndex) & 1) === 1);
+						}
+	
+						var mask = QRUtil.getMask(maskPattern, row, col - c);
+	
+						if (mask) {
+							dark = !dark;
+						}
+						
+						this.modules[row][col - c] = dark;
+						bitIndex--;
+	
+						if (bitIndex === -1) {
+							byteIndex++;
+							bitIndex = 7;
+						}
+					}
+				}
+								
+				row += inc;
+	
+				if (row < 0 || this.moduleCount <= row) {
+					row -= inc;
+					inc = -inc;
+					break;
+				}
+			}
+		}
+		
+	}
+
+};
+
+QRCode.PAD0 = 0xEC;
+QRCode.PAD1 = 0x11;
+
+QRCode.createData = function(typeNumber, errorCorrectLevel, dataList) {
+	
+	var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectLevel);
+	
+	var buffer = new QRBitBuffer();
+	
+	for (var i = 0; i < dataList.length; i++) {
+		var data = dataList[i];
+		buffer.put(data.mode, 4);
+		buffer.put(data.getLength(), QRUtil.getLengthInBits(data.mode, typeNumber) );
+		data.write(buffer);
+	}
+
+	// calc num max data.
+	var totalDataCount = 0;
+	for (var x = 0; x < rsBlocks.length; x++) {
+		totalDataCount += rsBlocks[x].dataCount;
+	}
+
+	if (buffer.getLengthInBits() > totalDataCount * 8) {
+		throw new Error("code length overflow. (" + 
+            buffer.getLengthInBits() + 
+            ">" +  
+            totalDataCount * 8 + 
+            ")");
+	}
+
+	// end code
+	if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+		buffer.put(0, 4);
+	}
+
+	// padding
+	while (buffer.getLengthInBits() % 8 !== 0) {
+		buffer.putBit(false);
+	}
+
+	// padding
+	while (true) {
+		
+		if (buffer.getLengthInBits() >= totalDataCount * 8) {
+			break;
+		}
+		buffer.put(QRCode.PAD0, 8);
+		
+		if (buffer.getLengthInBits() >= totalDataCount * 8) {
+			break;
+		}
+		buffer.put(QRCode.PAD1, 8);
+	}
+
+	return QRCode.createBytes(buffer, rsBlocks);
+};
+
+QRCode.createBytes = function(buffer, rsBlocks) {
+
+	var offset = 0;
+	
+	var maxDcCount = 0;
+	var maxEcCount = 0;
+	
+	var dcdata = new Array(rsBlocks.length);
+	var ecdata = new Array(rsBlocks.length);
+	
+	for (var r = 0; r < rsBlocks.length; r++) {
+
+		var dcCount = rsBlocks[r].dataCount;
+		var ecCount = rsBlocks[r].totalCount - dcCount;
+
+		maxDcCount = Math.max(maxDcCount, dcCount);
+		maxEcCount = Math.max(maxEcCount, ecCount);
+		
+		dcdata[r] = new Array(dcCount);
+		
+		for (var i = 0; i < dcdata[r].length; i++) {
+			dcdata[r][i] = 0xff & buffer.buffer[i + offset];
+		}
+		offset += dcCount;
+		
+		var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+		var rawPoly = new QRPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+		var modPoly = rawPoly.mod(rsPoly);
+		ecdata[r] = new Array(rsPoly.getLength() - 1);
+		for (var x = 0; x < ecdata[r].length; x++) {
+            var modIndex = x + modPoly.getLength() - ecdata[r].length;
+			ecdata[r][x] = (modIndex >= 0)? modPoly.get(modIndex) : 0;
+		}
+
+	}
+	
+	var totalCodeCount = 0;
+	for (var y = 0; y < rsBlocks.length; y++) {
+		totalCodeCount += rsBlocks[y].totalCount;
+	}
+
+	var data = new Array(totalCodeCount);
+	var index = 0;
+
+	for (var z = 0; z < maxDcCount; z++) {
+		for (var s = 0; s < rsBlocks.length; s++) {
+			if (z < dcdata[s].length) {
+				data[index++] = dcdata[s][z];
+			}
+		}
+	}
+
+	for (var xx = 0; xx < maxEcCount; xx++) {
+		for (var t = 0; t < rsBlocks.length; t++) {
+			if (xx < ecdata[t].length) {
+				data[index++] = ecdata[t][xx];
+			}
+		}
+	}
+
+	return data;
+
+};
+
+module.exports = QRCode;
+
+};
+var QRCode=R("index");
+window.dscQR=function(text){var q=new QRCode(-1,1);q.addData(String(text));q.make();var n=q.getModuleCount(),m=4,s=n+m*2,p=[];
+for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.isDark(r,c))p.push("M"+(c+m)+" "+(r+m)+"h1v1h-1z");
+return {n:n,svg:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+s+' '+s+'" shape-rendering="crispEdges"><rect width="'+s+'" height="'+s+'" fill="#fff"/><path d="'+p.join("")+'" fill="#000"/></svg>'}};})();
+</script>
 <div id="app">
   <header id="tb" role="toolbar" aria-label="Toolbar">
     <div class="tg">
+      <button class="tbb" id="tHome" title="Home: recent services and the latest Harmony lineup"><b>&#8962;</b>Home</button>
       <button class="tbb" id="tSearch" title="Search songs"><b>&#8981;</b>Search</button>
       <button class="tbb" id="tBible" title="Bible: look up a passage and make slides"><b>&#10013;</b>Bible</button>
     </div>
@@ -4433,7 +5688,7 @@ function dscErr(e){
    This computer publishes what is on screen to presenter/{teamId} and listens
    for button presses in presenterCmd/{teamId}/q. The projector is still fed
    directly by this computer, so it never depends on the internet. */
-var RM=null,RMauth=false,RMerr=0;
+var RM=null,RMauth=false,RMerr=0,LANH=null;
 /* ---- background for the phone remote's live preview ----
    remoteBg() describes the slide background as {k,t,v}:
      k = 'img' | 'vid' | 'grad' | 'color'
@@ -4777,10 +6032,11 @@ function remoteState(){
     bg:remoteBg(p),dim:Math.min(.9,Math.max(0,((p.d&&p.d.dim)||0)/100)),
     black:!!black,clear:!!clear,auto:!!autoNext,msg:msgOn?String(msg||'').slice(0,200):'',
     bv:BIBLES.map(b=>({i:b[0],n:b[2]})),
-    bq:(RM&&RM.bq&&Date.now()-RM.bq.at<900000)?RM.bq:null
+    bq:((RM&&RM.bq)||(LANH&&LANH.bq))&&Date.now()-((RM&&RM.bq)||LANH.bq).at<900000?((RM&&RM.bq)||LANH.bq):null
   };
 }
 function remotePublish(force){
+  try{lanPublish(force)}catch(e){}
   if(!RM||!dscDb)return;
   clearTimeout(RM.t);
   /* wait 150 ms so a burst of changes becomes one write, but never keep postponing for more than 1 s */
@@ -4836,9 +6092,9 @@ function remotePlace(c){
   toast('Remote: text '+(c.al||String(c.pos||'').toLowerCase()));
 }
 async function remoteBibleQuery(c){
-  if(!RM)return;
+  const RR=RM||LANH;if(!RR)return;
   const ver=BIBLES.some(b=>b[0]===c.ver)?c.ver:'kjv',q=String(c.q||'').trim().slice(0,80),rid=String(c.rid||'').slice(0,40);
-  RM.bq={rid,q,ver,busy:1,at:Date.now()};remotePublish(true);
+  RR.bq={rid,q,ver,busy:1,at:Date.now()};remotePublish(true);
   const out={rid,q,ver,res:[],at:Date.now()};
   try{
     const d=await bbLoad(ver);
@@ -4870,7 +6126,7 @@ async function remoteBibleQuery(c){
       }else out.err=p.err;
     }
   }catch(e){out.err='The computer could not open that Bible.'}
-  if(RM&&RM.bq&&RM.bq.rid===rid){RM.bq=out;remotePublish(true)}
+  if(RR.bq&&RR.bq.rid===rid){RR.bq=out;remotePublish(true)}
 }
 async function remoteBibleGo(c){
   try{
@@ -4959,6 +6215,59 @@ async function remoteAccessLink(){
   try{await navigator.clipboard.writeText(link);toast('Stream access link copied. Paste it in Stream (StreamLink, Cloud link).')}
   catch(e){window.prompt('Copy this access link and paste it in Stream:',link)}
 }
+/* ---- Wi-Fi remote (desktop app only) ----
+   The desktop app runs a small server for phones on the same Wi-Fi (no internet). This page feeds it the same state the
+   cloud remote publishes and runs the button presses that arrive from it. The QR shows the phone's address and PIN. */
+(function(){
+  const N=window.dscNative&&window.dscNative.lan;if(!N)return;
+  LANH={bq:null,lan:1,key:'',t:0,clients:0,hb:0};
+  N.onCmd(c=>{try{if(c&&c.t)remoteRun(c)}catch(e){console.error(e)}lanPublish(true);setTimeout(()=>lanPublish(),500)});
+  N.onClients(n=>{LANH.clients=n;try{lanBadge()}catch(e){}lanPublish(true)});
+  setInterval(()=>lanPublish(true),15000);
+})();
+function lanPublish(force){
+  if(!LANH)return;
+  clearTimeout(LANH.t);
+  LANH.t=setTimeout(()=>{
+    let st,key;
+    try{st=remoteState();key=JSON.stringify(Object.assign({},st,{hb:0}))}catch(e){return}
+    if(!force&&key===LANH.key)return;
+    LANH.key=key;
+    try{window.dscNative.lan.state(JSON.stringify(st))}catch(e){}
+  },force?0:120);
+}
+function lanBadge(){
+  const b=$('#tRemote');if(!b||!LANH)return;
+  const n=LANH.clients|0;
+  b.title=(RM?'Remote is ON. Click to turn it off.':'Let the Disciples app on your phone control this screen')+(n?' \u00b7 '+n+' phone'+(n>1?'s':'')+' on Wi-Fi':'');
+}
+async function lanDlg(){
+  const N=window.dscNative&&window.dscNative.lan;
+  if(!N){toast('The Wi-Fi remote is part of the desktop app.');return}
+  let inf=null;try{inf=await N.info()}catch(e){}
+  const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Phone remote on this Wi-Fi</b><button class="x">Close</button></div><div id="lnBody"></div>','');
+  m.q('.x').onclick=m.done;
+  const body=m.q('#lnBody');
+  if(!inf||!inf.running){body.innerHTML='<p class="hint">The Wi-Fi remote is not running. It is on by default; check that <code>lan.enabled</code> is true in config.json (it is on by default), then restart PreCenter.</p>';return}
+  if(!inf.urls.length){body.innerHTML='<p class="hint">This computer is not connected to a Wi-Fi or wired network, so a phone cannot reach it.</p>';return}
+  let cur=0;
+  const draw=()=>{
+    const u=inf.urls[cur],q=window.dscQR?window.dscQR(u.url):null;
+    body.innerHTML='<p class="hint">Open Disciples: Harmony on the phone, go to Remote and tap <b>Scan QR</b> (or point the phone camera at the code). The phone must be on the same Wi-Fi as this computer. Nothing goes through the internet.</p>'
+      +'<div style="display:flex;justify-content:center;padding:6px"><div id="lnQr" style="width:min(300px,70vw);height:min(300px,70vw);background:#fff;border-radius:10px;padding:2px">'+(q?q.svg.replace('<svg','<svg width="100%" height="100%"'):'')+'</div></div>'
+      +'<div style="text-align:center;margin:6px 0"><div><b>'+dscEsc(u.address)+':'+inf.port+'</b></div><div class="hint" style="margin:0">PIN <b style="letter-spacing:.2em">'+dscEsc(inf.pin)+'</b> \u00b7 <span id="lnCl"></span></div></div>'
+      +(inf.urls.length>1?'<label>If the phone cannot connect, try another address<select id="lnSel">'+inf.urls.map((x,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+dscEsc(x.address+'  ('+x.name+')')+'</option>').join('')+'</select></label>':'')
+      +'<div class="row"><button id="lnCp">Copy link</button><button id="lnNp" title="Phones already connected will have to scan again">New PIN</button></div>'
+      +'<p class="hint">First time on Windows: if the phone cannot connect, allow PreCenter on <b>private networks</b> when Windows asks (or in Windows Security \u203a Firewall).</p>';
+    const cl=()=>{const e=m.q('#lnCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}};cl();
+    const iv=setInterval(()=>{if(!m.w.isConnected){clearInterval(iv);return}cl()},1000);
+    const sel=m.q('#lnSel');if(sel)sel.onchange=()=>{cur=+sel.value;clearInterval(iv);draw()};
+    m.q('#lnCp').onclick=async()=>{try{await navigator.clipboard.writeText(u.url);toast('Link copied')}catch(e){window.prompt('Copy this link:',u.url)}};
+    m.q('#lnNp').onclick=async()=>{try{const n=await N.newPin();if(n){inf=n;clearInterval(iv);draw();toast('New PIN. Phones must scan the new code.')}}catch(e){toast('Could not change the PIN')}};
+  };
+  draw();
+}
+$('#tHome').onclick=()=>window.dscStartHome&&dscStartHome();
 $('#tRemote').onclick=()=>{RM?remoteOff():remoteOn(false)};
 try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),1200)}catch(e){}
 
@@ -5008,6 +6317,130 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
     });
   }
   start();
+})();
+
+/* ---------- Home: recent services + the latest Disciples: Harmony lineup, shown when PreCenter starts ---------- */
+(function dscStartHomeMod(){
+  if(/^#(output|stage|layout)/.test(location.hash))return;
+  const st=document.createElement('style');
+  st.textContent='#dscStartHome{position:fixed;inset:0;z-index:9000;background:var(--bg);color:var(--ink);overflow:auto;display:flex;justify-content:center;padding:28px 18px}'
+  +'#dscStartHome .hw{width:min(1040px,100%);display:flex;flex-direction:column;gap:16px}'
+  +'#dscStartHome .hh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}'
+  +'#dscStartHome .hk{font:700 11px Poppins,Inter,sans-serif;letter-spacing:.3em;color:var(--acc)}#dscStartHome h1{margin:2px 0 0;font:700 28px Poppins,Inter,sans-serif}'
+  +'#dscStartHome .ha{display:flex;gap:8px;flex-wrap:wrap}'
+  +'#dscStartHome .hg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}@media(max-width:820px){#dscStartHome .hg{grid-template-columns:1fr}}'
+  +'#dscStartHome .hc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}'
+  +'#dscStartHome .hc h2{margin:0;font:700 13px Poppins,Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}'
+  +'#dscStartHome .hr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:transparent;color:inherit;text-align:left;width:100%}'
+  +'#dscStartHome .hr:hover,#dscStartHome .hr:focus-visible{border-color:var(--acc)}#dscStartHome .hr.on{border-color:var(--acc);background:rgba(255,200,0,.07)}'
+  +'#dscStartHome .hr b{display:block;font-weight:600}#dscStartHome .hr small{color:var(--mute)}#dscStartHome .hb{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--acc);color:#000;font-weight:700;flex:none}'
+  +'#dscStartHome .hs{display:grid;grid-template-columns:28px 1fr 56px 70px;gap:6px;font-size:13px;padding:4px 2px;border-bottom:1px solid var(--line)}#dscStartHome .hs.h{color:var(--mute);font-size:11px;text-transform:uppercase}'
+  +'#dscStartHome .hs span:nth-child(3),#dscStartHome .hs span:nth-child(4){text-align:right}'
+  +'#dscStartHome .hf{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--mute);font-size:12px}#dscStartHome .hf label{flex-direction:row;align-items:center;gap:6px;display:flex}'
+  +'#dscStartHome .ld{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}#dscStartHome .ld b{font-size:17px}#dscStartHome .ld span{color:var(--mute);font-size:13px}';
+  document.head.appendChild(st);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const ago=t=>{if(!t)return '';const m=Math.round((Date.now()-t)/6e4);if(m<1)return 'just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<24)return h+' h ago';const d=Math.round(h/24);return d<8?d+' day'+(d>1?'s':'')+' ago':new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'})};
+  const fmtT=v=>{if(!v)return '';let d=null;if(typeof v.toDate==='function')d=v.toDate();else{const m=/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?$/i.exec(String(v).trim());if(m){if(m[3])return(+m[1])+':'+m[2]+' '+m[3].toUpperCase();d=new Date(2000,0,1,+m[1],+m[2])}else{d=new Date(v);if(isNaN(d))return String(v)}}return d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})};
+  const sKey=(x,b)=>String(x.key||x.songKey||x.transposedKey||x.selectedKey||x.currentKey||(b&&(b.key||b.songKey||b.originalKey))||'');
+  const sBpm=(x,b)=>{const v=x.bpm||x.tempo||(b&&(b.bpm||b.tempo));return v?String(v):''};
+  let w=null,shownOnce=false;
+  const close=()=>{if(w){document.removeEventListener('keydown',kd,true);w.remove();w=null}};
+  const kd=e=>{if(e.key==='Escape'&&w&&!document.getElementById('dscGate')){e.stopPropagation();close()}};
+  function plans(){
+    const L=(window.plList?plList():[]);
+    return L.slice().sort((a,b)=>(b.cur?1:0)-(a.cur?1:0)||Math.max(b.at||0,b.saved||0,b.opened||0)-Math.max(a.at||0,a.saved||0,a.opened||0));
+  }
+  function recentHtml(){
+    const L=plans().slice(0,8);
+    if(!L.length)return '<div class="hint" style="margin:0">No services yet. Start a new one.</div>';
+    return L.map(p=>{
+      const bits=[p.n+' item'+(p.n===1?'':'s')];
+      if(p.cur)bits.push('open now');else if(p.at)bits.push('opened '+ago(p.at));
+      if(p.saved)bits.push('saved to computer '+ago(p.saved));else if(p.opened)bits.push('opened from a file '+ago(p.opened));
+      return '<button class="hr'+(p.cur?' on':'')+'" data-id="'+esc(p.id)+'"><span><b>'+esc(p.name)+'</b><small>'+esc(bits.join(' · '))+'</small></span>'+(p.cur?'<span class="hb">Current</span>':'')+'</button>';
+    }).join('');
+  }
+  let LN=null;
+  async function loadLineup(box,force){
+    const set=h=>{if(box.isConnected)box.innerHTML=h};
+    set('<div class="hint" style="margin:0">Loading the latest lineup…</div>');
+    try{
+      await dscInit();const u=dscAuth.currentUser;
+      if(!u){set('<div class="hint" style="margin:0">Sign in to see your team’s lineup.</div>');return}
+      const teams=await dscTeams(u);let team=dscPickTeam(teams);
+      if(!team){
+        if(!teams.length){set('<div class="hint" style="margin:0">This account is not on a Disciples team yet.</div>');return}
+        set('<div class="hint" style="margin:0">You are on '+teams.length+' teams.</div><div><button id="hnTeam" class="pri">Choose a team</button></div>');
+        const b=box.querySelector('#hnTeam');if(b)b.onclick=()=>{close();window.dscOpen&&dscOpen()};return;
+      }
+      if(!LN||force||LN.team!==team.id){
+        const [lines,lib]=await Promise.all([dscLoadLineups(team.id),dscLoadLibrary(team.id)]);
+        LN={team:team.id,name:team.name,lines,lib};
+      }
+      const l=LN.lines[0];
+      if(!l){set('<div class="hint" style="margin:0">No lineup with songs yet. Build one in Disciples: Harmony.</div>');return}
+      const byId=new Map(LN.lib.map(s=>[s.id,s])),key=l.dateKey||String(l.id).split('_').pop(),d=new Date(key+'T00:00:00');
+      const wd=isNaN(d)?'':d.toLocaleDateString(undefined,{weekday:'long'}),dt=isNaN(d)?key:d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+      const tm=fmtT(l.serviceTime||l.eventTime||l.time||l.startTime||l.start||l.at||'');
+      set('<div class="ld"><b>'+esc(wd)+(tm?' · '+esc(tm):'')+'</b><span>'+esc(dt)+'</span></div><div class="hint" style="margin:0">'+esc(l.title||'Worship Lineup')+' · '+esc(LN.name)+'</div>'
+        +'<div class="hs h"><span>#</span><span>Song</span><span>Key</span><span>BPM</span></div>'
+        +l.songs.map((x,n)=>{const b=byId.get(x.id),k=sKey(x,b),bp=sBpm(x,b);return '<div class="hs"><span>'+(n+1)+'</span><span>'+esc((b||x).title||'Untitled')+(b?'':' <i>(not in the library)</i>')+'</span><span>'+(esc(k)||'&ndash;')+'</span><span>'+(bp?esc(bp):'&ndash;')+'</span></div>'}).join('')
+        +'<div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"><button id="hnNew" class="pri">Open as new service</button><button id="hnAdd">Add to current service</button><button id="hnRef" title="Check Harmony again">Refresh</button></div>');
+      const name=(l.title&&!/^worship lineup$/i.test(l.title)?l.title+' ':'')+(isNaN(d)?key:d.toLocaleDateString(undefined,{month:'short',day:'numeric'}));
+      const songs=l.songs.map(s=>byId.get(s.id)).filter(Boolean);
+      let per=0;try{per=+(JSON.parse(localStorage.getItem('lp-dsc')||'{}').per)||0}catch(e){}
+      const run=nw=>{
+        if(!songs.length){toast('None of those songs are in the library.');return}
+        if(nw&&window.plCreate&&!plCreate(name))return;
+        const r=dscAddLineup(songs,per,name);close();
+        toast(r.added+' songs added'+(nw?' in a new service called "'+name+'"':' in a section called "'+name+'"')+(r.skipped?', '+r.skipped+' skipped (no lyrics)':'')+(songs.length<l.songs.length?', '+(l.songs.length-songs.length)+' not in the library':'')+'.');
+      };
+      box.querySelector('#hnNew').onclick=()=>run(true);box.querySelector('#hnAdd').onclick=()=>run(false);box.querySelector('#hnRef').onclick=()=>loadLineup(box,true);
+    }catch(e){
+      set('<div class="hint" style="margin:0;color:#c0392b">'+esc((typeof dscErr==='function'?dscErr(e):e&&e.message)||'Could not load the lineup.')+'</div><div><button id="hnRef2">Try again</button></div>');
+      const b=box.querySelector('#hnRef2');if(b)b.onclick=()=>loadLineup(box,true);
+    }
+  }
+  function open(){
+    close();
+    let nm='',cn='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):''}catch(e){}
+    try{cn=window.plName?plName():''}catch(e){}
+    const hr=new Date().getHours(),gr=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
+    let on='1';try{on=localStorage.getItem('lp-home')==='0'?'0':'1'}catch(e){}
+    w=document.createElement('div');w.id='dscStartHome';w.setAttribute('role','dialog');w.setAttribute('aria-label','Home');
+    w.innerHTML='<div class="hw"><div class="hh"><div><div class="hk">DISCIPLES PRECENTER</div><h1>'+esc(gr)+(nm?', '+esc(nm):'')+'</h1></div>'
+      +'<div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
+      +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" style="display:flex;flex-direction:column;gap:8px"></div></div>'
+      +'<div class="hc"><h2>Latest lineup · Disciples: Harmony</h2><div id="hmLn" style="display:flex;flex-direction:column;gap:8px"></div></div></div>'
+      +'<div class="hf"><label><input type="checkbox" id="hmOn" style="width:auto"'+(on==='1'?' checked':'')+'> Show Home when PreCenter starts</label><span>Esc to close</span></div></div>';
+    document.body.appendChild(w);document.addEventListener('keydown',kd,true);
+    const rec=w.querySelector('#hmRec');rec.innerHTML=recentHtml();
+    rec.onclick=e=>{const b=e.target.closest('.hr');if(!b)return;const id=b.dataset.id;if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close()};
+    w.querySelector('#hmGo').onclick=close;
+    w.querySelector('#hmNew').onclick=()=>{close();window.plNew&&plNew()};
+    w.querySelector('#hmOpen').onclick=()=>{close();const f=document.getElementById('svFile');if(f)f.click()};
+    w.querySelector('#hmOn').onchange=e=>{try{localStorage.setItem('lp-home',e.target.checked?'1':'0')}catch(_){}};
+    loadLineup(w.querySelector('#hmLn'));
+    w.querySelector('#hmGo').focus();
+  }
+  window.dscStartHome=open;
+  /* once per start, after sign-in */
+  (async function boot(){
+    try{
+      let on=true;try{on=localStorage.getItem('lp-home')!=='0'}catch(e){}
+      if(!on)return;
+      for(let i=0;i<40&&!(window.plList&&document.getElementById('app'));i++)await new Promise(r=>setTimeout(r,150));
+      let signed=false;
+      try{await dscInit();signed=await new Promise(res=>{const off=dscAuth.onAuthStateChanged(u=>{off();res(!!u)})})}catch(e){signed=!!localStorage.getItem('lp-dsc-user')}
+      if(!signed){
+        /* wait for the sign-in gate to finish */
+        try{dscAuth.onAuthStateChanged(u=>{if(u&&!shownOnce){shownOnce=true;setTimeout(open,400)}})}catch(e){}
+        return;
+      }
+      if(!shownOnce){shownOnce=true;open()}
+    }catch(e){}
+  })();
 })();
 
 const DSC_VERSION='1.0.18',DSC_RELEASED='October 2026';
@@ -5514,6 +6947,7 @@ async function saveSvcNative(name){
     const e=await NS.end(h.id);
     if(!e||!e.ok)throw new Error((e&&e.error)||'the file could not be finished');
     if(e.bytes!==total)throw new Error('the file on disk is '+e.bytes+' bytes but '+total+' were sent');
+    try{plMark('saved')}catch(_){}
     toast('Saved '+e.name+' ('+fmtSize(e.bytes)+': '+inside(r)+') in \u201c'+e.dir+'\u201d'+sumNote(r));
   }catch(e){try{await NS.abort(h.id)}catch(_){}toast('Could not save: '+(e&&e.message||e))}
 }
@@ -5540,12 +6974,14 @@ async function saveSvc(name){
       try{if(r.zip)await zipToFile(r.zip,w);else await w.write(r.blob);await w.close()}catch(e){try{await w.abort()}catch(_){}throw e}
       let where='';
       if(dir){try{const pth=await dir.resolve(fh);if(pth)where=' in \u201c'+[dir.name,...pth.slice(0,-1)].join(' \u203a ')+'\u201d'}catch(e){}}
+      try{plMark('saved')}catch(_){}
       toast('Saved '+fh.name+' ('+inside(r)+')'+where+note);return;
     }catch(e){await dropEmpty();pickErr=e;fh=null}   /* the chosen file could not be written: still hand over a complete copy in Downloads, never an empty file */
   }
   let blob=r.blob;
   if(!blob){try{blob=await r.zip.generateAsync({type:'blob',streamFiles:true})}catch(e){toast('Could not save: '+(e.message||e));return}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+  try{plMark('saved')}catch(_){}
   toast((pickErr?'Saving to the place you chose did not work ('+(pickErr.message||pickErr.name||pickErr)+'). ':'')+'Saved '+fn+' ('+fmtSize(blob.size)+': '+inside(r)+') to your Downloads folder'+note);
 }
 window.dscSaveFlow=function(forceAsk){
@@ -5569,6 +7005,7 @@ async function openSvc(file){
     }
     try{const t=localStorage.getItem('lp-theme');if(t==='dark'||t==='light'){th=t;applyTheme()}}catch(e){}
     idx=0;S.sel=(S.songs.find(x=>x.id===S.sel)||S.songs[0]).id;save();drawAll();try{drawProps();drawMacros();tmDraw()}catch(e){}refreshSvc();
+    try{plMark('opened')}catch(_){}
     toast('Opened "'+(data.name||file.name)+'"');
   }catch(e){toast(/JSON/.test(e.message||'')?'That file is damaged or incomplete (the save was probably interrupted). Please save the service again.':'Could not open that file: '+e.message)}
 }
@@ -5688,11 +7125,11 @@ const info=(title,rows)=>{
   w.onclick=x;document.addEventListener('keydown',k,true);w.appendChild(b);document.body.appendChild(w)};
 const setView=v=>()=>{gview=v;try{localStorage.setItem('lp-view',v)}catch(e){}drawGrid()};
 const MENUS=window.dscMENUS={
- File:()=>[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
+ File:()=>[{t:'Home',fn:()=>window.dscStartHome&&dscStartHome()},{sep:1},{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{t:'Switch service',sub:window.plMenuItems?plMenuItems():[]},{sep:1},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{t:'Save service to computer\u2026 (Ctrl+S)',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{sep:1},{t:'Duplicate this service\u2026',fn:()=>window.plDup&&plDup()},{t:'Rename this service\u2026',fn:()=>window.plRename&&plRename()},{t:'Delete this service\u2026',fn:()=>window.plDelete&&plDelete()},{sep:1},{t:'MIDI, OSC and audio triggers\u2026',fn:()=>window.dscTriggers&&dscTriggers()},{t:S.svcAt?'Service start time: '+S.svcAt+' (change)\u2026':'Set service start time\u2026',fn:()=>window.dscSetSvcAt&&dscSetSvcAt()},{t:'Import files\u2026',fn:()=>window.dscImportDlg&&dscImportDlg()},{t:'Export\u2026',fn:()=>window.dscExportDlg&&dscExportDlg()},{t:'Print\u2026 (Ctrl+P)',fn:()=>window.dscPrintDlg&&dscPrintDlg()},{t:'Import from an earlier version\u2026',fn:()=>window.dscMigrateDlg&&dscMigrateDlg()},{t:'Export current item (Disciples file)\u2026',fn:()=>dscExportItems([cur()],cur().title)},{sep:1},{t:'Choose media folder\u2026',fn:click('mDir')},{t:'Choose media file\u2026',fn:click('mOne')}],
  'Slide Show':()=>window.dscShowMenu?dscShowMenu():[],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{t:'Slides as live page (whole service)',fn:setView('live')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
- Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Copy Stream access link (cloud)',fn:()=>remoteAccessLink()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
+ Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Copy Stream access link (cloud)',fn:()=>remoteAccessLink()},{t:'Phone remote on this Wi-Fi (QR)\u2026',fn:()=>lanDlg()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Phone video backgrounds\u2026',fn:()=>rmVidCfg()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
@@ -6132,7 +7569,7 @@ function switchPlan(id){
   const nxt=S.plans.find(p=>p.id===id),cur0=activePlan();
   if(!nxt||nxt===cur0)return false;
   if(!liveGuard())return false;
-  cur0.songs=S.songs;cur0.secs=S.secs;cur0.sel=S.sel;cur0.svc=S.svcName||null;cur0.sa=S.svcAt||null;
+  cur0.songs=S.songs;cur0.secs=S.secs;cur0.sel=S.sel;cur0.svc=S.svcName||null;cur0.sa=S.svcAt||null;cur0.at=Date.now();
   S.songs=(nxt.songs&&nxt.songs.length)?nxt.songs:[blank()];
   S.secs=(nxt.secs&&nxt.secs.length)?nxt.secs:DEFSECS.slice();
   S.sel=S.songs.some(x=>x.id===nxt.sel)?nxt.sel:S.songs[0].id;
@@ -6165,7 +7602,7 @@ function delPlan(){
     S.plans=S.plans.filter(x=>x.id!==p.id);save();drawList();
   });
 }
-window.dscSetSvcAt=()=>ask('Service start time, 24-hour, e.g. 09:00 (empty to remove)',v=>{v=(v||'').trim();if(!v){delete S.svcAt;save();toast('Service start time removed.');return}const m=/^(\d{1,2})[:.](\d{2})$/.exec(v);if(!m||+m[1]>23||+m[2]>59){toast('Use hours and minutes, like 09:30.');return}S.svcAt=String(+m[1]).padStart(2,'0')+':'+m[2];save();toast('Service starts at '+S.svcAt+'. The status bar counts down to it.');S.songs.filter(x=>x.type==='countdown'&&x.cd&&x.cd.mode==='at').forEach(x=>x.cd.at=S.svcAt);save()},S.svcAt||'');window.plNew=newPlan;window.plDup=()=>dupPlan(false);window.plRename=renamePlan;window.plDelete=delPlan;
+window.dscSetSvcAt=()=>ask('Service start time, 24-hour, e.g. 09:00 (empty to remove)',v=>{v=(v||'').trim();if(!v){delete S.svcAt;save();toast('Service start time removed.');return}const m=/^(\d{1,2})[:.](\d{2})$/.exec(v);if(!m||+m[1]>23||+m[2]>59){toast('Use hours and minutes, like 09:30.');return}S.svcAt=String(+m[1]).padStart(2,'0')+':'+m[2];save();toast('Service starts at '+S.svcAt+'. The status bar counts down to it.');S.songs.filter(x=>x.type==='countdown'&&x.cd&&x.cd.mode==='at').forEach(x=>x.cd.at=S.svcAt);save()},S.svcAt||'');window.plNew=newPlan;window.plSwitch=switchPlan;window.plList=()=>S.plans.map(p=>{const c=p.id===S.plan;return{id:p.id,name:p.name,cur:c,n:c?S.songs.length:(p.songs?p.songs.length:0),at:c?Date.now():p.at,saved:p.saved,opened:p.opened}});window.plMark=k=>{const p=activePlan();if(p){p[k]=Date.now();save()}};window.plCreate=name=>{const songs=[blank()],p={id:pid(),name:uniq(name,S.plans),songs,secs:DEFSECS.slice(),sel:songs[0].id,svc:null};S.plans.push(p);return switchPlan(p.id)};window.plDup=()=>dupPlan(false);window.plRename=renamePlan;window.plDelete=delPlan;
 window.plMenuItems=()=>S.plans.map(p=>({t:(p.id===S.plan?'\u2713 ':'')+p.name,fn:()=>switchPlan(p.id)}));
 document.getElementById('plMore').onclick=e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
   showMenu(r.left,r.bottom+2,[{t:'New service (playlist)\u2026',fn:newPlan},{t:'Duplicate this playlist\u2026',fn:()=>dupPlan(false)},{t:'Rename\u2026',fn:renamePlan},{sep:1},{t:'Delete this playlist\u2026',fn:delPlan}])};

@@ -53,6 +53,14 @@ contextBridge.exposeInMainWorld('dscNative', {
     abort: id => ipcRenderer.invoke('save:abort', String(id)),
     folder: () => ipcRenderer.invoke('save:folder')
   },
+  // Wi-Fi remote: the app runs a small server for phones on the same network; the page shows the QR and feeds it.
+  lan: {
+    info: () => ipcRenderer.invoke('lan:info'),
+    newPin: () => ipcRenderer.invoke('lan:newPin'),
+    state: json => ipcRenderer.send('lan:state', String(json)),
+    onCmd: cb => { ipcRenderer.on('lan:cmd', (_e, c) => cb(c)); },
+    onClients: cb => { ipcRenderer.on('lan:clients', (_e, n) => cb(n)); }
+  },
   platform: process.platform,
   ndi: {
     sync: cfgs => ipcRenderer.invoke('ndi:sync', cfgs),
