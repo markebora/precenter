@@ -6323,10 +6323,10 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
 (function dscStartHomeMod(){
   if(/^#(output|stage|layout)/.test(location.hash))return;
   const st=document.createElement('style');
-  st.textContent='#dscStartHome{position:fixed;inset:0;z-index:9000;background:var(--bg);color:var(--ink);overflow:auto;display:flex;justify-content:center;padding:28px 18px}'
+  st.textContent='#dscStartHome{position:fixed;inset:0;z-index:9000;background:var(--bg);color:var(--ink);overflow:auto;display:flex;justify-content:center;padding:max(56px,calc(env(titlebar-area-height,0px) + 24px)) 18px 28px}'
   +'#dscStartHome .hw{width:min(1040px,100%);display:flex;flex-direction:column;gap:16px}'
   +'#dscStartHome .hh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}'
-  +'#dscStartHome .hk{font:700 11px Poppins,Inter,sans-serif;letter-spacing:.3em;color:var(--acc)}#dscStartHome h1{margin:2px 0 0;font:700 28px Poppins,Inter,sans-serif}'
+  +'#dscStartHome .hk{display:flex;align-items:center;gap:8px;font:700 14px Poppins,Inter,sans-serif;letter-spacing:.01em;color:var(--acc)}#dscStartHome .hk i{width:10px;height:10px;border-radius:50%;background:var(--acc);display:block}#dscStartHome .hp{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:99px;background:var(--panel);color:inherit;cursor:pointer;text-align:left}#dscStartHome .hp:hover{border-color:var(--acc)}#dscStartHome .hpa{width:32px;height:32px;border-radius:50%;background:var(--acc);color:#000;display:grid;place-items:center;font-weight:700;flex:none}#dscStartHome .hp b{display:block;font-size:13px;line-height:1.2}#dscStartHome .hp small{display:block;color:var(--mute);font-size:11px;line-height:1.2}#dscStartHome .hpm{position:absolute;right:0;top:calc(100% + 6px);z-index:2;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.45)}#dscStartHome .hpm div.hpi{padding:8px 10px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}#dscStartHome .hpm div.hpi small{display:block;color:var(--mute);font-size:12px;overflow-wrap:anywhere}#dscStartHome .hpm button{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px}#dscStartHome .hpm button:hover{background:rgba(255,255,255,.07)}#dscStartHome h1{margin:2px 0 0;font:700 28px Poppins,Inter,sans-serif}'
   +'#dscStartHome .ha{display:flex;gap:8px;flex-wrap:wrap}'
   +'#dscStartHome .hg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}@media(max-width:820px){#dscStartHome .hg{grid-template-columns:1fr}}'
   +'#dscStartHome .hc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}'
@@ -6404,19 +6404,34 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   }
   function open(){
     close();
-    let nm='',cn='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):''}catch(e){}
+    let nm='',cn='',em='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):'';em=u?(u.email||''):''}catch(e){}
+    try{const own=(localStorage.getItem('lp-home-name')||'').trim();if(own)nm=own}catch(e){}
     try{cn=window.plName?plName():''}catch(e){}
     const hr=new Date().getHours(),gr=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
     let on='1';try{on=localStorage.getItem('lp-home')==='0'?'0':'1'}catch(e){}
     w=document.createElement('div');w.id='dscStartHome';w.setAttribute('role','dialog');w.setAttribute('aria-label','Home');
-    w.innerHTML='<div class="hw"><div class="hh"><div><div class="hk">DISCIPLES PRECENTER</div><h1>'+esc(gr)+(nm?', '+esc(nm):'')+'</h1></div>'
-      +'<div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
+    w.innerHTML='<div class="hw"><div class="hh" style="align-items:center"><div><div class="hk"><i></i>Disciples PreCenter</div><h1>'+esc(gr)+(nm?', '+esc(nm):'')+'</h1></div>'
+      +'<div style="position:relative"><button class="hp" id="hmProf" aria-haspopup="menu"><span class="hpa">'+esc((nm||'?').charAt(0).toUpperCase())+'</span><span><b>'+esc(nm||'Your profile')+'</b><small id="hmPt">'+esc(em||'Account')+'</small></span></button></div></div>'
+      +'<div class="hh" style="justify-content:flex-end"><div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
       +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" style="display:flex;flex-direction:column;gap:8px"></div></div>'
       +'<div class="hc"><h2>Latest lineup · Disciples: Harmony</h2><div id="hmLn" style="display:flex;flex-direction:column;gap:8px"></div></div></div>'
       +'<div class="hf"><label><input type="checkbox" id="hmOn" style="width:auto"'+(on==='1'?' checked':'')+'> Show Home when PreCenter starts</label><span>Esc to close</span></div></div>';
     document.body.appendChild(w);document.addEventListener('keydown',kd,true);
     const rec=w.querySelector('#hmRec');rec.innerHTML=recentHtml();
     rec.onclick=e=>{const b=e.target.closest('.hr');if(!b)return;const id=b.dataset.id;if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close()};
+    w.querySelector('#hmProf').onclick=e=>{
+      e.stopPropagation();const old=w.querySelector('.hpm');if(old){old.remove();return}
+      const m=document.createElement('div');m.className='hpm';m.setAttribute('role','menu');
+      m.innerHTML='<div class="hpi"><b>'+esc(nm||'Your profile')+'</b><small>'+esc(em||'Not signed in')+'</small><small id="hmTm"></small></div><button data-a="name">Change the name shown here</button><button data-a="acc">Account and preferences\u2026</button><button data-a="team">Switch team</button><button data-a="out">Sign out</button>';
+      w.querySelector('#hmProf').parentNode.appendChild(m);
+      try{if(LN&&LN.name)m.querySelector('#hmTm').textContent='Team: '+LN.name}catch(_){}
+      m.onclick=async ev=>{const a=ev.target.dataset&&ev.target.dataset.a;if(!a)return;m.remove();
+        if(a==='name'){const v=prompt('Name to show on Home',nm||'');if(v!==null){try{localStorage.setItem('lp-home-name',v.trim())}catch(_){}open()}}
+        else if(a==='acc'){const b=document.getElementById('tProf');if(b)b.click()}
+        else if(a==='team'){try{localStorage.removeItem('lp-dsc-team')}catch(_){}LN=null;loadLineup(w.querySelector('#hmLn'),true)}
+        else if(a==='out'){if(!confirm('Sign out of Disciples on this computer?'))return;try{await dscAuth.signOut()}catch(_){}try{localStorage.removeItem('lp-dsc-user')}catch(_){}location.reload()}};
+    };
+    w.onclick=e=>{const m=w.querySelector('.hpm');if(m&&!e.target.closest('.hpm')&&!e.target.closest('#hmProf'))m.remove()};
     w.querySelector('#hmGo').onclick=close;
     w.querySelector('#hmNew').onclick=()=>{close();window.plNew&&plNew()};
     w.querySelector('#hmOpen').onclick=()=>{close();const f=document.getElementById('svFile');if(f)f.click()};
@@ -7232,6 +7247,7 @@ const bar=document.createElement('div');bar.id='mbar';bar.setAttribute('role','m
 let openName=null;
 const openM=(b,n)=>{openName=n;bar.querySelectorAll('.mb').forEach(x=>x.classList.toggle('on',x===b));const r=b.getBoundingClientRect();showMenu(r.left,r.bottom,MENUS[n]())};
 Object.keys(MENUS).forEach(n=>{const b=document.createElement('button');b.className='mb';b.textContent=n;b.onclick=e=>{e.stopPropagation();if(openName===n&&cmEl){closeCm();openName=null;b.classList.remove('on')}else openM(b,n)};b.onmouseenter=()=>{if(openName&&cmEl&&openName!==n)openM(b,n)};bar.appendChild(b)});
+{const hb=document.createElement('button');hb.className='mb';hb.id='mbHome';hb.textContent='Home';hb.title='Back to the Home screen';hb.onclick=e=>{e.stopPropagation();try{closeCm();openName=null}catch(_){}window.dscStartHome&&dscStartHome()};bar.insertBefore(hb,bar.firstChild)}
 const br=document.createElement('span');br.className='brand';br.textContent='Disciples PreCenter';br.title='Version '+DSC_VERSION;bar.appendChild(br);
 const air=document.createElement('span');air.className='air';bar.insertBefore(air,br);let lk='',ls=Date.now(),lik='',lis=Date.now();const fmt=t=>{t=Math.floor(t/1000);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
 document.addEventListener('click',()=>{openName=null;bar.querySelectorAll('.mb.on').forEach(x=>x.classList.remove('on'))});
