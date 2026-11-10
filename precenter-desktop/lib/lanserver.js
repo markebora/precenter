@@ -147,6 +147,34 @@ function create(opt) {
     tell();
   }
 
+  // Backgrounds for the phone (short clips and pictures PreCenter makes), kept in memory and served to phones on this Wi-Fi.
+  const media = new Map(); let mediaBytes = 0;
+  const MEDIA_MAX = 256 * 1024 * 1024;
+  const MEDIA_TYPES = { mp4: 'video/mp4', webm: 'video/webm', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+  function putMedia(key, buf, type) {
+    if (typeof key !== 'string' || !/^[A-Za-z0-9._\-\/]{1,160}$/.test(key) || key.includes('..') || !Buffer.isBuffer(buf) || !buf.length || buf.length > 120 * 1024 * 1024) return false;
+    const old = media.get(key); if (old) { mediaBytes -= old.buf.length; media.delete(key); }
+    media.set(key, { buf, type: String(type || '') });
+    mediaBytes += buf.length;
+    for (const k of Array.from(media.keys())) { if (mediaBytes <= MEDIA_MAX || k === key) break; mediaBytes -= media.get(k).buf.length; media.delete(k); }   // oldest first
+    return true;
+  }
+  function serveMedia(req, res, key, headers) {
+    const m = media.get(key);
+    if (!m) { res.writeHead(404, headers); res.end('Not found'); return; }
+    const ext = key.split('.').pop().toLowerCase(), type = MEDIA_TYPES[ext] || m.type || 'application/octet-stream', n = m.buf.length;
+    const h = Object.assign({}, headers, { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=300' });
+    const r = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (r && (r[1] || r[2])) {
+      let a = r[1] === '' ? Math.max(0, n - parseInt(r[2], 10)) : parseInt(r[1], 10), b = (r[1] === '' || r[2] === '') ? n - 1 : Math.min(n - 1, parseInt(r[2], 10));
+      if (a > b || a >= n) { res.writeHead(416, Object.assign({ 'Content-Range': 'bytes */' + n }, headers)); res.end(); return; }
+      res.writeHead(206, Object.assign({ 'Content-Range': 'bytes ' + a + '-' + b + '/' + n, 'Content-Length': b - a + 1 }, h));
+      res.end(req.method === 'HEAD' ? undefined : m.buf.subarray(a, b + 1)); return;
+    }
+    res.writeHead(200, Object.assign({ 'Content-Length': n }, h));
+    res.end(req.method === 'HEAD' ? undefined : m.buf);
+  }
+
   function handle(req, res) {
     let u;
     try { u = new URL(req.url, 'http://x'); } catch (e) { res.writeHead(400); res.end(); return; }
@@ -157,6 +185,7 @@ function create(opt) {
       try { html = fs.readFileSync(opt.pageFile, 'utf8'); } catch (e) { html = '<!doctype html><meta charset=utf-8><title>Remote</title><p style="font:16px sans-serif;padding:24px">The remote page is missing from this copy of PreCenter.</p>'; }
       res.writeHead(200, Object.assign({ 'Content-Type': 'text/html; charset=utf-8' }, headers)); res.end(html); return;
     }
+    if (u.pathname.startsWith('/m/') && (req.method === 'GET' || req.method === 'HEAD')) { serveMedia(req, res, decodeURIComponent(u.pathname.slice(3)), headers); return; }
     res.writeHead(404, headers); res.end('Not found');
   }
 
@@ -213,7 +242,7 @@ function create(opt) {
     return { running: !!server, port, pin, urls, clients: count() };
   }
 
-  return { start, stop, setState, newPin, info, count };
+  return { start, stop, setState, newPin, info, count, putMedia };
 }
 
 module.exports = { create, lanAddresses, frame };

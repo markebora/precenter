@@ -5699,10 +5699,6 @@ var RMB={cache:new Map(),busy:new Set()};
 /* ---- phone video backgrounds: a short, short looping 720p copy goes to a Cloudflare R2 bucket; only its public link goes in Firestore (bg.u) ---- */
 var RMV={q:[],cur:'',fail:{},status:'',done:(()=>{try{return JSON.parse(localStorage.getItem('lp-r2done')||'{}')}catch(e){return{}}})()};
 RMV.at=(()=>{try{return JSON.parse(localStorage.getItem('lp-r2at')||'{}')||{}}catch(e){return{}}})();
-/* phones on the Wi-Fi get the same clips straight from this computer (desktop app): no internet and no R2 needed. RML.done[vk] = ['m/bg/x.mp4', ...] */
-var RML={done:{}};
-function rmLanOn(){try{return !!(window.dscNative&&dscNative.lan&&dscNative.lan.media&&LANH&&LANH.lan&&(LANH.clients|0)>0)}catch(e){return false}}
-async function rmLanPut(key,blob){try{return await dscNative.lan.media(key,await blob.arrayBuffer(),blob.type||'')}catch(e){return false}}
 function rmSaveDone(){try{localStorage.setItem('lp-r2done',JSON.stringify(RMV.done));localStorage.setItem('lp-r2at',JSON.stringify(RMV.at))}catch(e){}}
 /* forget uploads older than the number of days set for the R2 lifecycle rule, so PreCenter re-uploads a clip R2 has deleted */
 function rmPrune(c){
@@ -5774,35 +5770,31 @@ async function rmEncodeImg(src,contain){
 async function rmVidRun(){
   if(RMV.cur)return;const j=RMV.q.shift();if(!j)return;RMV.cur=j.vk;
   try{
-    const c=rmCfg(),lc=rmLanOn();if(!c&&!lc)throw new Error('turned off');
+    const c=rmCfg();if(!c)throw new Error('turned off');
     if(j.kind==='img'){
       RMV.status='Making a 720p picture\u2026';
       const blob=await rmEncodeImg(j.src,j.contain),key='img/'+j.vk+'.jpg';
-      if(lc&&await rmLanPut(key,blob))RML.done[j.vk]=['m/'+key];
-      if(c){
-        RMV.status='Uploading picture '+Math.round(blob.size/1024)+' KB\u2026';
-        await r2Put(c,key,blob,'image/jpeg');
-        {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=key;RMV.at[dk]=Date.now();rmSaveDone()}
-      }
-      RMV.status='Last '+(c?'upload':'copy')+' OK (picture, '+Math.round(blob.size/1024)+' KB)';remotePublish();RMV.cur='';rmVidRun();return;
+      RMV.status='Uploading picture '+Math.round(blob.size/1024)+' KB\u2026';
+      await r2Put(c,key,blob,'image/jpeg');
+      {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=key;RMV.at[dk]=Date.now();rmSaveDone()}
+      RMV.status='Last upload OK (picture, '+Math.round(blob.size/1024)+' KB)';remotePublish();RMV.cur='';rmVidRun();return;
     }
     RMV.status='Making a short clip\u2026';
     const outs=await rmEncode(j.src);if(!outs.length)throw new Error('the recorded clip was empty');
-    const keys=[],lk=[];let kb=0;
+    const keys=[];let kb=0;
     for(const o of outs){
       const key='bg/'+j.vk+'.'+o.ext;kb+=o.blob.size;
-      if(lc&&await rmLanPut(key,o.blob))lk.push('m/'+key);
-      if(c){RMV.status='Uploading '+o.ext+' '+Math.round(o.blob.size/1024)+' KB\u2026';await r2Put(c,key,o.blob,o.blob.type);keys.push(key)}
+      RMV.status='Uploading '+o.ext+' '+Math.round(o.blob.size/1024)+' KB\u2026';
+      await r2Put(c,key,o.blob,o.blob.type);keys.push(key);
     }
-    if(lk.length)RML.done[j.vk]=lk;
-    if(c){const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=keys.join(',');RMV.at[dk]=Date.now();rmSaveDone()}
-    RMV.status='Last '+(c?'upload':'copy')+' OK ('+(keys.length?keys:lk).map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB)';remotePublish();
+    {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=keys.join(',');RMV.at[dk]=Date.now();rmSaveDone()}
+    RMV.status='Last upload OK ('+keys.map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB)';remotePublish();
   }catch(e){RMV.fail[j.vk]=1;RMV.status='Failed: '+(e&&e.message||e);toast('Phone video background: '+RMV.status)}
   RMV.cur='';rmVidRun();
 }
-function rmVidCfg(host){
+function rmVidCfg(){
   let c={};try{c=JSON.parse(localStorage.getItem('lp-r2')||'{}')||{}}catch(e){}
-  const m=connHost(host,'<div class="row" style="justify-content:space-between;align-items:center"><b>Phone video backgrounds</b><button class="x">Close</button></div>'
+  const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Phone video backgrounds</b><button class="x">Close</button></div>'
     +'<p class="hint">The phone remote can play a short looping copy of a slide\u2019s video background. PreCenter makes a 6-second 720p clip (about 2 MB) for videos, and a 720p picture (about 150 KB, in the img/ folder) for images, and uploads them to your Cloudflare R2 bucket; only its web link goes to the phone. Photos and colours do not need this.</p>'
     +'<label class="row" style="gap:6px;align-items:center"><input type="checkbox" id="r2On"'+(c.on?' checked':'')+' style="width:auto"> Send video backgrounds to the phone</label>'
     +'<label>Account ID<input id="r2A" value="'+dscEsc(c.acct||'')+'" placeholder="from the R2 overview page"></label>'
@@ -5817,7 +5809,7 @@ function rmVidCfg(host){
     +'<p class="hint">The keys stay on this computer only. In the bucket settings turn on public access and add this CORS rule: <code>[{"AllowedOrigins":["*"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedHeaders":["*"],"MaxAgeSeconds":3600}]</code></p>');
   const val=()=>({on:m.q('#r2On').checked,acct:m.q('#r2A').value.trim(),bucket:m.q('#r2B').value.trim(),id:m.q('#r2I').value.trim(),secret:m.q('#r2S').value.trim(),base:m.q('#r2U').value.trim(),stm:m.q('#r2Stm').checked,days:Math.max(0,Math.min(365,parseInt(m.q('#r2D').value,10)||0))});
   const st=t=>{m.q('#r2St').textContent=t};
-  {const x=m.q('.x');if(x)x.onclick=m.done}
+  m.q('.x').onclick=m.done;
   m.q('#r2Sv').onclick=()=>{localStorage.setItem('lp-r2',JSON.stringify(val()));RMV.fail={};st('Saved.');try{remotePublish(true)}catch(e){}};
   m.q('#r2L').onclick=()=>{const v=val();if(!v.base){st('Fill in the public link of the bucket first.');return}localStorage.setItem('lp-r2',JSON.stringify(v));remoteAccessLink()};
   m.q('#r2C').onclick=()=>{RMV.done={};RMV.at={};RMV.fail={};rmSaveDone();st('Cleared. Clips will be made and uploaded again when a video slide goes live.');try{remotePublish(true)}catch(e){}};
@@ -5998,21 +5990,17 @@ function remoteBg(p){
       if(hit===undefined&&!RMB.busy.has(key))rmThumb(key,kind,src,d.fit==='contain');
       const o=hit?{k:kind,t:hit,v:key}:{k:kind,v:key};
       if(kind==='vid'){
-        const c=rmCfg(),lc=rmLanOn();
-        if(c||lc){
-          const ln=d.lib,f=ln&&libFile[ln],vk='x.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),us=c?rmVidUrl(c,vk):[],lo=lc?RML.done[vk]:null;
-          if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}
-          if(lo&&lo.length){o.lu=lo[0];if(lo[1])o.lu2=lo[1]}
-          if(((c&&!us.length)||(lc&&!lo))&&!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
+        const c=rmCfg();
+        if(c){
+          const ln=d.lib,f=ln&&libFile[ln],vk='x.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),us=rmVidUrl(c,vk);
+          if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}else if(!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
         }
       }
       if(kind==='img'&&d.bg==='Image'){
-        const c=rmCfg(),lc=rmLanOn();
-        if(c||lc){
-          const ik='i.'+rmHash(d.fit==='contain'?'c|':'f|'+(src.length>200?src.slice(0,100)+src.length+src.slice(-100):src)),us=c?rmVidUrl(c,ik):[],lo=lc?RML.done[ik]:null;
-          if(us.length)o.iu=us[0];
-          if(lo&&lo.length)o.liu=lo[0];
-          if(((c&&!us.length)||(lc&&!lo))&&!RMV.fail[ik]&&!RMV.q.some(j=>j.vk===ik)&&RMV.cur!==ik)RMV.q.push({vk:ik,src,kind:'img',contain:d.fit==='contain'}),rmVidRun();
+        const c=rmCfg();
+        if(c){
+          const ik='i.'+rmHash(d.fit==='contain'?'c|':'f|'+(src.length>200?src.slice(0,100)+src.length+src.slice(-100):src)),us=rmVidUrl(c,ik);
+          if(us.length)o.iu=us[0];else if(!RMV.fail[ik]&&!RMV.q.some(j=>j.vk===ik)&&RMV.cur!==ik)RMV.q.push({vk:ik,src,kind:'img',contain:d.fit==='contain'}),rmVidRun();
         }
       }
       return o;
@@ -6220,7 +6208,7 @@ async function remoteOn(auto){
 /* access link for Disciples Stream: it carries only the team id; Stream signs in with the same account and reads presenter/{team} like the phone does */
 async function remoteAccessLink(){
   const c=rmCfg();
-  if(!c){toast('Set up the R2 bucket first (Connection \u203a Media & Stream), then copy the link.');try{connDlg('r2')}catch(e){}return}
+  if(!c){toast('Set up the R2 bucket first (Phone video backgrounds), then copy the link.');try{rmVidCfg()}catch(e){}return}
   let tm='';try{tm=(RM&&RM.team)||localStorage.getItem('lp-dsc-team')||''}catch(e){}
   const link='dscr2:'+c.base.replace(/\/+$/,'')+(tm?'#'+tm:'');
   r2Stream(true);
@@ -6253,64 +6241,12 @@ function lanBadge(){
   const n=LANH.clients|0;
   b.title=(RM?'Remote is ON. Click to turn it off.':'Let the Disciples app on your phone control this screen')+(n?' \u00b7 '+n+' phone'+(n>1?'s':'')+' on Wi-Fi':'');
 }
-/* ---- Connection center: every way PreCenter talks to phones and to Disciples Stream, in one dialog ---- */
-function connHost(host,html,cls){
-  if(!host)return modal(html,cls);
-  host.innerHTML=html.replace(/^<div class="row" style="justify-content:space-between;align-items:center"><b>[^<]*<\/b><button class="x">Close<\/button><\/div>/,'');
-  return{w:host,done:()=>{},q:s=>host.querySelector(s)};
-}
-window.connDlg=function(tab){
-  const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Connection</b><button class="x">Close</button></div><div class="row" id="cnTabs" style="gap:6px;flex-wrap:wrap;margin-top:6px"></div><div id="cnBody" style="margin-top:10px"></div>','');
-  m.w.firstChild.style.width='min(580px,94vw)';m.w.firstChild.style.maxHeight='90vh';m.w.firstChild.style.overflow='auto';
-  m.q('.x').onclick=m.done;
-  const TABS=[['all','Overview'],['wifi','Wi-Fi'],['cloud','Cloud remote'],['r2','Media & Stream (R2)'],['stream','Stream server']];
-  const bar=m.q('#cnTabs'),body=m.q('#cnBody');let cur='';
-  const show=t=>{
-    cur=t;bar.querySelectorAll('button').forEach(b=>b.classList.toggle('pri',b.dataset.t===t));
-    const h=document.createElement('div');body.replaceChildren(h);
-    if(t==='wifi')lanDlg(h);
-    else if(t==='cloud')cloudPanel(h);
-    else if(t==='r2')rmVidCfg(h);
-    else if(t==='stream'){if(window.slOpen)slOpen(h);else h.innerHTML='<p class="hint">Stream link is not available.</p>'}
-    else overview(h);
-  };
-  TABS.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.t=k;b.onclick=()=>show(k);bar.appendChild(b)});
-  const row=(t,name,state,why,cls)=>'<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div><b>'+name+'</b> <span class="hint" style="margin:0;color:'+(cls==='ok'?'#30d158':cls==='warn'?'#ff9f0a':'inherit')+'">'+dscEsc(state)+'</span></div><div class="hint" style="margin:2px 0 0">'+why+'</div></div><button data-go="'+t+'">Settings</button></div>';
-  async function overview(h){
-    h.innerHTML='<p class="hint">PreCenter reaches phones and Disciples Stream in four ways. The phone remote picks Wi-Fi when you scan the QR, otherwise Cloud. The Cloud remote only carries text and button presses; pictures and video go through R2.</p><div id="cnRows"></div>';
-    const draw=async()=>{
-      let lan=null;try{lan=window.dscNative&&window.dscNative.lan?await window.dscNative.lan.info():null}catch(e){}
-      const n=LANH?LANH.clients|0:0,r2=rmCfg();
-      const rows=[
-        row('wifi','Wi-Fi (same network)',lan?(lan.running?(n?n+' phone'+(n>1?'s':'')+' connected':'ready, no phone yet'):'not running'):'desktop app only',lan&&lan.running?'Fastest. Nothing goes through the internet. Phone scans the QR.':'Needs the desktop app.',lan&&lan.running?'ok':'warn'),
-        row('cloud','Cloud remote (Firestore)',RM?'on · '+(RM.name||'team'):'off','Works anywhere through the internet. Text and buttons only.',RM?'ok':'warn'),
-        row('r2','Media & Stream (R2)',r2?'on':'not set up','Uploads video backgrounds and the live slide to your Cloudflare R2 bucket. Needed for the Stream cloud link.',r2?'ok':'warn'),
-        row('stream','Stream server','','Direct link to a Disciples Stream server by address and pairing code.','')
-      ];
-      const el=h.querySelector('#cnRows');if(!el||!h.isConnected)return;el.innerHTML=rows.join('');
-      el.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
-    };
-    draw();const iv=setInterval(()=>{if(!h.isConnected){clearInterval(iv);return}draw()},2000);
-  }
-  function cloudPanel(h){
-    const draw=()=>{
-      if(!h.isConnected)return;
-      h.innerHTML='<p class="hint">The Disciples phone app controls this screen through the internet (Firestore). Use it when the phone is not on the same Wi-Fi as this computer. It sends only text and button presses.</p>'
-        +'<div class="hint" style="margin:6px 0">Status: <b>'+(RM?'On for '+dscEsc(RM.name||'your team'):'Off')+'</b></div>'
-        +'<div class="row"><button id="cnRm" class="pri">'+(RM?'Turn off':'Turn on')+'</button></div>'
-        +'<p class="hint">Turning it on signs in with your Disciples account and uses your team. The same switch is the Remote button in the toolbar.</p>';
-      h.querySelector('#cnRm').onclick=async()=>{if(RM)remoteOff();else await remoteOn(false);draw()};
-    };
-    draw();const iv=setInterval(()=>{if(!h.isConnected){clearInterval(iv);return}const b=h.querySelector('#cnRm');if(b&&(!!RM)!==(b.textContent==='Turn off'))draw()},1500);
-  }
-  show(TABS.some(x=>x[0]===tab)?tab:'all');
-};
-async function lanDlg(host){
+async function lanDlg(){
   const N=window.dscNative&&window.dscNative.lan;
-  if(!N){if(host)host.innerHTML='<p class="hint">The Wi-Fi remote is part of the desktop app. In the web version phones use the cloud remote.</p>';else toast('The Wi-Fi remote is part of the desktop app.');return}
+  if(!N){toast('The Wi-Fi remote is part of the desktop app.');return}
   let inf=null;try{inf=await N.info()}catch(e){}
-  const m=connHost(host,'<div class="row" style="justify-content:space-between;align-items:center"><b>Phone remote on this Wi-Fi</b><button class="x">Close</button></div><div id="lnBody"></div>','');
-  {const x=m.q('.x');if(x)x.onclick=m.done}
+  const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Phone remote on this Wi-Fi</b><button class="x">Close</button></div><div id="lnBody"></div>','');
+  m.q('.x').onclick=m.done;
   const body=m.q('#lnBody');
   if(!inf||!inf.running){body.innerHTML='<p class="hint">The Wi-Fi remote is not running. It is on by default; check that <code>lan.enabled</code> is true in config.json (it is on by default), then restart PreCenter.</p>';return}
   if(!inf.urls.length){body.innerHTML='<p class="hint">This computer is not connected to a Wi-Fi or wired network, so a phone cannot reach it.</p>';return}
@@ -6387,10 +6323,10 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
 (function dscStartHomeMod(){
   if(/^#(output|stage|layout)/.test(location.hash))return;
   const st=document.createElement('style');
-  st.textContent='#dscStartHome{position:fixed;inset:0;z-index:9000;background:var(--bg);color:var(--ink);overflow:auto;display:flex;justify-content:center;padding:max(56px,calc(env(titlebar-area-height,0px) + 24px)) 18px 28px}'
+  st.textContent='#dscStartHome{position:fixed;inset:0;z-index:9000;background:var(--bg);color:var(--ink);overflow:auto;display:flex;justify-content:center;padding:28px 18px}'
   +'#dscStartHome .hw{width:min(1040px,100%);display:flex;flex-direction:column;gap:16px}'
   +'#dscStartHome .hh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}'
-  +'#dscStartHome .hk{display:flex;align-items:center;gap:8px;font:700 14px Poppins,Inter,sans-serif;letter-spacing:.01em;color:var(--acc)}#dscStartHome .hk i{width:10px;height:10px;border-radius:50%;background:var(--acc);display:block}#dscStartHome .hp{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:99px;background:var(--panel);color:inherit;cursor:pointer;text-align:left}#dscStartHome .hp:hover{border-color:var(--acc)}#dscStartHome .hpa{width:32px;height:32px;border-radius:50%;background:var(--acc);color:#000;display:grid;place-items:center;font-weight:700;flex:none}#dscStartHome .hp b{display:block;font-size:13px;line-height:1.2}#dscStartHome .hp small{display:block;color:var(--mute);font-size:11px;line-height:1.2}#dscStartHome .hpm{position:absolute;right:0;top:calc(100% + 6px);z-index:2;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.45)}#dscStartHome .hpm div.hpi{padding:8px 10px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}#dscStartHome .hpm div.hpi small{display:block;color:var(--mute);font-size:12px;overflow-wrap:anywhere}#dscStartHome .hpm button{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px}#dscStartHome .hpm button:hover{background:rgba(255,255,255,.07)}#dscStartHome h1{margin:2px 0 0;font:700 28px Poppins,Inter,sans-serif}'
+  +'#dscStartHome .hk{font:700 11px Poppins,Inter,sans-serif;letter-spacing:.3em;color:var(--acc)}#dscStartHome h1{margin:2px 0 0;font:700 28px Poppins,Inter,sans-serif}'
   +'#dscStartHome .ha{display:flex;gap:8px;flex-wrap:wrap}'
   +'#dscStartHome .hg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}@media(max-width:820px){#dscStartHome .hg{grid-template-columns:1fr}}'
   +'#dscStartHome .hc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}'
@@ -6468,34 +6404,19 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   }
   function open(){
     close();
-    let nm='',cn='',em='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):'';em=u?(u.email||''):''}catch(e){}
-    try{const own=(localStorage.getItem('lp-home-name')||'').trim();if(own)nm=own}catch(e){}
+    let nm='',cn='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):''}catch(e){}
     try{cn=window.plName?plName():''}catch(e){}
     const hr=new Date().getHours(),gr=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
     let on='1';try{on=localStorage.getItem('lp-home')==='0'?'0':'1'}catch(e){}
     w=document.createElement('div');w.id='dscStartHome';w.setAttribute('role','dialog');w.setAttribute('aria-label','Home');
-    w.innerHTML='<div class="hw"><div class="hh" style="align-items:center"><div><div class="hk"><i></i>Disciples PreCenter</div><h1>'+esc(gr)+(nm?', '+esc(nm):'')+'</h1></div>'
-      +'<div style="position:relative"><button class="hp" id="hmProf" aria-haspopup="menu"><span class="hpa">'+esc((nm||'?').charAt(0).toUpperCase())+'</span><span><b>'+esc(nm||'Your profile')+'</b><small id="hmPt">'+esc(em||'Account')+'</small></span></button></div></div>'
-      +'<div class="hh" style="justify-content:flex-end"><div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
+    w.innerHTML='<div class="hw"><div class="hh"><div><div class="hk">DISCIPLES PRECENTER</div><h1>'+esc(gr)+(nm?', '+esc(nm):'')+'</h1></div>'
+      +'<div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
       +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" style="display:flex;flex-direction:column;gap:8px"></div></div>'
       +'<div class="hc"><h2>Latest lineup · Disciples: Harmony</h2><div id="hmLn" style="display:flex;flex-direction:column;gap:8px"></div></div></div>'
       +'<div class="hf"><label><input type="checkbox" id="hmOn" style="width:auto"'+(on==='1'?' checked':'')+'> Show Home when PreCenter starts</label><span>Esc to close</span></div></div>';
     document.body.appendChild(w);document.addEventListener('keydown',kd,true);
     const rec=w.querySelector('#hmRec');rec.innerHTML=recentHtml();
     rec.onclick=e=>{const b=e.target.closest('.hr');if(!b)return;const id=b.dataset.id;if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close()};
-    w.querySelector('#hmProf').onclick=e=>{
-      e.stopPropagation();const old=w.querySelector('.hpm');if(old){old.remove();return}
-      const m=document.createElement('div');m.className='hpm';m.setAttribute('role','menu');
-      m.innerHTML='<div class="hpi"><b>'+esc(nm||'Your profile')+'</b><small>'+esc(em||'Not signed in')+'</small><small id="hmTm"></small></div><button data-a="name">Change the name shown here</button><button data-a="acc">Account and preferences\u2026</button><button data-a="team">Switch team</button><button data-a="out">Sign out</button>';
-      w.querySelector('#hmProf').parentNode.appendChild(m);
-      try{if(LN&&LN.name)m.querySelector('#hmTm').textContent='Team: '+LN.name}catch(_){}
-      m.onclick=async ev=>{const a=ev.target.dataset&&ev.target.dataset.a;if(!a)return;m.remove();
-        if(a==='name'){const v=prompt('Name to show on Home',nm||'');if(v!==null){try{localStorage.setItem('lp-home-name',v.trim())}catch(_){}open()}}
-        else if(a==='acc'){const b=document.getElementById('tProf');if(b)b.click()}
-        else if(a==='team'){try{localStorage.removeItem('lp-dsc-team')}catch(_){}LN=null;loadLineup(w.querySelector('#hmLn'),true)}
-        else if(a==='out'){if(!confirm('Sign out of Disciples on this computer?'))return;try{await dscAuth.signOut()}catch(_){}try{localStorage.removeItem('lp-dsc-user')}catch(_){}location.reload()}};
-    };
-    w.onclick=e=>{const m=w.querySelector('.hpm');if(m&&!e.target.closest('.hpm')&&!e.target.closest('#hmProf'))m.remove()};
     w.querySelector('#hmGo').onclick=close;
     w.querySelector('#hmNew').onclick=()=>{close();window.plNew&&plNew()};
     w.querySelector('#hmOpen').onclick=()=>{close();const f=document.getElementById('svFile');if(f)f.click()};
@@ -6942,57 +6863,24 @@ window.lpScr={get:()=>D,sel:()=>sel,redraw:()=>{save();draw()},stageOn:()=>D.fil
 <input type="file" id="svFile" accept=".dscservice,.zip,.json" hidden>
 <script>
 (function(){
-const SKIP=/^lp-(pco|dsc-user|dsc-team|remote|output|stage|screens|screens-save|state|r2|svc-media|svc-cloud|home)$/,EXT='.dscservice';
+const SKIP=/^lp-(pco|dsc-user|dsc-team|remote|output|stage|screens|screens-save|state)$/,EXT='.dscservice';
 const safe=s=>((s||'service')+'').replace(/[\\\/:*?"<>|]+/g,'-').trim()||'service';
 const settings=()=>{const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lp-/.test(k)&&!SKIP.test(k))o[k]=localStorage.getItem(k)}}catch(e){}return o};
-/* How the media goes into a service file:
-   ref   = light (default): only the NAMES of the backgrounds. A few KB. They are found again in your media folder.
-   cloud = the backgrounds are uploaded once to your R2 bucket and the file holds their links. A few KB, opens anywhere with internet.
-   full  = a complete copy of every background inside the file (can be GBs; use it to move a service to another computer). */
-const getMode=()=>{try{const m=localStorage.getItem('lp-svc-media');return m==='cloud'||m==='full'?m:'ref'}catch(e){return'ref'}};
-const libUrl={};   /* backgrounds that come from a link (cloud) instead of a file on this computer */
-const cloudMap=()=>{try{return JSON.parse(localStorage.getItem('lp-svc-cloud')||'{}')||{}}catch(e){return{}}};
-async function cloudPut(f,name,c){
-  const sig=name+'|'+f.size+'|'+(f.lastModified||0),map=cloudMap();
-  if(map[sig]&&map[sig].acct===c.acct+'/'+c.bucket)return map[sig].url;
-  const key='svc/'+rmHash(sig)+'-'+(f.size.toString(36))+'-'+safe(name.split('/').pop());
-  await r2Put(c,key,f,f.type||'application/octet-stream');
-  const url=c.base.replace(/\/+$/,'')+'/'+key.split('/').map(encodeURIComponent).join('/');
-  map[sig]={url,acct:c.acct+'/'+c.bucket};try{localStorage.setItem('lp-svc-cloud',JSON.stringify(map))}catch(e){}
-  return url;
-}
-async function build(name,mode){
-  mode=mode||getMode();
+async function build(name){
   const media=[],audio=[],zip=typeof JSZip!=='undefined'?new JSZip():null;
   const stt=window.plForSave?plForSave():JSON.parse(JSON.stringify(S));
-  const data={app:'Disciples PreCenter',v:2,name,saved:new Date().toISOString(),mode,state:stt,settings:settings(),media,audio};
-  /* only the backgrounds this service actually uses are listed (not every saved folder) */
+  const data={app:'Disciples PreCenter',v:1,name,saved:new Date().toISOString(),state:stt,settings:settings(),media,audio};
+  /* only the backgrounds this service actually uses go into the file (not every saved folder) */
   const used=new Set((JSON.stringify(stt).match(/"lib":"[^"]+"/g)||[]).map(m=>m.slice(7,-1).replace(/\\\//g,'/')));
-  const miss=new Set();used.forEach(n=>{if(!libFile[n]&&!libUrl[n])miss.add(n)});
-  const info={items:(stt.songs||[]).length,mode,miss:mode==='full'?miss.size:0,missNames:mode==='full'?[...miss]:[],linked:0,cloud:0,cloudFail:0,bytes:0};
+  const miss=new Set();used.forEach(n=>{if(!libFile[n])miss.add(n)});
+  const info={items:(stt.songs||[]).length,miss:miss.size,missNames:[...miss]};
   if(!zip)return Object.assign(info,{json:true,blob:new Blob([JSON.stringify(data)],{type:'application/json'})});
-  const cfg=mode==='cloud'?rmCfg():null;
-  if(mode==='cloud'&&!cfg){info.mode=data.mode='ref';info.noCloud=true}
-  let i=0,n=0;const todo=libList.filter(x=>used.has(x.name));
-  for(const x of todo){
-    n++;const f=libFile[x.name],lu=libUrl[x.name];
-    if(data.mode==='full'&&f){const pth='media/'+(i++)+'-'+safe(f.name);zip.file(pth,f,{compression:'STORE'});media.push({name:x.name,type:x.type,file:pth,mime:f.type});continue}
-    const ent={name:x.name,type:x.type,mime:(f&&f.type)||(lu&&lu.mime)||'',size:(f&&f.size)||(lu&&lu.size)||0};
-    if(data.mode==='cloud'){
-      if(lu){ent.url=lu.url;info.cloud++}
-      else if(f){
-        toast('Uploading backgrounds to your cloud ('+n+' of '+todo.length+'): '+f.name+' …');
-        try{ent.url=await cloudPut(f,x.name,cfg);info.cloud++}catch(e){info.cloudFail++;info.cloudWhy=(e&&e.message)||String(e)}
-      }
-    }
-    if(!ent.url)info.linked++;
-    media.push(ent);
-  }
-  /* small audio files travel inside the file; big ones are listed by name */
+  let i=0;
+  for(const x of libList){if(!used.has(x.name))continue;const f=libFile[x.name];if(!f)continue;const pth='media/'+(i++)+'-'+safe(f.name);zip.file(pth,f,{compression:'STORE'});media.push({name:x.name,type:x.type,file:pth,mime:f.type})}
   i=0;
-  for(const a of aud.list){try{const b=await(await fetch(a.url)).blob();if(b.size>25*1048576&&data.mode!=='full'){audio.push({name:a.name,size:b.size,mime:b.type,ref:1});continue}const pth='audio/'+(i++)+'-'+safe(a.name);zip.file(pth,b,{compression:'STORE'});audio.push({name:a.name,file:pth,mime:b.type})}catch(e){}}
+  for(const a of aud.list){try{const b=await(await fetch(a.url)).blob();const pth='audio/'+(i++)+'-'+safe(a.name);zip.file(pth,b,{compression:'STORE'});audio.push({name:a.name,file:pth,mime:b.type})}catch(e){}}
   zip.file('service.json',JSON.stringify(data),{compression:'DEFLATE'});
-  return Object.assign(info,{zip,media:media.filter(m=>m.file).length,audio:audio.filter(m=>m.file).length});
+  return Object.assign(info,{zip,media:media.length,audio:audio.length});
 }
 /* write the zip to disk piece by piece so big services do not need one giant block of memory */
 function zipToFile(zip,writable){
@@ -7024,10 +6912,10 @@ window.dscSetSvcFolder=async function(){
 };
 const fmtSize=n=>n>=1073741824?(n/1073741824).toFixed(1)+' GB':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
 /* what went into the file, so you can see it really holds the service */
-const inside=r=>r.items+' item'+(r.items===1?'':'s')+(r.media?', '+r.media+' background'+(r.media===1?'':'s')+' inside':'')+(r.cloud?', '+r.cloud+' background'+(r.cloud===1?'':'s')+' as cloud link'+(r.cloud===1?'':'s'):'')+(r.linked?', '+r.linked+' background'+(r.linked===1?'':'s')+' by name':'')+(r.audio?', '+r.audio+' audio file'+(r.audio===1?'':'s'):'');
-/* full copy only: a background the service uses but that is not loaded on this computer cannot go into the file */
-const okToSave=r=>!r.miss||confirm(r.miss+' background'+(r.miss>1?'s':'')+' used by this service '+(r.miss>1?'are':'is')+' not loaded on this computer, so '+(r.miss>1?'they':'it')+' cannot be put in the file:\n\n'+r.missNames.slice(0,8).join('\n')+(r.miss>8?'\n…':'')+'\n\nLoad the folder again (Media bin) to include '+(r.miss>1?'them':'it')+'.\n\nSave anyway?');
-const sumNote=r=>(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' • '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'')+(r.noCloud?' • the cloud (R2) is not set up, so backgrounds were saved by name':'')+(r.cloudFail?' • '+r.cloudFail+' could not be uploaded ('+r.cloudWhy+'), saved by name':'')+(r.mode==='ref'&&r.linked?'. On another computer, load the same media folder to see them.':'');
+const inside=r=>r.items+' item'+(r.items===1?'':'s')+(r.media?', '+r.media+' background'+(r.media===1?'':'s'):'')+(r.audio?', '+r.audio+' audio file'+(r.audio===1?'':'s'):'');
+/* a background the service uses but that is not loaded on this computer cannot go into the file: say so BEFORE saving */
+const okToSave=r=>!r.miss||confirm(r.miss+' background'+(r.miss>1?'s':'')+' used by this service '+(r.miss>1?'are':'is')+' not loaded on this computer, so '+(r.miss>1?'they':'it')+' cannot be put in the file:\n\n'+r.missNames.slice(0,8).join('\n')+(r.miss>8?'\n\u2026':'')+'\n\nLoad the folder again (Media bin) to include '+(r.miss>1?'them':'it')+'.\n\nSave anyway?');
+const sumNote=r=>(r.json?' (JSZip is offline, so media was not included)':'')+(r.miss?' \u2022 '+r.miss+' background'+(r.miss>1?'s are':' is')+' not loaded, so not included':'');
 /* desktop app: send the zip to the app in pieces of a few MB; the app writes it next to its final name and only renames it when every byte has arrived */
 function zipToNative(zip,NS,id){
   return new Promise((res,rej)=>{
@@ -7043,14 +6931,14 @@ function zipToNative(zip,NS,id){
     st.on('error',rej);st.on('end',()=>flush().then(()=>res(total),rej));st.resume();
   });
 }
-async function saveSvcNative(name,mode){
+async function saveSvcNative(name){
   const NS=window.dscNative.save;
   const fn=safe(name)+(typeof JSZip!=='undefined'?EXT:'.json');
   let h;try{h=await NS.begin({name:fn,title:'Save service'})}catch(e){toast('Could not open the Save window: '+(e&&e.message||e));return}
   if(!h||h.canceled)return;
   if(!h.ok){toast('Could not save: '+(h.error||'the file could not be created'));return}
   toast('Saving service\u2026');
-  let r;try{r=await build(name,mode)}catch(e){await NS.abort(h.id);toast('Could not save: '+(e.message||e));return}
+  let r;try{r=await build(name)}catch(e){await NS.abort(h.id);toast('Could not save: '+(e.message||e));return}
   if(!okToSave(r)){await NS.abort(h.id);toast('Save cancelled.');return}
   try{
     let total;
@@ -7063,8 +6951,8 @@ async function saveSvcNative(name,mode){
     toast('Saved '+e.name+' ('+fmtSize(e.bytes)+': '+inside(r)+') in \u201c'+e.dir+'\u201d'+sumNote(r));
   }catch(e){try{await NS.abort(h.id)}catch(_){}toast('Could not save: '+(e&&e.message||e))}
 }
-async function saveSvc(name,mode){
-  if(window.dscNative&&window.dscNative.save)return saveSvcNative(name,mode);
+async function saveSvc(name){
+  if(window.dscNative&&window.dscNative.save)return saveSvcNative(name);
   /* ask WHERE first, while the click is still fresh (browsers block the Save window if we wait until the zip is built) */
   const fn=safe(name)+(typeof JSZip!=='undefined'?EXT:'.json');
   let fh=null,pickErr=null,dir=null;
@@ -7077,7 +6965,7 @@ async function saveSvc(name,mode){
   }
   toast('Saving service\u2026');
   const dropEmpty=async()=>{try{if(fh&&fh.remove)await fh.remove()}catch(e){}};
-  let r;try{r=await build(name,mode)}catch(e){await dropEmpty();toast('Could not save: '+(e.message||e));return}
+  let r;try{r=await build(name)}catch(e){await dropEmpty();toast('Could not save: '+(e.message||e));return}
   if(!okToSave(r)){await dropEmpty();toast('Save cancelled.');return}
   const note=sumNote(r);
   if(fh){
@@ -7096,83 +6984,31 @@ async function saveSvc(name,mode){
   try{plMark('saved')}catch(_){}
   toast((pickErr?'Saving to the place you chose did not work ('+(pickErr.message||pickErr.name||pickErr)+'). ':'')+'Saved '+fn+' ('+fmtSize(blob.size)+': '+inside(r)+') to your Downloads folder'+note);
 }
-window.dscSaveFlow=function(forceAsk,mode){
-  if(S.svcName&&!forceAsk){saveSvc(S.svcName,mode);return}
-  ask('Service name, e.g. Sunday 12 Oct',n=>{n=(n||'').trim();if(!n)return;S.svcName=n;save();saveSvc(n,mode)},S.svcName||(window.plName?plName():''));
+window.dscSaveFlow=function(forceAsk){
+  if(S.svcName&&!forceAsk){saveSvc(S.svcName);return}
+  ask('Service name, e.g. Sunday 12 Oct',n=>{n=(n||'').trim();if(!n)return;S.svcName=n;save();saveSvc(n)},S.svcName||(window.plName?plName():''));
 };
-window.dscSvcMode=getMode;window.dscSvcBuild=build;window.dscSvcOpen=openSvc;
-/* Reads a service file WITHOUT loading it into memory: only the small table at the end of the zip is read, and each
-   background becomes a window onto the file on disk. This is why a service of several GB opens at once. */
-async function zipIndex(file){
-  const size=file.size,tl=Math.min(size,65557+20),tail=new DataView(await file.slice(size-tl,size).arrayBuffer());
-  let e=-1;for(let i=tl-22;i>=0;i--){if(tail.getUint32(i,true)===0x06054b50){e=i;break}}
-  if(e<0)throw new Error('This is not a zip file.');
-  let cnt=tail.getUint16(e+10,true),cdSize=tail.getUint32(e+12,true),cdOff=tail.getUint32(e+16,true);
-  if(cnt===0xFFFF||cdOff===0xFFFFFFFF||cdSize===0xFFFFFFFF){
-    const lp=e-20;
-    if(lp>=0&&tail.getUint32(lp,true)===0x07064b50){const zo=Number(tail.getBigUint64(lp+8,true)),z=new DataView(await file.slice(zo,zo+56).arrayBuffer());if(z.getUint32(0,true)===0x06064b50){cnt=Number(z.getBigUint64(32,true));cdSize=Number(z.getBigUint64(40,true));cdOff=Number(z.getBigUint64(48,true))}}
-  }
-  const cd=new DataView(await file.slice(cdOff,cdOff+cdSize).arrayBuffer()),u8=new Uint8Array(cd.buffer),dec=new TextDecoder(),map=new Map();
-  let p=0;
-  for(let i=0;i<cnt&&p+46<=cd.byteLength;i++){
-    if(cd.getUint32(p,true)!==0x02014b50)break;
-    const method=cd.getUint16(p+10,true);let csize=cd.getUint32(p+20,true),usize=cd.getUint32(p+24,true),off=cd.getUint32(p+42,true);
-    const nl=cd.getUint16(p+28,true),el=cd.getUint16(p+30,true),cl=cd.getUint16(p+32,true);
-    if(usize===0xFFFFFFFF||csize===0xFFFFFFFF||off===0xFFFFFFFF){
-      let q=p+46+nl;const end=q+el;
-      while(q+4<=end){const id=cd.getUint16(q,true),sz=cd.getUint16(q+2,true);if(id===1){let r=q+4;if(usize===0xFFFFFFFF){usize=Number(cd.getBigUint64(r,true));r+=8}if(csize===0xFFFFFFFF){csize=Number(cd.getBigUint64(r,true));r+=8}if(off===0xFFFFFFFF){off=Number(cd.getBigUint64(r,true))}}q+=4+sz}
-    }
-    map.set(dec.decode(u8.subarray(p+46,p+46+nl)),{method,csize,off});
-    p+=46+nl+el+cl;
-  }
-  const blob=async(n,type)=>{
-    const en=map.get(n);if(!en)return null;
-    const h=new DataView(await file.slice(en.off,en.off+30).arrayBuffer());
-    if(h.getUint32(0,true)!==0x04034b50)throw new Error('damaged zip');
-    const st=en.off+30+h.getUint16(26,true)+h.getUint16(28,true),b=file.slice(st,st+en.csize,type||'');
-    if(en.method===0)return b;
-    if(en.method===8){if(typeof DecompressionStream==='undefined')throw new Error('this version cannot read compressed parts');return new Response(b.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob()}
-    throw new Error('unsupported zip method');
-  };
-  return{has:n=>map.has(n),blob,text:async n=>{const b=await blob(n);if(!b)throw new Error('missing '+n);return b.text()}};
-}
 async function openSvc(file){
   try{
-    if(!file.size){toast('That file is empty. The save did not finish, so please save the service again.');return}
-    const head=new Uint8Array(await file.slice(0,2).arrayBuffer());let zi=null,data;
-    if(head[0]===0x50&&head[1]===0x4B){zi=await zipIndex(file);if(!zi.has('service.json'))throw new Error('missing service.json');data=JSON.parse(await zi.text('service.json'))}
-    else data=JSON.parse(await file.text());
+    const buf=await file.arrayBuffer(),u=new Uint8Array(buf);let zip=null,data;
+    if(!u.length){toast('That file is empty. The save did not finish, so please save the service again.');return}
+    if(u[0]===0x50&&u[1]===0x4B){if(typeof JSZip==='undefined'){toast('JSZip is not loaded. Connect to the internet once and reload.');return}zip=await JSZip.loadAsync(buf);const e=zip.file('service.json');if(!e)throw new Error('missing service.json');data=JSON.parse(await e.async('string'))}
+    else data=JSON.parse(new TextDecoder().decode(u));
     if(!data||!data.state||!Array.isArray(data.state.songs)||!data.state.songs.length){toast('That is not a PreCenter service file.');return}
     if(!confirm('Open "'+(data.name||file.name)+'"?\n\nThis adds it as a new playlist and merges its songs into your library. Your other playlists are kept.'))return;
     S=(window.plOpenMerge?plOpenMerge(S,data.state,data.name||file.name):data.state);S.props=S.props||[];S.macros=S.macros||[];TMS();S.svcName=data.name||S.svcName;
-    Object.entries(data.settings||{}).forEach(([k,v])=>{if(SKIP.test(k))return;try{localStorage.setItem(k,v)}catch(e){}});
-    let inFile=0,viaLink=0;
-    for(const m of data.media||[]){
-      if(lib[m.name])continue;
-      if(zi&&m.file&&zi.has(m.file)){const b=await zi.blob(m.file,m.mime),f=new File([b],m.name.split('/').pop(),{type:m.mime||b.type});lib[m.name]=URL.createObjectURL(f);libFile[m.name]=f;libList.push({name:m.name,type:m.type});inFile++}
-      else if(m.url&&/^https:\/\//.test(m.url)){lib[m.name]=m.url;libUrl[m.name]={url:m.url,size:m.size||0,mime:m.mime||''};libList.push({name:m.name,type:m.type});viaLink++}
+    Object.entries(data.settings||{}).forEach(([k,v])=>{try{localStorage.setItem(k,v)}catch(e){}});
+    if(zip){
+      for(const m of data.media||[]){const e=zip.file(m.file);if(!e||lib[m.name])continue;const b=await e.async('blob'),f=new File([b],m.name.split('/').pop(),{type:m.mime||b.type});lib[m.name]=URL.createObjectURL(f);libFile[m.name]=f;libList.push({name:m.name,type:m.type})}
+      for(const a of data.audio||[]){const e=zip.file(a.file);if(!e||aud.list.some(x=>x.name===a.name))continue;const b=await e.async('blob');aud.list.push({name:a.name,url:URL.createObjectURL(new File([b],a.name,{type:a.mime||b.type}))})}
+      sent={};audRefresh();
     }
-    for(const a of data.audio||[]){if(!zi||!a.file||!zi.has(a.file)||aud.list.some(x=>x.name===a.name))continue;const b=await zi.blob(a.file,a.mime);aud.list.push({name:a.name,url:URL.createObjectURL(new File([b],a.name,{type:a.mime||b.type}))})}
-    sent={};audRefresh();
     try{const t=localStorage.getItem('lp-theme');if(t==='dark'||t==='light'){th=t;applyTheme()}}catch(e){}
     idx=0;S.sel=(S.songs.find(x=>x.id===S.sel)||S.songs[0]).id;save();drawAll();try{drawProps();drawMacros();tmDraw()}catch(e){}refreshSvc();
     try{plMark('opened')}catch(_){}
-    /* backgrounds the service uses that are still not on this computer */
-    const need=new Set((JSON.stringify(S).match(/"lib":"[^"]+"/g)||[]).map(m=>m.slice(7,-1).replace(/\\\//g,'/')));
-    const gone=[...need].filter(n=>!lib[n]&&(data.media||[]).some(m=>m.name===n));
-    toast('Opened "'+(data.name||file.name)+'"'+(viaLink?' • '+viaLink+' background'+(viaLink>1?'s':'')+' play from the cloud':'')+(gone.length?' • '+gone.length+' background'+(gone.length>1?'s are':' is')+' not on this computer yet. Load the media folder it came from (Media bin) and '+(gone.length>1?'they':'it')+' will show.':''));
-  }catch(e){toast(/JSON/.test(e.message||'')?'That file is damaged or incomplete (the save was probably interrupted). Please save the service again.':'Could not open that file: '+(e.message||e))}
+    toast('Opened "'+(data.name||file.name)+'"');
+  }catch(e){toast(/JSON/.test(e.message||'')?'That file is damaged or incomplete (the save was probably interrupted). Please save the service again.':'Could not open that file: '+e.message)}
 }
-/* choose how services are saved */
-window.dscSvcOptions=function(){
-  const cur=getMode(),has=!!rmCfg();
-  const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>How should a saved service hold its backgrounds?</b><button class="x">Close</button></div>'
-    +'<label class="row" style="gap:8px;align-items:flex-start"><input type="radio" name="svm" value="ref" style="width:auto;margin-top:4px"><span><b>Light (recommended)</b><br><span class="hint">Only the names of the backgrounds. The file is a few KB. They are found again in your media folder.</span></span></label>'
-    +'<label class="row" style="gap:8px;align-items:flex-start"><input type="radio" name="svm" value="cloud" style="width:auto;margin-top:4px"'+(has?'':' disabled')+'><span><b>Cloud links</b><br><span class="hint">'+(has?'Each background is uploaded once to your R2 bucket and the file holds its link. Tiny file, opens on any computer with internet.':'Needs the R2 bucket from Phone video backgrounds (Services menu).')+'</span></span></label>'
-    +'<label class="row" style="gap:8px;align-items:flex-start"><input type="radio" name="svm" value="full" style="width:auto;margin-top:4px"><span><b>Full copy</b><br><span class="hint">Every background inside the file. Can be GBs. Use it to move a service to a computer without your media. (Services › Save full copy does this once.)</span></span></label>','');
-  m.q('.x').onclick=m.done;
-  m.w.querySelectorAll('input[name=svm]').forEach(r=>{r.checked=r.value===cur;r.onchange=()=>{try{localStorage.setItem('lp-svc-media',r.value)}catch(e){}toast('Saved services will use: '+(r.value==='ref'?'light (names only)':r.value==='cloud'?'cloud links':'full copy'))}});
-};
 document.getElementById('svFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)openSvc(f)};
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='s'){e.preventDefault();e.stopPropagation();window.dscSaveFlow(false)}},true);
 })();
@@ -7293,9 +7129,8 @@ const MENUS=window.dscMENUS={
  'Slide Show':()=>window.dscShowMenu?dscShowMenu():[],
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{t:'Slides as live page (whole service)',fn:setView('live')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
- Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
- Connection:()=>[{t:'Connection overview\u2026',fn:()=>connDlg('all')},{sep:1},{t:'Wi-Fi: phone remote QR\u2026',fn:()=>connDlg('wifi')},{t:'Cloud remote (Firestore)\u2026',fn:()=>connDlg('cloud')},{t:'Media & Stream (R2)\u2026',fn:()=>connDlg('r2')},{t:'Stream server link\u2026',fn:()=>connDlg('stream')},{sep:1},{t:'Copy Stream access link (cloud)',fn:()=>remoteAccessLink()}],
- Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Save full copy with all backgrounds\u2026',fn:()=>dscSaveFlow(true,'full')},{t:'How services are saved\u2026',fn:()=>dscSvcOptions()},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
+ Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Stream link (Disciples Stream)\u2026',fn:()=>window.slOpen&&slOpen()},{t:'Copy Stream access link (cloud)',fn:()=>remoteAccessLink()},{t:'Phone remote on this Wi-Fi (QR)\u2026',fn:()=>lanDlg()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
+ Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Phone video backgrounds\u2026',fn:()=>rmVidCfg()},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
 };
@@ -7312,7 +7147,6 @@ const bar=document.createElement('div');bar.id='mbar';bar.setAttribute('role','m
 let openName=null;
 const openM=(b,n)=>{openName=n;bar.querySelectorAll('.mb').forEach(x=>x.classList.toggle('on',x===b));const r=b.getBoundingClientRect();showMenu(r.left,r.bottom,MENUS[n]())};
 Object.keys(MENUS).forEach(n=>{const b=document.createElement('button');b.className='mb';b.textContent=n;b.onclick=e=>{e.stopPropagation();if(openName===n&&cmEl){closeCm();openName=null;b.classList.remove('on')}else openM(b,n)};b.onmouseenter=()=>{if(openName&&cmEl&&openName!==n)openM(b,n)};bar.appendChild(b)});
-{const hb=document.createElement('button');hb.className='mb';hb.id='mbHome';hb.textContent='Home';hb.title='Back to the Home screen';hb.onclick=e=>{e.stopPropagation();try{closeCm();openName=null}catch(_){}window.dscStartHome&&dscStartHome()};bar.insertBefore(hb,bar.firstChild)}
 const br=document.createElement('span');br.className='brand';br.textContent='Disciples PreCenter';br.title='Version '+DSC_VERSION;bar.appendChild(br);
 const air=document.createElement('span');air.className='air';bar.insertBefore(air,br);let lk='',ls=Date.now(),lik='',lis=Date.now();const fmt=t=>{t=Math.floor(t/1000);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
 document.addEventListener('click',()=>{openName=null;bar.querySelectorAll('.mb.on').forEach(x=>x.classList.remove('on'))});
@@ -12010,17 +11844,16 @@ window.dscNdiGuide=async function(){
   }
   const _push=push;push=function(){const r=_push.apply(this,arguments);try{send(false)}catch(e){}return r};
   setInterval(()=>{try{send(true)}catch(e){}},5000);
-  window.slOpen=function(host){
-    const w=host||document.createElement('div');if(!host)w.className='qe';
+  window.slOpen=function(){
+    const w=document.createElement('div');w.className='qe';
     w.innerHTML='<div class="qb" style="width:min(440px,94vw);display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:space-between;align-items:center"><b>Stream link \u2013 Disciples Stream</b><button class="x" title="Close">\u2715</button></div>'
       +'<div class="hint" style="margin:0">Sends the live slide, clear and black to Disciples Stream, with its background. Use the address and pairing code the Stream server prints when it starts.</div>'
       +'<label class=\"row\" style=\"gap:6px;align-items:center\"><input type=\"checkbox\" id=\"slBg\" style=\"width:auto\"> Send backgrounds (video, image, color) and dim level</label>'
       +'<label>Server address<input id="slA" placeholder="localhost:3000" autocomplete="off"></label><label>Pairing code<input id="slC" autocomplete="off"></label>'
       +'<div class="row" style="justify-content:space-between;align-items:center"><span class="hint" style="margin:0">Status: <b id="slSt"></b></span><button id="slB" class="pri"></button></div></div>';
     const kd=e=>{if(e.key==='Escape'){e.stopPropagation();done()}},done=()=>{document.removeEventListener('keydown',kd,true);w.remove()};
-    if(host){const qb=w.querySelector('.qb');qb.className='';qb.style.cssText='display:flex;flex-direction:column;gap:8px';qb.firstChild.style.display='none'}
-    else{document.addEventListener('keydown',kd,true);w.querySelector('.x').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};document.body.appendChild(w)}
-    const A=w.querySelector('#slA'),Cd=w.querySelector('#slC');A.value=C.addr;Cd.value=C.code;setS(stt);
+    document.addEventListener('keydown',kd,true);w.querySelector('.x').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
+    document.body.appendChild(w);const A=w.querySelector('#slA'),Cd=w.querySelector('#slC');A.value=C.addr;Cd.value=C.code;setS(stt);
     const Bg=w.querySelector('#slBg');Bg.checked=C.bg!==false;Bg.onchange=()=>{C.bg=Bg.checked;save();last='';try{send(true)}catch(e){}};
     w.querySelector('#slB').onclick=()=>{if(C.on){C.on=false;save();stop();setS('Off');return}C.addr=A.value.trim();C.code=Cd.value.trim();C.on=true;save();start()};
   };

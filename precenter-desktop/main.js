@@ -346,6 +346,10 @@ function setupLan() {
   const toPage = (ch, ...a) => { try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(ch, ...a); } catch (e) { /* closing */ } };
   ipcMain.handle('lan:info', e => (fromMain(e) && lan) ? lan.info() : { running: false, port: 0, pin: '', urls: [], clients: 0 });
   ipcMain.handle('lan:newPin', e => { if (fromMain(e) && lan) { lan.newPin(); return lan.info(); } return null; });
+  ipcMain.handle('lan:media', (e, key, data, type) => {
+    if (!lan || !fromMain(e) || !data) return false;
+    try { return lan.putMedia(String(key), Buffer.from(data), String(type || '')); } catch (err) { return false; }
+  });
   ipcMain.on('lan:state', (e, json) => {
     if (!lan || !fromMain(e) || typeof json !== 'string' || json.length > 2 * 1024 * 1024) return;
     try { lan.setState(JSON.parse(json)); } catch (err) { /* bad state: ignore */ }
