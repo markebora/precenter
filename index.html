@@ -6322,8 +6322,11 @@ async function lanDlg(host){
       +'<div style="text-align:center;margin:6px 0"><div><b>'+dscEsc(u.address)+':'+inf.port+'</b></div><div class="hint" style="margin:0">PIN <b style="letter-spacing:.2em">'+dscEsc(inf.pin)+'</b> \u00b7 <span id="lnCl"></span></div></div>'
       +(inf.urls.length>1?'<label>If the phone cannot connect, try another address<select id="lnSel">'+inf.urls.map((x,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+dscEsc(x.address+'  ('+x.name+')')+'</option>').join('')+'</select></label>':'')
       +'<div class="row"><button id="lnCp">Copy link</button><button id="lnNp" title="Phones already connected will have to scan again">New PIN</button></div>'
+      +'<div class="hint" id="lnVid" style="margin:8px 0 0"></div>'
       +'<p class="hint">First time on Windows: if the phone cannot connect, allow PreCenter on <b>private networks</b> when Windows asks (or in Windows Security \u203a Firewall).</p>';
-    const cl=()=>{const e=m.q('#lnCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}};cl();
+    const cl=()=>{const e=m.q('#lnCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}
+      const v=m.q('#lnVid');if(v){const nat=!!(window.dscNative&&dscNative.lan&&dscNative.lan.media),rd=Object.keys(RML.done).length;
+        v.textContent='Video and picture backgrounds for phones: '+(!nat?'this PreCenter app is too old (install the rebuilt desktop app)':!(LANH&&LANH.clients>0)?'waiting for a phone to connect':(rd?rd+' ready on this computer. ':'none made yet. Show a slide with a video or picture background. ')+(RMV.cur?'Making one now\u2026 ':'')+(RMV.status?'Last: '+RMV.status:''))}};cl();
     const iv=setInterval(()=>{if(!m.w.isConnected){clearInterval(iv);return}cl()},1000);
     const sel=m.q('#lnSel');if(sel)sel.onchange=()=>{cur=+sel.value;clearInterval(iv);draw()};
     m.q('#lnCp').onclick=async()=>{try{await navigator.clipboard.writeText(u.url);toast('Link copied')}catch(e){window.prompt('Copy this link:',u.url)}};
