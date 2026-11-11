@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, Menu, protocol, session, ipcMain, shell, dialog, desktopCapturer, screen } = require('electron');
+const { app, BrowserWindow, Menu, protocol, session, ipcMain, shell, dialog, desktopCapturer, screen, net } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { loadConfig } = require('./lib/config');
@@ -10,6 +10,7 @@ const log = require('./lib/log');
 const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 const appUpdate = require('./lib/appupdate');
+const lanPageLib = require('./lib/lanpage');
 const linkBridge = require('./lib/linkbridge');
 const saveBridge = require('./lib/savebridge');
 const lanServer = require('./lib/lanserver');
@@ -342,7 +343,8 @@ function showAbout() {
 // ---------- IPC from the page ----------
 // ---------- Wi-Fi remote: phones on the same network, no internet ----------
 const builtInPage = () => path.join(__dirname, 'lan', 'remote.html');
-const customPage = () => path.join(app.getPath('userData'), 'lan', 'remote.html');
+const customPage = () => path.join(app.getPath('userData'), 'lan', 'remote.html');      // a file you put there yourself wins
+let lanPage = null;                                                                       // rebuilds remote.auto.html from Harmony
 function setupLan() {
   const fromMain = e => mainWin && !mainWin.isDestroyed() && e.sender === mainWin.webContents;
   const toPage = (ch, ...a) => { try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(ch, ...a); } catch (e) { /* closing */ } };
@@ -350,7 +352,13 @@ function setupLan() {
   ipcMain.handle('lan:pageInfo', e => {
     if (!fromMain(e)) return null;
     const c = customPage();
-    return { custom: fs.existsSync(c), folder: path.dirname(c), file: c };
+    const i = lanPage ? lanPage.info() : { auto: false, at: 0, from: '', last: null };
+    return { custom: fs.existsSync(c), auto: i.auto, at: i.at, from: i.from, last: i.last, enabled: !!lanPage, folder: path.dirname(c), file: c };
+  });
+  ipcMain.handle('lan:updatePage', async e => {
+    if (!fromMain(e)) return null;
+    if (!lanPage) return { status: 'invalid', message: 'Automatic phone page updates are turned off in config.json.' };
+    return lanPage.check();
   });
   ipcMain.handle('lan:openPageFolder', e => {
     if (!fromMain(e)) return false;
@@ -372,10 +380,18 @@ function setupLan() {
     port: cfg.lan.port,
     dir: app.getPath('userData'),
     // A remote.html in the app's data folder (lan/remote.html) wins over the one built into the app, so a new phone page is a file copy, not a rebuild.
-    pageFile: () => { const c = customPage(); return fs.existsSync(c) ? c : builtInPage(); },
+    pageFile: () => { const c = customPage(); if (fs.existsSync(c)) return c; return lanPage && fs.existsSync(lanPage.autoFile) ? lanPage.autoFile : builtInPage(); },
     onCommand: c => toPage('lan:cmd', c),
     onClients: n => toPage('lan:clients', n)
   });
+  if (cfg.lan.autoUpdatePage) {
+    lanPage = lanPageLib.create({
+      dir: app.getPath('userData'), templateFile: path.join(__dirname, 'lan', 'template.html'), log,
+      url: cfg.lan.pageUrl || cfg.siteUrl, fetchFn: (u, o) => net.fetch(u, o)
+    });
+    setTimeout(() => lanPage.check().catch(() => {}), 4000);
+    setInterval(() => lanPage.check().catch(() => {}), 30 * 60 * 1000).unref();
+  }
   lan.start().then(p => log.info('Wi-Fi remote listening on port ' + p)).catch(err => { log.error('Wi-Fi remote could not start: ' + err.message); lan = null; });
 }
 

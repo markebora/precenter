@@ -22,7 +22,7 @@ const DEFAULTS = {
   autoUpdate: true,
   devTools: false,
   ndi: { enabled: false },
-  lan: { enabled: true, port: 8765 }
+  lan: { enabled: true, port: 8765, autoUpdatePage: true, pageUrl: '' }
 };
 
 // Removes // and /* */ comments but leaves text inside "strings" alone (so https:// survives).

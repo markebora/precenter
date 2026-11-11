@@ -463,6 +463,47 @@ test('Wi-Fi remote: a phone with the right PIN gets the state and its button pre
     assert.ok(counts.includes(1) && counts[counts.length - 1] === 0);
   } finally { srv.stop(); }
 });
+test('Wi-Fi remote: a remote.html in the data folder replaces the built-in page without a restart', async () => {
+  const fs = require('fs'), os = require('os'), http = require('http');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lanpage-')), custom = path.join(dir, 'remote.html');
+  const srv = lan.create({ pin: '222222', port: 0, pageFile: () => fs.existsSync(custom) ? custom : path.join(root, 'lan', 'remote.html') });
+  const port = await srv.start();
+  const get = () => new Promise((ok, no) => http.get({ host: '127.0.0.1', port, path: '/' }, r => { let b = ''; r.on('data', d => b += d); r.on('end', () => ok(b)); }).on('error', no));
+  try {
+    assert.ok((await get()).includes('rmtOv'));            // built-in page
+    fs.writeFileSync(custom, '<!doctype html><title>custom</title>');
+    assert.strictEqual(await get(), '<!doctype html><title>custom</title>');   // picked up at once
+    fs.unlinkSync(custom);
+    assert.ok((await get()).includes('rmtOv'));            // back to the built-in page
+  } finally { srv.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+test('Phone page: rebuilt from Harmony, kept when the download is bad, and only rewritten when it changes', async () => {
+  const fs = require('fs'), os = require('os'), lanPage = require(path.join(root, 'lib', 'lanpage'));
+  const tpl = fs.readFileSync(path.join(root, 'lan', 'template.html'), 'utf8');
+  const fake = (css, js) => '<!doctype html><html><head><style id="remoteCss">' + css + '</style></head><body>' + 'x'.repeat(60 * 1024) + '<script id="remoteJs">' + js + '</script></body></html>';
+  const good = fake('.a{color:red}', "var o='rmtOv';var d=window.firestoreDb;'Could not send. Check your connection.'");
+  const out = lanPage.convert(good, tpl);
+  assert.ok(out.includes('.a{color:red}') && out.includes('Check the Wi-Fi.') && !out.includes('Check your connection.') && out.includes('PreCenter Remote'));
+  assert.throws(() => lanPage.convert('<html>nope</html>', tpl));
+  assert.throws(() => lanPage.convert(fake('a{}', 'var nothing=1'), tpl));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lanauto-'));
+  let body = good, status = 200;
+  const up = lanPage.create({ dir, templateFile: path.join(root, 'lan', 'template.html'), url: 'https://example.test/', fetchFn: async () => ({ ok: status === 200, status, text: async () => body }) });
+  try {
+    assert.strictEqual((await up.check()).status, 'updated');
+    assert.ok(fs.readFileSync(up.autoFile, 'utf8').includes('.a{color:red}'));
+    assert.strictEqual((await up.check()).status, 'current');
+    body = fake('.b{color:blue}', "var o='rmtOv';var d=window.firestoreDb;");
+    assert.strictEqual((await up.check()).status, 'updated');
+    assert.ok(fs.readFileSync(up.autoFile, 'utf8').includes('.b{color:blue}'));
+    body = '<html>Error page</html>';
+    assert.strictEqual((await up.check()).status, 'invalid');
+    assert.ok(fs.readFileSync(up.autoFile, 'utf8').includes('.b{color:blue}'));   // the good copy stays
+    status = 500;
+    assert.strictEqual((await up.check()).status, 'offline');
+    assert.ok(up.info().auto);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
 test('Wi-Fi remote: a wrong PIN is refused, and too many wrong tries are blocked', async () => {
   const srv = lan.create({ pin: '654321', port: 0, pageFile: 'x' });
   const port = await srv.start();

@@ -72,5 +72,8 @@
 
   // Wi-Fi remote: lets a phone on the same Wi-Fi control PreCenter by scanning a QR code (Screens menu, Phone remote on this Wi-Fi).
   // Nothing goes through the internet. The first time, Windows may ask to allow PreCenter on private networks: choose Allow.
-  "lan": { "enabled": true, "port": 8765 }
+  // Wi-Fi phone remote. "autoUpdatePage": the phone page is rebuilt from Disciples: Harmony (your hosted site) when the app starts
+  // and every 30 minutes, so a change you publish to Harmony reaches the Wi-Fi page without reinstalling the app.
+  // "pageUrl": the Harmony address to read ("" = use "siteUrl").
+  "lan": { "enabled": true, "port": 8765, "autoUpdatePage": true, "pageUrl": "" }
 }

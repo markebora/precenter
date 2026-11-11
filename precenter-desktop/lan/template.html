@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<title>PreCenter Remote</title>
+<style>:root{--accent:#E8B923;--accent-ink:#171200;--accent-strong:#f3c93c}
+html,body{margin:0;height:100%;background:#0b0b0c;color:#f7f7f7;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;cursor:pointer}
+.rmtWifi{display:none!important}
+#lanHome{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
+#lanHome h1{margin:0;font-size:22px}#lanHome p{margin:0;color:#9a9aa3;font-size:14px}
+#lanHome button{border:0;border-radius:12px;padding:13px 22px;font-weight:700;font-size:16px;background:rgba(255,255,255,.1);color:#fff;min-width:220px}
+#lanHome button.pri{background:var(--accent);color:var(--accent-ink)}
+</style>
+<style id="remoteCss">/*__CSS__*/</style></head>
+<body>
+<div id="lanHome" hidden><h1>PreCenter Remote</h1><p>Connected over this Wi-Fi.</p><button class="pri" id="lanGo">Open remote</button><button id="lanSite">Back to Disciples</button></div>
+<button id="remoteOpenBtn" hidden aria-hidden="true" tabindex="-1"></button>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search),pin=q.get('pin')||'';
+  try{if(pin){localStorage.setItem('dscLanPin',pin);history.replaceState(null,'',location.pathname)}else pin=localStorage.getItem('dscLanPin')||''}catch(e){}
+  var L=window.dscLan={open:false,ms:null,host:location.host},sentAt=0,ws=null,subs=[],last=null,isOpen=false,everOpen=false,fails=0,timer=0,pingBad=false;
+  function snap(){return{exists:!!last,data:function(){return last}}}
+  function emitErr(code){subs.slice().forEach(function(s){try{s.err&&s.err({code:code})}catch(e){}})}
+  function connect(){
+    if(ws&&(ws.readyState===0||ws.readyState===1))return;
+    clearTimeout(timer);
+    try{ws=new WebSocket('ws://'+location.host+'/ws?pin='+encodeURIComponent(pin))}catch(e){retry();return}
+    var w=ws;
+    w.onopen=function(){isOpen=true;everOpen=true;fails=0;L.open=true;beat()};
+    w.onmessage=function(e){var m;try{m=JSON.parse(e.data)}catch(x){return}
+      if(m.t==='hb'){if(sentAt){var d=Math.round(performance.now()-sentAt);L.ms=L.ms==null?d:Math.round(L.ms*0.5+d*0.5);sentAt=0}return}
+      if(m.t==='state'){last=m.d;subs.slice().forEach(function(s){try{s.cb(snap())}catch(x){console.error(x)}})}};
+    w.onclose=function(){if(w!==ws)return;isOpen=false;L.open=false;fails++;
+      /* closed before ever opening: wrong PIN (the computer answers 401) or the computer is not reachable */
+      fetch('/ping',{cache:'no-store'}).then(function(r){return r.ok}).catch(function(){return false}).then(function(up){
+        emitErr(up&&!everOpen&&fails>1?'permission-denied':'unavailable');retry()})};
+    w.onerror=function(){try{w.close()}catch(e){}};
+  }
+  function retry(){clearTimeout(timer);timer=setTimeout(connect,Math.min(5000,700*fails+700))}
+  function beat(){if(isOpen)try{sentAt=performance.now();ws.send('{"t":"hb"}')}catch(e){}}
+  setInterval(beat,2500);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&!isOpen){fails=0;connect()}});
+  window.addEventListener('online',function(){fails=0;connect()});
+  window.firestoreDb={collection:function(c){return{doc:function(){return{
+    onSnapshot:function(cb,err){var s={cb:cb,err:err};subs.push(s);connect();if(last)setTimeout(function(){try{cb(snap())}catch(e){}},0);
+      return function(){subs=subs.filter(function(x){return x!==s})}},
+    collection:function(){return{add:function(doc){return new Promise(function(ok,no){
+      if(!isOpen){no({code:'unavailable'});return}
+      try{ws.send(JSON.stringify({t:'cmd',c:doc}));ok()}catch(e){no(e)}})}}}
+  }}}}};
+  window.firebaseAuth={currentUser:{uid:'lan'}};
+  window.firebaseReadyPromise=Promise.resolve();
+  window.getActiveTeamId=function(){return'lan'};
+  window.showToast=function(m){var t=document.getElementById('lanToast');if(!t){t=document.createElement('div');t.id='lanToast';t.style.cssText='position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20000;background:#26262b;color:#fff;border:1px solid rgba(255,255,255,.15);padding:9px 16px;border-radius:999px;font:600 14px system-ui,sans-serif;max-width:86vw;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none';document.body.appendChild(t)}
+    t.textContent=m;t.style.opacity=1;clearTimeout(t._h);t._h=setTimeout(function(){t.style.opacity=0},1800)};
+})();
+</script>
+<script id="remoteJs">/*__JS__*/</script>
+<script>
+(function(){
+  var SITE='https://worship-chords-rho.vercel.app';
+  var home=document.getElementById('lanHome');
+  function openRemote(){home.hidden=true;document.getElementById('remoteOpenBtn').click()}
+  document.getElementById('lanGo').onclick=openRemote;
+  document.getElementById('lanSite').onclick=function(){location.href=SITE};
+  /* closing the remote shows the start screen again, so the phone is never left on a blank page */
+  new MutationObserver(function(){var o=document.getElementById('rmtOv');if(o&&o.hidden)home.hidden=false}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden']});
+  openRemote();
+})();
+</script>
+</body></html>
