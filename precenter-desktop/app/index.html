@@ -6467,19 +6467,79 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   const close=()=>{clearInterval(hmRdT);hmRdT=null;if(w){document.removeEventListener('keydown',kd,true);w.remove();w=null}};
   const kd=e=>{if(e.key==='Escape'&&w&&!document.getElementById('dscGate')){e.stopPropagation();close()}};
   function plans(){
-    const L=(window.plList?plList():[]);
-    return L.slice().sort((a,b)=>(b.cur?1:0)-(a.cur?1:0)||Math.max(b.at||0,b.saved||0,b.opened||0)-Math.max(a.at||0,a.saved||0,a.opened||0));
+    const L=(window.plList?plList():[]),pin=x=>{const q=(S.plans||[]).find(z=>z.id===x.id);return q&&q.pinned?1:0};
+    return L.slice().sort((a,b)=>(b.cur?1:0)-(a.cur?1:0)||pin(b)-pin(a)||Math.max(b.at||0,b.saved||0,b.opened||0)-Math.max(a.at||0,a.saved||0,a.opened||0));
+  }
+  /* Recent services as cards: the first slides of the first songs, with their real backgrounds and the song titles */
+  const hClone=o=>JSON.parse(JSON.stringify(o));
+  const hPid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const hNid=(()=>{let n=0;return()=>Date.now()*1000+(++n%1000)})();
+  const hUniq=(base,list)=>{base=base||'Service';const names=new Set(list.map(x=>x.name));let n=base,k=2;while(names.has(n))n=base+' ('+(k++)+')';return n};
+  const CELLS=new Map();
+  /* The card's picture is the sermon's title slide: the first item in a section called Sermon / Message / Preaching / Teaching.
+     Without such a section it uses the first slide of the first item. */
+  function cardCells(p){
+    const items=p.id===S.plan?S.songs:(p.songs||[]);
+    const first=it=>{try{const sl=expand(it);return{it:it,x:sl&&sl.length?sl[0]:{text:''}}}catch(e){return{it:it,x:{text:''}}}};
+    const sm=items.find(x=>/sermon|message|preach|teaching/i.test(x.sec||''));
+    if(sm){const c=first(sm);c.sermon=true;return[c]}
+    for(const it of items){try{const sl=expand(it);if(sl&&sl.length)return[{it:it,x:sl[0]}]}catch(e){}}
+    return [];
+  }
+  function popList(p){
+    const items=p.id===S.plan?S.songs:(p.songs||[]);
+    if(!items.length)return '<div class="hpi">No items yet</div>';
+    let cur=null,h='';
+    items.slice(0,30).forEach(it=>{const sec=it.sec||'Music';if(sec!==cur){cur=sec;h+='<div class="hps">'+esc(sec)+'</div>'}h+='<div class="hpi"><span>'+(it.type==='song'?'\u266a':'\u2022')+'</span>'+esc(it.title||'Untitled')+'</div>'});
+    if(items.length>30)h+='<div class="hps">+'+(items.length-30)+' more</div>';
+    return h;
   }
   function recentHtml(){
-    const L=plans().slice(0,8);
-    if(!L.length)return '<div class="hint" style="margin:0">No services yet. Start a new one.</div>';
-    return L.map(p=>{
-      const bits=[p.n+' item'+(p.n===1?'':'s')];
-      if(p.cur)bits.push('open now');else if(p.at)bits.push('opened '+ago(p.at));
-      if(p.saved)bits.push('saved to computer '+ago(p.saved));else if(p.opened)bits.push('opened from a file '+ago(p.opened));
-      return '<button class="hr'+(p.cur?' on':'')+'" data-id="'+esc(p.id)+'"><span><b>'+esc(p.name)+'</b><small>'+esc(bits.join(' · '))+'</small></span>'+(p.cur?'<span class="hb">Current</span>':'')+'</button>';
+    if(!document.getElementById('dscHomeCards')){
+      const cs=document.createElement('style');cs.id='dscHomeCards';
+      cs.textContent='#dscStartHome .hcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media(max-width:560px){#dscStartHome .hcards{grid-template-columns:1fr}}'
+      +'#dscStartHome .hcard{position:relative;border:1px solid var(--line);border-radius:12px;cursor:pointer;display:flex;flex-direction:column;min-width:0}'
+      +'#dscStartHome .hcard:hover,#dscStartHome .hcard:focus-visible{border-color:var(--acc)}#dscStartHome .hcard.on{border-color:var(--acc);background:rgba(232,185,35,.07)}'
+      +'#dscStartHome .hth{position:relative;aspect-ratio:16/9;display:grid;gap:2px;background:#000;border-radius:11px 11px 0 0;overflow:hidden}'
+      +'#dscStartHome .hth.n1{grid-template-columns:1fr}#dscStartHome .hth.n2{grid-template-columns:1fr 1fr}#dscStartHome .hth.n3,#dscStartHome .hth.n4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}'
+      +'#dscStartHome .hcell{position:relative;overflow:hidden;background:#111;min-width:0;min-height:0}'
+      +'#dscStartHome .hcell .stage{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}'
+      +'#dscStartHome .hct{position:absolute;left:0;right:0;bottom:0;padding:12px 6px 3px;font:700 10px Inter,sans-serif;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.78));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}'
+      +'#dscStartHome .hcb{position:absolute;top:6px;right:6px;z-index:2}'
+      +'#dscStartHome .hcm{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px}#dscStartHome .hcm>span{min-width:0}'
+      +'#dscStartHome .hcm b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#dscStartHome .hcm small{display:block;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+      +'#dscStartHome .hmore{flex:none;width:30px;height:28px;padding:0;border-radius:8px}'
+      +'#dscStartHome .hcmenu{position:absolute;right:8px;bottom:46px;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;display:flex;flex-direction:column;min-width:150px;box-shadow:0 10px 30px rgba(0,0,0,.5)}'
+      +'#dscStartHome .hcmenu button{text-align:left;border:0;background:none;padding:7px 10px;border-radius:7px;color:inherit}#dscStartHome .hcmenu button:hover{background:var(--chip)}'
+      +'#dscStartHome .hpop{display:none;position:absolute;z-index:6;left:6px;right:6px;top:6px;max-height:250px;overflow:auto;background:rgba(12,12,14,.97);border:1px solid var(--acc);border-radius:10px;padding:8px 10px;box-shadow:0 12px 32px rgba(0,0,0,.6)}'
+      +'#dscStartHome .hth:hover~.hpop,#dscStartHome .hpop:hover,#dscStartHome .hcard:focus-visible .hpop{display:block}'
+      +'#dscStartHome .hps{font:700 10px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:7px 0 2px}#dscStartHome .hps:first-child{margin-top:0}'
+      +'#dscStartHome .hpi{display:flex;gap:6px;font-size:12px;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#dscStartHome .hpi span{flex:none;width:12px;color:var(--mute)}';
+      document.head.appendChild(cs);
+    }
+    const L=plans().slice(0,6);CELLS.clear();
+    if(!L.length)return '<div class="hint" style="margin:0;grid-column:1/-1">No services yet. Start a new one.</div>';
+    return L.map(p0=>{
+      const p=(S.plans||[]).find(z=>z.id===p0.id);if(!p)return '';
+      const cells=cardCells(p);CELLS.set(p.id,cells);const n=cells.length;
+      const th=n?cells.map((c,i)=>'<div class="hcell" data-ci="'+i+'"><div class="stage"></div><span class="hct">'+esc(c.it.title||'Untitled')+'</span></div>').join(''):'<div class="hcell" style="display:grid;place-items:center;color:var(--mute);font-size:12px">Empty service</div>';
+      const bits=[p0.n+' item'+(p0.n===1?'':'s')];
+      if(p0.cur)bits.push('open now');else if(p0.at)bits.push('opened '+ago(p0.at));
+      if(p0.saved)bits.push('saved '+ago(p0.saved));else if(p0.opened)bits.push('from a file '+ago(p0.opened));
+      return '<div class="hcard'+(p0.cur?' on':'')+'" data-id="'+esc(p.id)+'" tabindex="0"><div class="hth n'+Math.max(1,Math.min(n,4))+'">'+th+(p0.cur?'<span class="hb hcb">Current</span>':'')+(cells[0]&&cells[0].sermon?'<span class="hb" style="position:absolute;top:6px;left:6px;z-index:2">Sermon</span>':'')+'</div><div class="hpop">'+popList(p)+'</div>'
+        +'<div class="hcm"><span><b>'+(p.pinned?'\u2605 ':'')+esc(p0.name)+'</b><small>'+esc(bits.join(' \u00b7 '))+'</small></span><button type="button" class="hmore" data-m="menu" aria-label="More">\u22ef</button></div></div>';
     }).join('');
   }
+  function paintRecent(box){
+    box.querySelectorAll('.hcard').forEach(card=>{
+      const cells=CELLS.get(card.dataset.id)||[];
+      card.querySelectorAll('.hcell[data-ci]').forEach(el=>{
+        const c=cells[+el.dataset.ci];if(!c)return;
+        try{const e=eff(c.it,0);paint(el.querySelector('.stage'),{d:e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0},u:libUrl(e),text:c.x.text||c.it.title||''})}catch(err){}
+      });
+    });
+  }
+  function recentFill(box){box.innerHTML=recentHtml();paintRecent(box)}
   let LN=null;
   async function loadLineup(box,force){
     const set=h=>{if(box.isConnected)box.innerHTML=h};
@@ -6532,7 +6592,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
             const r=dscSyncLineup(songs,per,name);
             const parts=[];if(r.added)parts.push(r.added+' added');if(r.removed)parts.push(r.removed+' removed');
             toast('Synced with Harmony: '+(parts.join(', ')||'order updated')+(r.skipped?' ('+r.skipped+' skipped, no lyrics)':'')+'.');
-            const rc=w&&w.querySelector('#hmRec');if(rc)rc.innerHTML=recentHtml();
+            const rc=w&&w.querySelector('#hmRec');if(rc)recentFill(rc);
             loadLineup(box,false);
           };
         }
@@ -6627,14 +6687,45 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
       +'<div style="position:relative"><button class="hp" id="hmProf" aria-haspopup="menu"><span class="hpa">'+esc((nm||'?').charAt(0).toUpperCase())+'</span><span><b>'+esc(nm||'Your profile')+'</b><small id="hmPt">'+esc(em||'Account')+'</small></span></button></div></div>'
       +'<div class="hh" style="justify-content:flex-end"><div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
       +'<div class="hc" id="hmCd" style="display:none;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><div><h2>Next service</h2><div class="ld" style="margin-top:6px"><b id="hmCdT" style="font-size:30px;font-family:Poppins,Inter,sans-serif"></b><span id="hmCdD"></span></div></div><button id="hmStart" class="pri" style="font-size:16px;padding:12px 26px">Start show &#9654;</button></div>'
-      +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" style="display:flex;flex-direction:column;gap:8px"></div></div>'
+      +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" class="hcards"></div></div>'
       +'<div class="hc"><h2>Latest lineup · Disciples: Harmony</h2><div id="hmLn" style="display:flex;flex-direction:column;gap:8px"></div></div></div>'
       +'<div class="hc" id="hmReady"><h2>Ready for Sunday?</h2><div id="hmRd"></div></div>'
       +'<div class="hf"><label><input type="checkbox" id="hmOn" style="width:auto"'+(on==='1'?' checked':'')+'> Show Home when PreCenter starts</label><span>Esc to close</span></div></div>';
     document.body.appendChild(w);document.addEventListener('keydown',kd,true);readyDraw();cdDraw();hmRdT=setInterval(()=>{readyDraw();cdDraw()},2000);
     w.querySelector('#hmStart').onclick=()=>{close();try{if(window.dscAudOpen&&!dscAudOpen()){const b=document.getElementById('openOut');if(b)b.click()}}catch(e){}try{setMode('show')}catch(e){}};
-    const rec=w.querySelector('#hmRec');rec.innerHTML=recentHtml();
-    rec.onclick=e=>{const b=e.target.closest('.hr');if(!b)return;const id=b.dataset.id;if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close()};
+    const rec=w.querySelector('#hmRec');recentFill(rec);
+    const refreshRec=()=>{recentFill(rec);readyDraw()};
+    rec.onclick=e=>{
+      const card=e.target.closest('.hcard');if(!card)return;
+      const id=card.dataset.id,mb=e.target.closest('[data-m]');
+      if(mb){
+        e.stopPropagation();
+        const act=mb.dataset.m,q=(S.plans||[]).find(z=>z.id===id);if(!q)return;
+        if(act==='menu'){
+          const had=card.querySelector('.hcmenu');w.querySelectorAll('.hcmenu').forEach(m=>m.remove());if(had)return;
+          const m=document.createElement('div');m.className='hcmenu';m.setAttribute('role','menu');
+          m.innerHTML='<button data-m="rename">Rename\u2026</button><button data-m="dup">Duplicate</button><button data-m="pin">'+(q.pinned?'Unpin':'Pin to the top')+'</button><button data-m="del">Delete\u2026</button>';
+          card.appendChild(m);return;
+        }
+        w.querySelectorAll('.hcmenu').forEach(m=>m.remove());
+        if(act==='rename'){const v=prompt('Rename service',q.name);if(v&&v.trim()&&v.trim()!==q.name){q.name=hUniq(v.trim(),S.plans.filter(z=>z!==q));save();try{drawList()}catch(_){}refreshRec()}}
+        else if(act==='pin'){q.pinned=!q.pinned;save();refreshRec()}
+        else if(act==='dup'){
+          const src=q.id===S.plan?S.songs:q.songs;if(!src||!src.length){toast('That service is empty.');return}
+          const c={id:hPid(),name:hUniq(q.name+' copy',S.plans),songs:hClone(src),secs:(q.id===S.plan?S.secs:(q.secs||[])).slice(),sel:null,svc:null},map={};
+          c.songs.forEach(x=>{const o=x.id;x.id=hNid();map[o]=x.id});c.sel=map[q.id===S.plan?S.sel:q.sel]||c.songs[0].id;
+          S.plans.push(c);save();try{drawList()}catch(_){}refreshRec();toast('Saved a copy as \u201c'+c.name+'\u201d.');
+        }
+        else if(act==='del'){
+          if(q.id===S.plan){toast('This service is open now. Open another one first, then delete it.');return}
+          if(S.plans.length<2){toast('You need at least one service.');return}
+          if(confirm('Delete the service \u201c'+q.name+'\u201d? Songs saved in the library stay there; anything else in it is deleted with it.')){S.plans=S.plans.filter(z=>z.id!==q.id);save();try{drawList()}catch(_){}refreshRec()}
+        }
+        return;
+      }
+      if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close();
+    };
+    rec.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('hcard')){e.preventDefault();e.target.click()}};
     w.querySelector('#hmProf').onclick=e=>{
       e.stopPropagation();const old=w.querySelector('.hpm');if(old){old.remove();return}
       const m=document.createElement('div');m.className='hpm';m.setAttribute('role','menu');
@@ -6647,7 +6738,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
         else if(a==='team'){try{localStorage.removeItem('lp-dsc-team')}catch(_){}LN=null;loadLineup(w.querySelector('#hmLn'),true)}
         else if(a==='out'){if(!confirm('Sign out of Disciples on this computer?'))return;try{await dscAuth.signOut()}catch(_){}try{localStorage.removeItem('lp-dsc-user')}catch(_){}location.reload()}};
     };
-    w.onclick=e=>{const m=w.querySelector('.hpm');if(m&&!e.target.closest('.hpm')&&!e.target.closest('#hmProf'))m.remove()};
+    w.onclick=e=>{const m=w.querySelector('.hpm');if(m&&!e.target.closest('.hpm')&&!e.target.closest('#hmProf'))m.remove();if(!e.target.closest('.hcmenu')&&!e.target.closest('[data-m=menu]'))w.querySelectorAll('.hcmenu').forEach(x=>x.remove())};
     w.querySelector('#hmGo').onclick=close;
     w.querySelector('#hmNew').onclick=()=>{close();window.plNew&&plNew()};
     w.querySelector('#hmOpen').onclick=()=>{close();const f=document.getElementById('svFile');if(f)f.click()};
