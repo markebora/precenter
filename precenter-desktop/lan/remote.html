@@ -93,6 +93,14 @@ button{font:inherit;cursor:pointer}
 .rmtTabs button{flex:1;padding:7px 4px;font-size:13px}
 .rmtStat{margin-left:0;flex:none;width:12px;height:12px;min-width:12px;padding:0;border-radius:50%;background:#8a8a93;font-size:0;color:transparent;max-width:none}
 .rmtStat.ok{background:#30d158}.rmtStat.warn{background:#ff9f0a}.rmtStat.bad{background:#ff453a}
+.rmtBar{gap:8px}
+.rmtSw{flex:1;min-width:0;max-width:260px;margin:0 auto;display:flex;gap:3px;background:rgba(255,255,255,.08);border-radius:999px;padding:3px}
+.rmtSw button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:0;background:none;color:#9c9ca3;font-weight:700;font-size:13px;padding:7px 8px;border-radius:999px;min-width:0;white-space:nowrap}
+.rmtSw button.on{color:#06210d;background:#30d158}
+.rmtSw button#rmtSwCloud.on{color:#2b1700;background:#ffb340}
+/* bottom navigation, same look as the main Harmony bar */
+.rmtOv>.rmtTabs{flex:none;order:99;margin:6px 12px calc(12px + env(safe-area-inset-bottom,0px));height:60px;padding:5px;gap:4px;border-radius:20px;background:rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);justify-content:stretch}
+.rmtOv>.rmtTabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:700;padding:0;border-radius:16px}
 .rmtConn{flex:none;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.08);color:#cfcfd4;white-space:nowrap}
 .rmtConn.lan{background:rgba(48,209,88,.18);color:#6ee08a}
 .rmtConn.cloud{background:rgba(255,159,10,.18);color:#ffb340}
@@ -322,13 +330,41 @@ button{font:inherit;cursor:pointer}
     fitPrev();
   }
 
+  const svg=d=>'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';
+  const IC_WIFI=svg('<path d="M2 9a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.2" r="1" fill="currentColor"/>');
+  const IC_CLOUD=svg('<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5z"/>');
+  const IC_FLOW=svg('<path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h16"/>');
+  const IC_SLIDE=svg('<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>');
+  const IC_BIBLE=svg('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M9 8h6"/>');
+  const IC_STAGE=svg('<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>');
+  /* the Wi-Fi / Cloud switch. Cloud = this page (Harmony, over the internet). Wi-Fi = the page served by PreCenter on the same network. */
+  function lastLan(){try{const l=localStorage.getItem('dscLanLast');return l&&/^http:\/\/[0-9.]+:\d+\/\?pin=\d{6}$/.test(l)?l:''}catch(e){return ''}}
+  function swWifi(){
+    if(window.dscLan)return;                       /* already on Wi-Fi */
+    const last=lastLan();
+    if(!last){wifiScan();return}
+    const c=el('div','rmtScan');
+    c.innerHTML='<div class="rmtScanMsg" style="font-size:16px">Switch to Wi-Fi</div><div class="rmtScanMsg" style="font-weight:400">Same Wi-Fi as the computer running PreCenter.</div><div class="rmtScanBtns"><button type="button" class="rmtBtn big" data-a="last">Use the last connection</button><button type="button" class="rmtBtn big" data-a="scan">Scan the QR again</button><button type="button" class="rmtBtn" data-a="x">Cancel</button></div>';
+    document.body.appendChild(c);
+    c.querySelector('[data-a=x]').onclick=()=>c.remove();
+    c.querySelector('[data-a=last]').onclick=()=>{c.remove();wifiGo(last)};
+    c.querySelector('[data-a=scan]').onclick=()=>{c.remove();wifiScan()};
+  }
+  function swCloud(){
+    if(!window.dscLan)return;                      /* already on Cloud */
+    let dest='';
+    try{const m=/[#&]c=([^&]+)/.exec(location.hash);dest=m?decodeURIComponent(m[1]):sessionStorage.getItem('dscCloudUrl')||''}catch(e){}
+    if(/^https:\/\/[^\s"'<>]+$/.test(dest)){try{sessionStorage.setItem('dscCloudUrl',dest)}catch(e){}location.href=dest;return}
+    say('Open Disciples Harmony on this phone to go back to Cloud.');
+    try{if(history.length>1)history.back()}catch(e){}
+  }
   function build(){
     if(ov)return;
     ov=el('div','rmtOv');ov.id='rmtOv';ov.hidden=true;ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Remote control');
     ov.innerHTML=
-      '<div class="rmtBar"><button type="button" class="rmtX" id="rmtClose" aria-label="Close">✕</button>'+
-      '<div class="rmtTabs"><button type="button" data-tab="flow" class="on">Flow</button><button type="button" data-tab="slide">Slide</button><button type="button" data-tab="bible">Bible</button><button type="button" data-tab="stage">Stage</button></div>'+
-      '<div class="rmtConn" id="rmtConn"></div><div class="rmtStat" id="rmtStat" role="status"></div></div>'+
+      '<div class="rmtBar"><button type="button" class="rmtX" id="rmtClose" aria-label="Close">\u2715</button>'+
+      '<div class="rmtSw" role="group" aria-label="Connection"><button type="button" id="rmtSwWifi" aria-label="Wi-Fi">'+IC_WIFI+'<span id="rmtSwMs">Wi-Fi</span></button><button type="button" id="rmtSwCloud" aria-label="Cloud">'+IC_CLOUD+'<span>Cloud</span></button></div>'+
+      '<div class="rmtStat" id="rmtStat" role="status"></div></div>'+
       '<div class="rmtTop" id="rmtTop" hidden>'+
         '<div class="rmtHead"><div class="rmtTitle" id="rmtTitle"></div><div class="rmtNum" id="rmtNum"></div></div><div class="rmtLab" id="rmtLab"></div>'+
         '<div class="rmtPrev" id="rmtPv" hidden><div class="rmtPrevBg" id="rmtPrevBg"></div><video class="rmtPrevVid" id="rmtPrevVid" muted playsinline loop autoplay preload="auto" hidden></video><div class="rmtPrevDim" id="rmtPrevDim"></div><div class="rmtPrevTx"><span class="rmtPrevTxI" id="rmtPrevTxI"></span></div><div class="rmtPrevDbg" id="rmtPrevDbg" hidden></div></div>'+
@@ -351,15 +387,15 @@ button{font:inherit;cursor:pointer}
             '<div id="rmtBqOut"></div>'+
           '</div>'+
         '</div>'+
-        '<div class="rmtWifi"><button type="button" class="rmtBtn" id="rmtWifi">Faster on the same Wi-Fi: scan the QR in PreCenter</button><button type="button" class="rmtBtn" id="rmtWifiLast" hidden>Open the last Wi-Fi remote</button></div>'+
       '</div>'+
       '<div class="rmtStage" id="rmtStageV" hidden><div class="stgTop"><span class="stgLab" id="stgLab"></span><span id="stgTitle"></span><span><b class="stgNum" id="stgNum"></b><span id="stgClock"></span></span></div>'+
-      '<div class="stgMain" id="stgMain"><div class="stgText" id="stgText"></div></div><div class="stgMsg" id="stgMsg"></div><div class="stgNext" id="stgNext"></div></div>';
+      '<div class="stgMain" id="stgMain"><div class="stgText" id="stgText"></div></div><div class="stgMsg" id="stgMsg"></div><div class="stgNext" id="stgNext"></div></div>'+
+      '<div class="rmtTabs" role="tablist"><button type="button" data-tab="flow" class="on">'+IC_FLOW+'<span>Flow</span></button><button type="button" data-tab="slide">'+IC_SLIDE+'<span>Slide</span></button><button type="button" data-tab="bible">'+IC_BIBLE+'<span>Bible</span></button><button type="button" data-tab="stage">'+IC_STAGE+'<span>Stage</span></button></div>';
     document.body.appendChild(ov);
     ov.querySelector('#rmtClose').onclick=close;
     $('rmtPv').onclick=tapVid;
-    $('rmtWifi').onclick=wifiScan;
-    try{const last=localStorage.getItem('dscLanLast');if(last&&/^http:\/\/[0-9.]+:\d+\//.test(last)){const b=$('rmtWifiLast');b.hidden=false;b.onclick=()=>{location.href=last}}}catch(e){}
+    $('rmtSwWifi').onclick=swWifi;
+    $('rmtSwCloud').onclick=swCloud;
     $('rmtStat').onclick=()=>{subscribe();say('Reconnecting\u2026')};
     ov.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;lastScroll='';render()});
     $('rmtNext').onclick=()=>send('next');
@@ -480,16 +516,12 @@ button{font:inherit;cursor:pointer}
   }
   /* which road the remote is using: the computer on this Wi-Fi (page served by PreCenter, window.dscLan set) or the internet (Firestore) */
   function connLabel(){
-    const c=$('rmtConn');if(!c)return;
-    if(window.dscLan){
-      const ms=window.dscLan.ms,up=window.dscLan.open;
-      c.className='rmtConn lan';
-      c.textContent=up?('Wi-Fi \u00b7 '+(ms==null?'\u2026':ms+' ms')):'Wi-Fi \u00b7 reconnecting';
-      c.title='Direct to the computer on this Wi-Fi'+(window.dscLan.host?' ('+window.dscLan.host+')':'');
-    }else{
-      c.className='rmtConn cloud';c.textContent='Cloud';
-      c.title='Using the internet (Disciples cloud). Scan the QR in PreCenter to switch to Wi-Fi.';
-    }
+    const w=$('rmtSwWifi'),c=$('rmtSwCloud'),ms=$('rmtSwMs');if(!w||!c)return;
+    const lan=!!window.dscLan;
+    w.classList.toggle('on',lan);c.classList.toggle('on',!lan);
+    w.setAttribute('aria-pressed',lan?'true':'false');c.setAttribute('aria-pressed',lan?'false':'true');
+    if(lan){const m=window.dscLan.ms,up=window.dscLan.open;ms.textContent=up?(m==null?'Wi-Fi':m+' ms'):'\u2026';w.title='Direct to the computer on this Wi-Fi'+(window.dscLan.host?' ('+window.dscLan.host+')':'')}
+    else{ms.textContent='Wi-Fi';w.title='Tap to switch to the Wi-Fi remote';c.title='Using the internet (Disciples cloud)'}
   }
   setInterval(()=>{if(ov&&!ov.hidden)connLabel()},1500);
   function render(){
@@ -597,7 +629,7 @@ button{font:inherit;cursor:pointer}
     const t=String(txt||'').trim();
     if(!/^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d{2,5}\/\?pin=\d{6}$/.test(t))return false;
     try{localStorage.setItem('dscLanLast',t)}catch(e){}
-    say('Connecting over Wi-Fi\u2026');location.href=t;return true;
+    say('Connecting over Wi-Fi\u2026');location.href=t+'#c='+encodeURIComponent(location.origin+location.pathname);return true;
   }
   /* Scans the QR code PreCenter shows. It never closes by itself: when something goes wrong it says what, and offers
      "Try again", "Paste the link" and "Cancel". Works with the phone's built-in QR reader (BarcodeDetector) and, where

@@ -341,10 +341,23 @@ function showAbout() {
  
 // ---------- IPC from the page ----------
 // ---------- Wi-Fi remote: phones on the same network, no internet ----------
+const builtInPage = () => path.join(__dirname, 'lan', 'remote.html');
+const customPage = () => path.join(app.getPath('userData'), 'lan', 'remote.html');
 function setupLan() {
   const fromMain = e => mainWin && !mainWin.isDestroyed() && e.sender === mainWin.webContents;
   const toPage = (ch, ...a) => { try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(ch, ...a); } catch (e) { /* closing */ } };
   ipcMain.handle('lan:info', e => (fromMain(e) && lan) ? lan.info() : { running: false, port: 0, pin: '', urls: [], clients: 0 });
+  ipcMain.handle('lan:pageInfo', e => {
+    if (!fromMain(e)) return null;
+    const c = customPage();
+    return { custom: fs.existsSync(c), folder: path.dirname(c), file: c };
+  });
+  ipcMain.handle('lan:openPageFolder', e => {
+    if (!fromMain(e)) return false;
+    const dir = path.dirname(customPage());
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (err) { /* shown below if it matters */ }
+    return shell.openPath(dir).then(r => !r, () => false);
+  });
   ipcMain.handle('lan:newPin', e => { if (fromMain(e) && lan) { lan.newPin(); return lan.info(); } return null; });
   ipcMain.handle('lan:media', (e, key, data, type) => {
     if (!lan || !fromMain(e) || !data) return false;
@@ -358,7 +371,8 @@ function setupLan() {
   lan = lanServer.create({
     port: cfg.lan.port,
     dir: app.getPath('userData'),
-    pageFile: path.join(__dirname, 'lan', 'remote.html'),
+    // A remote.html in the app's data folder (lan/remote.html) wins over the one built into the app, so a new phone page is a file copy, not a rebuild.
+    pageFile: () => { const c = customPage(); return fs.existsSync(c) ? c : builtInPage(); },
     onCommand: c => toPage('lan:cmd', c),
     onClients: n => toPage('lan:clients', n)
   });

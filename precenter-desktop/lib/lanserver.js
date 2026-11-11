@@ -46,7 +46,7 @@ function frame(opcode, payload) {
   return Buffer.concat([head, payload]);
 }
 
-// options: { pin, port, pageFile, onCommand(cmd), onClients(count), dir (folder to remember the PIN in) }
+// options: { pin, port, pageFile (path, or a function that returns the path to use for each request), onCommand(cmd), onClients(count), dir (folder to remember the PIN in) }
 function create(opt) {
   opt = opt || {};
   let pin = opt.pin || '';
@@ -182,7 +182,7 @@ function create(opt) {
     if (u.pathname === '/ping') { res.writeHead(200, Object.assign({ 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' }, headers)); res.end('ok'); return; }
     if (u.pathname === '/' || u.pathname === '/remote') {
       let html = '';
-      try { html = fs.readFileSync(opt.pageFile, 'utf8'); } catch (e) { html = '<!doctype html><meta charset=utf-8><title>Remote</title><p style="font:16px sans-serif;padding:24px">The remote page is missing from this copy of PreCenter.</p>'; }
+      try { html = fs.readFileSync(typeof opt.pageFile === 'function' ? opt.pageFile() : opt.pageFile, 'utf8'); } catch (e) { html = '<!doctype html><meta charset=utf-8><title>Remote</title><p style="font:16px sans-serif;padding:24px">The remote page is missing from this copy of PreCenter.</p>'; }
       res.writeHead(200, Object.assign({ 'Content-Type': 'text/html; charset=utf-8' }, headers)); res.end(html); return;
     }
     if (u.pathname.startsWith('/m/') && (req.method === 'GET' || req.method === 'HEAD')) { serveMedia(req, res, decodeURIComponent(u.pathname.slice(3)), headers); return; }
