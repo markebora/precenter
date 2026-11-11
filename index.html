@@ -6329,11 +6329,15 @@ async function lanDlg(host){
       const v=m.q('#lnVid');if(v){const nat=!!(window.dscNative&&dscNative.lan&&dscNative.lan.media),rd=Object.keys(RML.done).length;
         v.textContent='Video and picture backgrounds for phones: '+(!nat?'this PreCenter app is too old (install the rebuilt desktop app)':!(LANH&&LANH.clients>0)?'waiting for a phone to connect':(rd?rd+' ready on this computer. ':'none made yet. Show a slide with a video or picture background. ')+(RMV.cur?'Making one now\u2026 ':'')+(RMV.status?'Last: '+RMV.status:''))}};cl();
     const iv=setInterval(()=>{if(!m.w.isConnected){clearInterval(iv);return}cl()},1000);
-    const pg=m.q('#lnPg');if(pg&&N.pageInfo)N.pageInfo().then(pi=>{
+    const pg=m.q('#lnPg');
+    const pgDraw=(msg)=>{if(!pg||!N.pageInfo)return;N.pageInfo().then(pi=>{
       if(!pi||!pg.isConnected)return;
-      pg.innerHTML='Phone page: <b>'+(pi.custom?'custom file':'built into the app')+'</b>. To change it without rebuilding, put a <code>remote.html</code> in the folder below. <button id="lnPf" style="margin-left:4px">Open folder</button>';
+      const src=pi.custom?'a file you placed in the folder':pi.auto?'updated from Disciples Harmony'+(pi.at?' ('+new Date(pi.at).toLocaleString()+')':''):'built into the app';
+      pg.innerHTML='Phone page: <b>'+dscEsc(src)+'</b>.'+(pi.enabled?' It follows Harmony by itself when PreCenter starts and every 30 minutes.':'')+' <button id="lnUp"'+(pi.enabled?'':' disabled')+' style="margin-left:4px">Update now</button> <button id="lnPf">Open folder</button>'+(msg?'<div style="margin-top:4px">'+dscEsc(msg)+'</div>':(pi.last&&pi.last.message?'<div style="margin-top:4px">'+dscEsc(pi.last.message)+'</div>':''));
       pg.querySelector('#lnPf').onclick=async()=>{try{await N.openPageFolder()}catch(e){toast('Could not open the folder')}};
-    }).catch(()=>{});
+      pg.querySelector('#lnUp').onclick=async()=>{const b=pg.querySelector('#lnUp');b.disabled=true;b.textContent='Checking\u2026';let r=null;try{r=await N.updatePage()}catch(e){}pgDraw(r&&r.message||'Could not check.')};
+    }).catch(()=>{})};
+    pgDraw();
     const sel=m.q('#lnSel');if(sel)sel.onchange=()=>{cur=+sel.value;clearInterval(iv);draw()};
     m.q('#lnCp').onclick=async()=>{try{await navigator.clipboard.writeText(u.url);toast('Link copied')}catch(e){window.prompt('Copy this link:',u.url)}};
     m.q('#lnNp').onclick=async()=>{try{const n=await N.newPin();if(n){inf=n;clearInterval(iv);draw();toast('New PIN. Phones must scan the new code.')}}catch(e){toast('Could not change the PIN')}};
