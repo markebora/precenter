@@ -6502,6 +6502,7 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
       const byId=new Map(LN.lib.map(s=>[s.id,s])),key=l.dateKey||String(l.id).split('_').pop(),d=new Date(key+'T00:00:00');
       const wd=isNaN(d)?'':d.toLocaleDateString(undefined,{weekday:'long'}),dt=isNaN(d)?key:d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
       const tm=fmtT(l.serviceTime||l.eventTime||l.time||l.startTime||l.start||l.at||'');
+      LN.svc=svcInfo(l,d);cdDraw();
       set('<div class="ld"><b>'+esc(wd)+(tm?' · '+esc(tm):'')+'</b><span>'+esc(dt)+'</span></div><div class="hint" style="margin:0">'+esc(l.title||'Worship Lineup')+' · '+esc(LN.name)+'</div>'
         +'<div class="hs h"><span>#</span><span>Song</span><span>Key</span><span>BPM</span></div>'
         +l.songs.map((x,n)=>{const b=byId.get(x.id),k=sKey(x,b),bp=sBpm(x,b);return '<div class="hs" data-sid="'+esc(x.id)+'"><span>'+(n+1)+'</span><span>'+esc((b||x).title||'Untitled')+(b?'':' <i>(not in the library)</i>')+'</span><span>'+(esc(k)||'&ndash;')+'</span><span>'+(bp?esc(bp):'&ndash;')+'</span></div>'}).join('')
@@ -6585,6 +6586,35 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
         +(x.act?'<button data-act="'+x.act+'" style="flex:none">'+esc(x.lab)+'</button>':'')+'</div>').join('');
     box.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const t=document.getElementById(b.dataset.act);close();if(t)t.click()});
   }
+  /* ---- Countdown to the next service (time comes from the latest Harmony lineup; if that has passed, the same weekday and time next week) ---- */
+  function svcInfo(l,d){
+    if(isNaN(d))return null;
+    const raw=l.serviceTime||l.eventTime||l.time||l.startTime||l.start||l.at||'';let tv=null;
+    if(raw&&typeof raw.toDate==='function'){const q=raw.toDate();tv={h:q.getHours(),m:q.getMinutes()}}
+    else if(raw){
+      const m=/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?$/i.exec(String(raw).trim());
+      if(m){let h=+m[1];if(m[3])h=h%12+(/p/i.test(m[3])?12:0);tv={h:h,m:+m[2]}}
+      else{const q=new Date(raw);if(!isNaN(q))tv={h:q.getHours(),m:q.getMinutes()}}
+    }
+    return{date:d,time:tv};
+  }
+  function cdDraw(){
+    if(!w)return;const el=w.querySelector('#hmCd');if(!el)return;
+    const sv=LN&&LN.svc;if(!sv||!sv.date){el.style.display='none';return}
+    const len=2*36e5,now=Date.now();
+    const t0=new Date(sv.date.getFullYear(),sv.date.getMonth(),sv.date.getDate(),sv.time?sv.time.h:0,sv.time?sv.time.m:0);
+    let rolled=false;while(t0.getTime()+len<now){t0.setDate(t0.getDate()+7);rolled=true}
+    const t=t0.getTime(),live=now>=t&&now<=t+len,diff=Math.max(0,t-now);
+    const dd=Math.floor(diff/864e5),hh=Math.floor(diff%864e5/36e5),mm=Math.floor(diff%36e5/6e4);
+    let txt;
+    if(live)txt='Service time';
+    else if(!sv.time)txt=dd>0?dd+' day'+(dd>1?'s':''):'Today';
+    else txt=dd>0?dd+' day'+(dd>1?'s':'')+' '+hh+' h':hh>0?hh+' h '+mm+' min':Math.max(1,mm)+' min';
+    const dstr=t0.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})+(sv.time?' \u00b7 '+t0.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'')+(rolled?' \u00b7 same time as your last lineup':'');
+    el.style.display='';
+    const a=el.querySelector('#hmCdT'),b=el.querySelector('#hmCdD');
+    if(a.textContent!==txt)a.textContent=txt;if(b.textContent!==dstr)b.textContent=dstr;
+  }
   function open(){
     close();
     let nm='',cn='',em='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):'';em=u?(u.email||''):''}catch(e){}
@@ -6596,11 +6626,13 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
     w.innerHTML='<div class="hw"><div class="hh" style="align-items:center"><div><div class="hk"><i></i>Disciples PreCenter</div><h1>'+esc(gr)+(nm?', '+esc(nm):'')+'</h1></div>'
       +'<div style="position:relative"><button class="hp" id="hmProf" aria-haspopup="menu"><span class="hpa">'+esc((nm||'?').charAt(0).toUpperCase())+'</span><span><b>'+esc(nm||'Your profile')+'</b><small id="hmPt">'+esc(em||'Account')+'</small></span></button></div></div>'
       +'<div class="hh" style="justify-content:flex-end"><div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
+      +'<div class="hc" id="hmCd" style="display:none;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><div><h2>Next service</h2><div class="ld" style="margin-top:6px"><b id="hmCdT" style="font-size:30px;font-family:Poppins,Inter,sans-serif"></b><span id="hmCdD"></span></div></div><button id="hmStart" class="pri" style="font-size:16px;padding:12px 26px">Start show &#9654;</button></div>'
       +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" style="display:flex;flex-direction:column;gap:8px"></div></div>'
       +'<div class="hc"><h2>Latest lineup · Disciples: Harmony</h2><div id="hmLn" style="display:flex;flex-direction:column;gap:8px"></div></div></div>'
       +'<div class="hc" id="hmReady"><h2>Ready for Sunday?</h2><div id="hmRd"></div></div>'
       +'<div class="hf"><label><input type="checkbox" id="hmOn" style="width:auto"'+(on==='1'?' checked':'')+'> Show Home when PreCenter starts</label><span>Esc to close</span></div></div>';
-    document.body.appendChild(w);document.addEventListener('keydown',kd,true);readyDraw();hmRdT=setInterval(readyDraw,2000);
+    document.body.appendChild(w);document.addEventListener('keydown',kd,true);readyDraw();cdDraw();hmRdT=setInterval(()=>{readyDraw();cdDraw()},2000);
+    w.querySelector('#hmStart').onclick=()=>{close();try{if(window.dscAudOpen&&!dscAudOpen()){const b=document.getElementById('openOut');if(b)b.click()}}catch(e){}try{setMode('show')}catch(e){}};
     const rec=w.querySelector('#hmRec');rec.innerHTML=recentHtml();
     rec.onclick=e=>{const b=e.target.closest('.hr');if(!b)return;const id=b.dataset.id;if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close()};
     w.querySelector('#hmProf').onclick=e=>{
