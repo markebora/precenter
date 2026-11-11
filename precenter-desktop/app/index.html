@@ -2270,7 +2270,16 @@ function showNext(dir){
 function firstVisible(){const n=expand(cur()).length;let j=0;while(j<n&&slideHidden(j))j++;return j<n?j:0}
 const kioskOn=()=>kioskRun;
 const loopOn=()=>SHOW().loop||kioskRun;
-function goPrev(){const j=showNext(-1);if(j>=0)go(j)}
+function goPrev(){
+  const j=showNext(-1);
+  if(j>=0){go(j);return}
+  /* mirror of Auto-next: Back on the first slide returns to the previous item, landing on its last slide */
+  if(autoNext&&!customRun&&!loopOn()){
+    const it=adjItem(-1);
+    if(it){openItem(it);const n=expand(cur()).length;let k=n-1;while(k>0&&slideHidden(k))k--;go(Math.max(0,k))}
+    else toast('That is the first item in the service.');
+  }
+}
 
 const TRANS_DIRS=['From Right','From Left','From Top','From Bottom'];
 const TRANS_LIST=['None','Fade','Push','Push Up','Wipe','Cover','Uncover','Split','Reveal','Random Bars','Shape','Zoom','Blinds','Blinds Vertical','Morph'];
@@ -5000,7 +5009,7 @@ async function runStep(st,run,depth){
       const post=st.m==='POST';
       fetch(u,{method:post?'POST':'GET',mode:'no-cors',body:post&&st.b?String(st.b):undefined,keepalive:true}).catch(e=>toast('Web request failed: '+((e&&e.message)||e)));break}
     case'next':advance();break;
-    case'prev':go(idx-1);break;
+    case'prev':goPrev();break;
     case'gotoSlide':{const n=Math.round(parseFloat(st.v));if(n>=1)go(Math.min(n,expand(cur()).length)-1);break}
     case'gotoItem':{const it=S.songs.find(x=>String(x.id)===String(st.v));if(!it){toast('Action: that item is not in this playlist.');break}
       S.sel=it.id;idx=0;save();drawAll();try{dscSlideAct()}catch(e){}break}
@@ -5617,6 +5626,39 @@ function dscAddLineup(songs,perSlide,secName){
   return res;
 }
 
+/* Sync a service with its Harmony lineup: songs the leader added come in, songs they removed go out,
+   the order follows the lineup. Songs already in the service keep their slides and edits. */
+function dscLineupItems(secName){return S.songs.filter(x=>x.src&&x.src.app==='harmony'&&x.src.lineup&&(x.sec||'Music')===secName)}
+function dscLineupDiff(ids,secName){
+  const items=dscLineupItems(secName);if(!items.length)return null;
+  const have=items.map(x=>x.src.id);
+  const added=ids.filter(id=>!have.includes(id)),removed=items.filter(x=>!ids.includes(x.src.id));
+  const kept=have.filter(id=>ids.includes(id)),order=ids.filter(id=>kept.includes(id));
+  const reordered=kept.some((id,i)=>id!==order[i]);
+  return{added,removed,reordered,same:!added.length&&!removed.length&&!reordered};
+}
+function dscSyncLineup(songs,perSlide,secName){
+  const want=songs.map(s=>s.id),selId=S.sel,selIdx=idx;
+  const gone=S.songs.filter(x=>x.src&&x.src.app==='harmony'&&x.src.lineup&&(x.sec||'Music')===secName&&!want.includes(x.src.id));
+  const goneIds=new Set(gone.map(x=>x.id));
+  S.songs=S.songs.filter(x=>!goneIds.has(x.id));
+  const have=new Set(dscLineupItems(secName).map(x=>x.src.id));
+  const fresh=songs.filter(s=>!have.has(s.id));
+  let res={added:0,skipped:0};
+  if(fresh.length){
+    res=dscAddSongs(fresh,perSlide,secName,true);
+    S.songs.forEach(x=>{if(x.src&&x.src.app==='harmony'&&(x.sec||'Music')===secName&&x.src.fresh){delete x.src.fresh;x.src.lineup=true}});
+  }
+  const slots=[],its=[];
+  S.songs.forEach((x,i)=>{if(x.src&&x.src.app==='harmony'&&x.src.lineup&&(x.sec||'Music')===secName){slots.push(i);its.push(x)}});
+  its.sort((a,b)=>want.indexOf(a.src.id)-want.indexOf(b.src.id));
+  slots.forEach((pos,k)=>{S.songs[pos]=its[k]});
+  if(S.songs.some(x=>x.id===selId)){S.sel=selId;idx=selIdx}
+  else if(S.songs.length&&!S.songs.some(x=>x.id===S.sel)){S.sel=S.songs[0].id;idx=0}
+  save();drawAll();
+  return{added:res.added,removed:gone.length,skipped:res.skipped};
+}
+
 function dscLoadScript(src){
   if(dscScripts[src])return dscScripts[src];
   return dscScripts[src]=new Promise((res,rej)=>{
@@ -6077,7 +6119,7 @@ function remoteErr(e){
 function remoteRun(c){
   switch(c.t){
     case'next':advance();break;
-    case'prev':go(idx-1);break;
+    case'prev':goPrev();break;
     case'go':if(c.sid===cur().id&&Number.isInteger(c.i))go(c.i);break;
     case'song':openItemById(c.id);break;
     case'songNext':goSong(1);break;
@@ -6421,8 +6463,8 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
   const fmtT=v=>{if(!v)return '';let d=null;if(typeof v.toDate==='function')d=v.toDate();else{const m=/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?$/i.exec(String(v).trim());if(m){if(m[3])return(+m[1])+':'+m[2]+' '+m[3].toUpperCase();d=new Date(2000,0,1,+m[1],+m[2])}else{d=new Date(v);if(isNaN(d))return String(v)}}return d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})};
   const sKey=(x,b)=>String(x.key||x.songKey||x.transposedKey||x.selectedKey||x.currentKey||(b&&(b.key||b.songKey||b.originalKey))||'');
   const sBpm=(x,b)=>{const v=x.bpm||x.tempo||(b&&(b.bpm||b.tempo));return v?String(v):''};
-  let w=null,shownOnce=false;
-  const close=()=>{if(w){document.removeEventListener('keydown',kd,true);w.remove();w=null}};
+  let w=null,shownOnce=false,hmRdT=null;
+  const close=()=>{clearInterval(hmRdT);hmRdT=null;if(w){document.removeEventListener('keydown',kd,true);w.remove();w=null}};
   const kd=e=>{if(e.key==='Escape'&&w&&!document.getElementById('dscGate')){e.stopPropagation();close()}};
   function plans(){
     const L=(window.plList?plList():[]);
@@ -6462,11 +6504,38 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
       const tm=fmtT(l.serviceTime||l.eventTime||l.time||l.startTime||l.start||l.at||'');
       set('<div class="ld"><b>'+esc(wd)+(tm?' · '+esc(tm):'')+'</b><span>'+esc(dt)+'</span></div><div class="hint" style="margin:0">'+esc(l.title||'Worship Lineup')+' · '+esc(LN.name)+'</div>'
         +'<div class="hs h"><span>#</span><span>Song</span><span>Key</span><span>BPM</span></div>'
-        +l.songs.map((x,n)=>{const b=byId.get(x.id),k=sKey(x,b),bp=sBpm(x,b);return '<div class="hs"><span>'+(n+1)+'</span><span>'+esc((b||x).title||'Untitled')+(b?'':' <i>(not in the library)</i>')+'</span><span>'+(esc(k)||'&ndash;')+'</span><span>'+(bp?esc(bp):'&ndash;')+'</span></div>'}).join('')
-        +'<div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"><button id="hnNew" class="pri">Open as new service</button><button id="hnAdd">Add to current service</button><button id="hnRef" title="Check Harmony again">Refresh</button></div>');
+        +l.songs.map((x,n)=>{const b=byId.get(x.id),k=sKey(x,b),bp=sBpm(x,b);return '<div class="hs" data-sid="'+esc(x.id)+'"><span>'+(n+1)+'</span><span>'+esc((b||x).title||'Untitled')+(b?'':' <i>(not in the library)</i>')+'</span><span>'+(esc(k)||'&ndash;')+'</span><span>'+(bp?esc(bp):'&ndash;')+'</span></div>'}).join('')
+        +'<div id="hnSyncBox"></div><div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"><button id="hnNew" class="pri">Open as new service</button><button id="hnAdd">Add to current service</button><button id="hnRef" title="Check Harmony again">Refresh</button></div>');
       const name=(l.title&&!/^worship lineup$/i.test(l.title)?l.title+' ':'')+(isNaN(d)?key:d.toLocaleDateString(undefined,{month:'short',day:'numeric'}));
       const songs=l.songs.map(s=>byId.get(s.id)).filter(Boolean);
       let per=0;try{per=+(JSON.parse(localStorage.getItem('lp-dsc')||'{}').per)||0}catch(e){}
+      const dif=dscLineupDiff(songs.map(s=>s.id),name),sb=box.querySelector('#hnSyncBox');
+      LN.st={name:name,dif:dif?{same:dif.same}:null};readyDraw();
+      if(dif&&sb){
+        if(dif.same){
+          sb.innerHTML='<div class="hint" style="margin:0;color:#2ecc71">\u2713 This service is in sync with the lineup ("'+esc(name)+'").</div>';
+        }else{
+          const bits=[];
+          if(dif.added.length)bits.push(dif.added.length+' added');
+          if(dif.removed.length)bits.push(dif.removed.length+' removed');
+          if(dif.reordered)bits.push('order changed');
+          sb.innerHTML='<div style="border:1px solid var(--acc);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:rgba(232,185,35,.08)">'
+            +'<b>The lineup changed in Harmony</b><span class="hint" style="margin:0">'+esc(bits.join(' \u00b7 '))+'</span>'
+            +(dif.removed.length?'<span class="hint" style="margin:0">Leaving the service: '+esc(dif.removed.map(x=>x.title).join(', '))+'</span>':'')
+            +'<div><button id="hnSyncGo" class="pri">Sync changes</button></div></div>';
+          dif.added.forEach(id=>{
+            const r=[...box.querySelectorAll('.hs[data-sid]')].find(q=>q.dataset.sid===String(id));
+            if(r&&r.children[1])r.children[1].insertAdjacentHTML('beforeend',' <span class="hb">NEW</span>');
+          });
+          sb.querySelector('#hnSyncGo').onclick=()=>{
+            const r=dscSyncLineup(songs,per,name);
+            const parts=[];if(r.added)parts.push(r.added+' added');if(r.removed)parts.push(r.removed+' removed');
+            toast('Synced with Harmony: '+(parts.join(', ')||'order updated')+(r.skipped?' ('+r.skipped+' skipped, no lyrics)':'')+'.');
+            const rc=w&&w.querySelector('#hmRec');if(rc)rc.innerHTML=recentHtml();
+            loadLineup(box,false);
+          };
+        }
+      }
       const run=nw=>{
         if(!songs.length){toast('None of those songs are in the library.');return}
         if(nw&&window.plCreate&&!plCreate(name))return;
@@ -6478,6 +6547,43 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
       set('<div class="hint" style="margin:0;color:#c0392b">'+esc((typeof dscErr==='function'?dscErr(e):e&&e.message)||'Could not load the lineup.')+'</div><div><button id="hnRef2">Try again</button></div>');
       const b=box.querySelector('#hnRef2');if(b)b.onclick=()=>loadLineup(box,true);
     }
+  }
+  /* ---- Ready for Sunday? : a quick check of the service and the screens, refreshed while Home is open ---- */
+  function readyItems(){
+    const out=[],add=(st,t,d,act,lab)=>out.push({st,t,d:d||'',act:act||'',lab:lab||''});
+    const tryv=(f,def)=>{try{return f()}catch(e){return def}};
+    const songs=tryv(()=>S.songs,[]),name=tryv(()=>window.plName?plName():'',''),songItems=songs.filter(x=>x&&x.type==='song');
+    if(!songs.length)add('warn','The service is empty','Add songs or open the lineup below.');
+    else add('ok',(name?'\u201c'+name+'\u201d':'The service')+' has '+songs.length+' item'+(songs.length===1?'':'s'));
+    const noLyr=songItems.filter(x=>!String(x.lyrics||'').trim());
+    if(noLyr.length)add('warn',noLyr.length+' song'+(noLyr.length>1?'s have':' has')+' no lyrics',noLyr.slice(0,4).map(x=>x.title||'Untitled').join(', ')+(noLyr.length>4?'\u2026':''));
+    else if(songItems.length)add('ok','Every song has lyrics and slides');
+    const miss=[];tryv(()=>songs.forEach(x=>{const n=x&&x.d&&x.d.lib;if(n&&!lib[n]&&!libFile[n]&&miss.indexOf(n)<0)miss.push(n)}));
+    if(miss.length)add('warn',miss.length+' background'+(miss.length>1?'s are':' is')+' missing on this computer',miss.slice(0,3).map(n=>String(n).split('/').pop()).join(', ')+(miss.length>3?'\u2026':''));
+    else add('ok','Backgrounds are loaded');
+    const aud=tryv(()=>!!window.dscAudOpen&&dscAudOpen(),false);
+    add(aud?'ok':'warn',aud?'Audience screen is on':'Audience screen is off',aud?'':'Turn it on before the service starts.',aud?'':'openOut',aud?'':'Turn on');
+    const stg=tryv(()=>stgWins.some(q=>q&&!q.closed)||!!(window.dscNdiOn&&window.dscNdiOn('s')),false);
+    add(stg?'ok':'info',stg?'Stage screen is on':'Stage screen is off','',stg?'':'stgB',stg?'':'Turn on');
+    const ph=tryv(()=>(typeof LANH!=='undefined'&&LANH&&LANH.clients|0)||0,0),rm=tryv(()=>typeof RM!=='undefined'&&!!RM,false);
+    if(ph)add('ok',ph+' phone'+(ph>1?'s':'')+' connected over Wi-Fi');
+    else if(rm)add('ok','Connect is on','Waiting for a phone to join.');
+    else add('info','No phone connected','Optional: use Connect to control PreCenter from a phone.','tRemote','Connect');
+    const st=LN&&LN.st;
+    if(!st)add('info','Harmony lineup not checked yet','Sign in, or press Refresh in the lineup panel.');
+    else if(!st.dif)add('info','The latest lineup (\u201c'+st.name+'\u201d) is not in this service yet','Use \u201cAdd to current service\u201d or \u201cOpen as new service\u201d.');
+    else if(st.dif.same)add('ok','Service matches the Harmony lineup');
+    else add('warn','The Harmony lineup changed','Use \u201cSync changes\u201d in the lineup panel.');
+    return out;
+  }
+  function readyDraw(){
+    if(!w)return;const box=w.querySelector('#hmRd');if(!box)return;
+    const L=readyItems(),n=L.filter(x=>x.st==='warn').length,col={ok:'#2ecc71',warn:'#e8a600',info:'var(--mute)'},ic={ok:'\u2713',warn:'!',info:'\u2013'};
+    box.innerHTML='<div class="ld"><b style="color:'+(n?'#e8a600':'#2ecc71')+'">'+(n?n+' thing'+(n>1?'s':'')+' to check':'All set')+'</b><span>'+(n?'Fix these before the service starts.':'Everything looks ready.')+'</span></div>'
+      +L.map(x=>'<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)"><span style="width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex:none;font:700 12px Inter,sans-serif;color:'+(x.st==='info'?'var(--mute)':'#000')+';background:'+(x.st==='info'?'transparent':col[x.st])+';border:1px solid '+col[x.st]+'">'+ic[x.st]+'</span>'
+        +'<span style="flex:1;min-width:0"><b style="font-weight:600">'+esc(x.t)+'</b>'+(x.d?' <small style="color:var(--mute)">'+esc(x.d)+'</small>':'')+'</span>'
+        +(x.act?'<button data-act="'+x.act+'" style="flex:none">'+esc(x.lab)+'</button>':'')+'</div>').join('');
+    box.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const t=document.getElementById(b.dataset.act);close();if(t)t.click()});
   }
   function open(){
     close();
@@ -6492,8 +6598,9 @@ try{if(localStorage.getItem('lp-remote')==='1')setTimeout(()=>remoteOn(true),120
       +'<div class="hh" style="justify-content:flex-end"><div class="ha"><button id="hmNew">New service</button><button id="hmOpen">Open from computer</button><button id="hmGo" class="pri">Continue'+(cn?' with “'+esc(cn)+'”':'')+' &rarr;</button></div></div>'
       +'<div class="hg"><div class="hc"><h2>Recent services</h2><div id="hmRec" style="display:flex;flex-direction:column;gap:8px"></div></div>'
       +'<div class="hc"><h2>Latest lineup · Disciples: Harmony</h2><div id="hmLn" style="display:flex;flex-direction:column;gap:8px"></div></div></div>'
+      +'<div class="hc" id="hmReady"><h2>Ready for Sunday?</h2><div id="hmRd"></div></div>'
       +'<div class="hf"><label><input type="checkbox" id="hmOn" style="width:auto"'+(on==='1'?' checked':'')+'> Show Home when PreCenter starts</label><span>Esc to close</span></div></div>';
-    document.body.appendChild(w);document.addEventListener('keydown',kd,true);
+    document.body.appendChild(w);document.addEventListener('keydown',kd,true);readyDraw();hmRdT=setInterval(readyDraw,2000);
     const rec=w.querySelector('#hmRec');rec.innerHTML=recentHtml();
     rec.onclick=e=>{const b=e.target.closest('.hr');if(!b)return;const id=b.dataset.id;if(window.plSwitch&&id!==(plList().find(p=>p.cur)||{}).id){if(plSwitch(id))close()}else close()};
     w.querySelector('#hmProf').onclick=e=>{
