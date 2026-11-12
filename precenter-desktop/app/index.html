@@ -2370,8 +2370,7 @@ function nrows(g,W,H,p,S){
       g.fillText(tk.t,x,yy)}}
 }
 
-/* 15. Name Arch: rings of names flowing around a dark arch window */
-var ARC={key:'',rings:[]};
+/* 15. Name Arch: small letters set one by one along rings around a dark arch window. The letters stay still; soft lights drift around the arch and light them up */
 function archPos(r,s,o){
   var A=r.A,d=r.d,a=r.a,cx=r.cx,cy=r.cy,yb=r.yb,l=r.l;
   s=wrap(s,r.L);
@@ -2386,32 +2385,48 @@ function archPos(r,s,o){
   if(s<Math.PI/2*d){var f2=Math.PI/2+s/d;o[0]=cx-a+d*Math.cos(f2);o[1]=yb+d*Math.sin(f2);o[2]=Math.atan2(Math.cos(f2),-Math.sin(f2));return}
   s-=Math.PI/2*d;
   o[0]=cx-A;o[1]=yb-s;o[2]=-Math.PI/2}
+var ARK=[];
+function archGet(W,H,S){
+  var c0=rgb(S.c[0]),key=W+'x'+H+'|'+SEED+'|'+S.c[0],i;
+  for(i=0;i<ARK.length;i++)if(ARK[i].key===key){var hit=ARK.splice(i,1)[0];ARK.push(hit);return hit}
+  var tc=lpCv(W,H),x=tc.getContext('2d'),rr=R(SEED*271+3),a=H*.155,cx=W/2,cy=H*.205+a,yb=H*.93,l=yb-cy,d=H*.022,k=0,rings=[],o=[0,0,0],tr=.05;
+  x.textAlign='center';x.textBaseline='middle';x.fillStyle=rgba(c0,1);
+  while(a+d<W*.74&&k<90){
+    var fs=H*(.0155+.0004*k),A=a+d,L=Math.PI*A+2*l+Math.PI*d+2*a,rg={A:A,d:d,a:a,cx:cx,cy:cy,yb:yb,l:l,L:L};
+    x.font='600 '+fs.toFixed(2)+'px "Arial Narrow",Arial,sans-serif';
+    var gl=[],tot=0,gap=fs*.55,tone=.7+.3*rr();
+    while(tot<L){var t=NM[rr()*NM.length|0],al=(.4+.6*rr())*tone,q;
+      for(q=0;q<t.length;q++){var w=x.measureText(t[q]).width+fs*tr;gl.push({c:t[q],w:w,al:al});tot+=w}
+      gl.push({c:'',w:gap});tot+=gap}
+    var f=L/tot,s=0;
+    for(i=0;i<gl.length;i++){var gg=gl[i],sw=gg.w*f;
+      if(gg.c){archPos(rg,s+sw/2,o);
+        if(o[0]>-fs&&o[0]<W+fs&&o[1]>-fs&&o[1]<H+fs){var cs=Math.cos(o[2]),sn=Math.sin(o[2]);x.setTransform(cs,sn,-sn,cs,o[0],o[1]);x.globalAlpha=gg.al;x.fillText(gg.c,0,0)}}
+      s+=sw}
+    rings.push(rg);d+=fs*1.08;k++}
+  x.setTransform(1,0,0,1,0,0);x.globalAlpha=1;
+  var ent={key:key,tc:tc,lc:lpCv(W,H),gc:lpCv(Math.max(8,W>>2),Math.max(8,H>>2)),rings:rings};
+  ARK.push(ent);if(ARK.length>6)ARK.shift();return ent}
 function arch(g,W,H,p,S){
-  var b=S.b,n=S.n,c0=rgb(S.c[0]),c1=rgb(S.c[1]),cx=W/2,a=H*.155,cy=H*.205+a,yb=H*.93,l=yb-cy,sc=H/720;
+  var b=S.b,n=S.n,ph=p*TAU*S.k,E=archGet(W,H,S),lc=E.lc.getContext('2d'),gc=E.gc.getContext('2d'),o=[0,0,0],sc=H/720,i;
   g.globalCompositeOperation='source-over';g.fillStyle=dk(S.c[2],1);g.fillRect(0,0,W,H);
-  var key=W+'x'+H+'|'+SEED+'|'+n;
-  if(ARC.key!==key){
-    var rr=R(SEED*271+3),rings=[],d=H*.03,k=0,tmp=document.createElement('canvas').getContext('2d');
-    while(a+d<W*.75&&k<40){
-      var fs=H*(.026+.0016*k),A=a+d,L=Math.PI*A+2*l+Math.PI*d+2*a;
-      tmp.font='600 '+fs+'px "Arial Narrow",Arial,sans-serif';
-      var rep=Math.max(1,Math.round(L/(H*1.9))),U=L/rep,tk=[],tot=0,gp=fs*.55;
-      while(tot<U-fs*2){var t=NM[rr()*NM.length|0],w=tmp.measureText(t).width;if(tot+w>U)break;tk.push({t:t,w:w,al:.45+.55*rr()});tot+=w+gp}
-      var extra=(U-tot)/tk.length,pos=0;tk.forEach(function(q){q.o=pos+q.w/2;pos+=q.w+gp+extra});
-      rings.push({A:A,d:d,a:a,cx:cx,cy:cy,yb:yb,l:l,L:L,rep:rep,U:U,tk:tk,fs:fs,dir:k%2?1:-1,tone:.55+.45*rr()});
-      d+=fs*1.12;k++}
-    ARC={key:key,rings:rings}}
-  g.globalCompositeOperation='lighter';glow(g,cx,cy+H*.15,H*.55,S.c[1],.1*b);
-  g.globalCompositeOperation='source-over';g.textAlign='center';g.textBaseline='middle';
-  var o=[0,0,0],i,j,q;
-  for(i=0;i<ARC.rings.length;i++){var rg=ARC.rings[i];g.font='600 '+rg.fs+'px "Arial Narrow",Arial,sans-serif';
-    var sh=rg.dir*p*S.k*rg.U;
-    for(var rp=0;rp<rg.rep;rp++)for(j=0;j<rg.tk.length;j++){q=rg.tk[j];archPos(rg,q.o+rp*rg.U+sh,o);
-      if(o[0]<-rg.fs*3||o[0]>W+rg.fs*3||o[1]<-rg.fs*3||o[1]>H+rg.fs*3)continue;
-      var cs=Math.cos(o[2]),sn=Math.sin(o[2]);
-      g.setTransform(cs,sn,-sn,cs,o[0],o[1]);
-      g.fillStyle=rgba(c0,Math.min(1,q.al*rg.tone*b*1.2));g.fillText(q.t,0,0)}}
-  g.setTransform(1,0,0,1,0,0);
+  g.globalCompositeOperation='lighter';glow(g,W/2,H*.52,H*.5,S.c[1],.1*b*n);
+  /* the letters, dim and steady */
+  g.globalCompositeOperation='source-over';g.globalAlpha=Math.min(1,(.62+.05*Math.sin(ph))*b);g.drawImage(E.tc,0,0);g.globalAlpha=1;
+  /* drifting lights: a few go one way round the arch, a few the other way */
+  lc.setTransform(1,0,0,1,0,0);lc.globalCompositeOperation='source-over';lc.globalAlpha=1;lc.clearRect(0,0,W,H);
+  var rg=E.rings[Math.min(9,E.rings.length-1)],rg2=E.rings[Math.min(22,E.rings.length-1)];
+  function blob(r,s,rad,al){archPos(r,s,o);var q=lc.createRadialGradient(o[0],o[1],0,o[0],o[1],rad);q.addColorStop(0,'rgba(255,255,255,'+al+')');q.addColorStop(.45,'rgba(255,255,255,'+al*.45+')');q.addColorStop(1,'rgba(255,255,255,0)');lc.fillStyle=q;lc.fillRect(o[0]-rad,o[1]-rad,rad*2,rad*2)}
+  for(i=0;i<3;i++){var s1=rg.L*i/3+p*S.k*rg.L/3;blob(rg,s1,H*.2*(1+.12*Math.sin(s1/rg.L*TAU*3+ph*2)),1)}
+  for(i=0;i<2;i++){var s2=rg2.L*i/2-p*S.k*rg2.L/2;blob(rg2,s2,H*.26*(1+.1*Math.sin(s2/rg2.L*TAU*2+ph*3)),.85)}
+  lc.globalCompositeOperation='destination-in';lc.drawImage(E.tc,0,0);
+  g.globalCompositeOperation='lighter';g.globalAlpha=Math.min(1,.95*b);g.drawImage(E.lc,0,0);
+  /* soft glow around the lit letters */
+  gc.setTransform(1,0,0,1,0,0);gc.globalCompositeOperation='source-over';gc.clearRect(0,0,gc.canvas.width,gc.canvas.height);
+  try{gc.filter='blur('+(2.2*sc)+'px)'}catch(e){}
+  gc.drawImage(E.lc,0,0,gc.canvas.width,gc.canvas.height);gc.filter='none';
+  gc.globalCompositeOperation='source-atop';gc.fillStyle=S.c[1];gc.fillRect(0,0,gc.canvas.width,gc.canvas.height);
+  g.globalAlpha=Math.min(1,.8*b*n);g.drawImage(E.gc,0,0,W,H);g.globalAlpha=1;
 }
 
 /* =====================================================================
@@ -2436,10 +2451,19 @@ var LOOPS=[
 ];
 var PAL=[['#FFC15A','#FF8A1F','#2a1606'],['#00D8FF','#0A62FF','#06122e'],['#B24DFF','#FF5CC8','#12082a'],['#3DDC97','#00D8FF','#04201a'],['#FF5A5A','#FFB347','#2a0808'],['#E8B923','#FFE600','#1a1405'],['#E5251B','#FF6A3A','#12070a'],['#2F7BFF','#7CC4FF','#050f2a']];
 function find(n){for(var i=0;i<LOOPS.length;i++)if(LOOPS[i].n===n)return LOOPS[i];return LOOPS[0]}
-function defaults(n){var l=find(n);return{name:l.n,c:l.pal.slice(),k:1,n:1,b:1,v:.5,seed:1,wt:l.wt||'THE NAME ABOVE ALL NAMES',dur:30}}
-function draw(g,W,H,p,S){SEED=+S.seed||1;D=+S.dur||30;g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.globalCompositeOperation='source-over';g.shadowBlur=0;
-  find(S.name).f(g,W,H,p,S);
-  g.globalCompositeOperation='source-over';g.globalAlpha=1;var q=g.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.98);q.addColorStop(0,'rgba(0,0,0,0)');q.addColorStop(1,'rgba(0,0,0,'+(S.v||0)*.85+')');g.fillStyle=q;g.fillRect(0,0,W,H)}
+function defaults(n){var l=find(n);return{name:l.n,c:l.pal.slice(),k:1,n:1,b:1,v:.5,fade:0,blur:0,seed:1,wt:l.wt||'THE NAME ABOVE ALL NAMES',dur:30}}
+var BLB={};
+function draw(g,W,H,p,S){SEED=+S.seed||1;D=+S.dur||30;
+  var bl=Math.max(0,+S.blur||0),fd=Math.min(1,Math.max(0,+S.fade||0)),tg=g,bk=W+'x'+H;
+  if(bl>0){if(!BLB[bk]){BLB={};BLB[bk]=lpCv(W,H)}tg=BLB[bk].getContext('2d')}
+  tg.setTransform(1,0,0,1,0,0);tg.globalAlpha=1;tg.globalCompositeOperation='source-over';tg.shadowBlur=0;
+  find(S.name).f(tg,W,H,p,S);
+  tg.globalCompositeOperation='source-over';tg.globalAlpha=1;var q=tg.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.98);q.addColorStop(0,'rgba(0,0,0,0)');q.addColorStop(1,'rgba(0,0,0,'+(S.v||0)*.85+')');tg.fillStyle=q;tg.fillRect(0,0,W,H);
+  /* Blur: the finished picture is softened (drawn a little oversize so the edges do not go dark) */
+  if(bl>0){g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.globalCompositeOperation='source-over';g.fillStyle=dk(S.c[2],1);g.fillRect(0,0,W,H);
+    var px=bl*H/720,m=px*2;try{g.filter='blur('+px+'px)'}catch(e){}g.drawImage(BLB[bk],-m,-m,W+2*m,H+2*m);g.filter='none'}
+  /* Fade: the picture melts into the loop's background colour (0 = full picture, 100% = plain background) */
+  if(fd>0){g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='source-over';g.globalAlpha=1;g.fillStyle=col(S.c[2],fd);g.fillRect(0,0,W,H)}}
 var CACHE={},CK=[];
 function still(L,w,h){var key=JSON.stringify(L)+'@'+w;if(!CACHE[key]){var c=document.createElement('canvas');c.width=w;c.height=h;try{draw(c.getContext('2d'),w,h,.25,L)}catch(e){}CACHE[key]=c;CK.push(key);if(CK.length>80)delete CACHE[CK.shift()]}return CACHE[key]}
 function mount(stage,cv,L,live){
@@ -4561,8 +4585,8 @@ function loopPanel(host,d,ch){
     [0,1,2].forEach(i=>{const x=document.createElement('input');x.type='color';x.value=L.c[i];x.title=['Main','Accent','Background'][i];x.style.cssText='width:44px;height:28px;padding:2px';
       const set=fin=>{const c=d.loop.c.slice();c[i]=x.value;apply({c:c},fin)};x.oninput=()=>set(false);x.onchange=()=>set(true);cr.appendChild(x)});
     const sh=el('button','margin-left:auto','Variation');sh.title='A different random arrangement of the same loop';sh.onclick=()=>apply({seed:(Math.random()*99999|0)+1},true);cr.appendChild(sh);ctl.appendChild(cr);
-    [['Speed','k',1,4,1,v=>v+'\u00d7'],['Intensity','n',.4,2,.1,v=>v.toFixed(1)],['Brightness','b',.4,1.6,.05,v=>v.toFixed(2)],['Vignette','v',0,1,.05,v=>v.toFixed(2)]].forEach(a=>{
-      const r=row(),i=document.createElement('input');i.type='range';i.min=a[2];i.max=a[3];i.step=a[4];i.value=L[a[1]];i.style.flex='1';
+    [['Speed','k',1,4,1,v=>v+'\u00d7'],['Intensity','n',.4,2,.1,v=>v.toFixed(1)],['Brightness','b',.4,1.6,.05,v=>v.toFixed(2)],['Vignette','v',0,1,.05,v=>v.toFixed(2)],['Fade','fade',0,1,.05,v=>Math.round(v*100)+'%'],['Blur','blur',0,20,1,v=>v+' px']].forEach(a=>{
+      const r=row(),i=document.createElement('input');i.type='range';i.min=a[2];i.max=a[3];i.step=a[4];i.value=L[a[1]]||0;i.style.flex='1';
       const v=el('span','width:34px;text-align:right',a[5](+i.value));
       i.oninput=()=>{v.textContent=a[5](+i.value);apply({[a[1]]:+i.value},false)};i.onchange=()=>apply({[a[1]]:+i.value},true);
       r.append(el('span','width:74px',a[0]),i,v);ctl.appendChild(r)});
