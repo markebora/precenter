@@ -6518,6 +6518,15 @@ function remoteBg(p){
       }
       return o;
     }
+    /* animated loop: the phone gets a still picture of it (the loop engine itself only runs on the computer) */
+    if(d.bg==='Loop'&&d.loop&&window.dscLoop){
+      const key='lp.'+rmHash(JSON.stringify(d.loop));let hit=RMB.cache.get(key);
+      if(hit===undefined){
+        hit='';try{const c=window.dscLoop.still(d.loop,640,360);hit=c.toDataURL('image/jpeg',.7);if(hit.length>120000)hit=c.toDataURL('image/jpeg',.5);if(hit.length>120000)hit=c.toDataURL('image/jpeg',.35)}catch(e){hit=''}
+        RMB.cache.set(key,hit);
+      }
+      if(hit)return{k:'img',t:hit,v:key};
+    }
     if(d.bg==='Color'&&d.color)return css(String(d.color));
     if(d.bg==='Gradient'&&d.grad&&d.grad.c)return css(d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`);
     if(typeof G!=='undefined'&&G[d.bg])return css(String(G[d.bg]));
