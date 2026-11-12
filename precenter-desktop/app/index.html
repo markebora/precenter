@@ -2298,7 +2298,7 @@ function mount(stage,cv,L,live){
   var lite=document.body.classList.contains('lite')&&stage.id!=='o'&&!(window.dscIsAud&&window.dscIsAud()),W=+stage.dataset.w||(stage.id==='preview'?640:1280);if(lite)W=Math.min(W,480);var H=W*9/16,gap=lite?50:30;cv.width=W;cv.height=H;
   var g=cv.getContext('2d'),D=(L.dur||30)*1000,t0=performance.now(),last=0;
   (function tick(now){if(!cv.isConnected)return;stage._lpRaf=requestAnimationFrame(tick);if(now-last<gap)return;last=now;try{draw(g,W,H,((now-t0)%D)/D,L)}catch(e){}})(t0)}
-window.dscLoop={list:LOOPS.map(function(l){return{n:l.n,cat:l.cat,d:l.d}}),defaults:defaults,mount:mount,still:still};
+window.dscLoop={list:LOOPS.map(function(l){return{n:l.n,cat:l.cat,d:l.d}}),defaults:defaults,mount:mount,still:still,frame:function(g,L,W,H,p){draw(g,W,H,p,L)}};
 })();
 </script>
 <script>
@@ -6262,6 +6262,36 @@ async function rmEncode(src){
   v.pause();recs.forEach(r=>r.rec.stop());await Promise.all(recs.map(r=>r.stopped));v.removeAttribute('src');v.load();
   return recs.map(r=>({blob:new Blob(r.parts,{type:r.mt.split(';')[0]}),ext:/mp4/.test(r.mt)?'mp4':'webm'})).filter(x=>x.blob.size>2000);
 }
+/* animated Loop backgrounds for the phone: draws the loop engine frame by frame and records an 8-second clip (WebM + MP4).
+   The last 2 seconds fade into the frames that come before the start, so the phone can repeat the clip with no visible jump. */
+function rmLoopOn(){try{return localStorage.getItem('lp-loopvid')!=='0'}catch(e){return true}}
+async function rmEncodeLoop(L){
+  const LP=window.dscLoop;if(!(LP&&LP.frame))throw new Error('the loop engine is not available');
+  const W=960,H=540,T=8,X=2,D=Math.max(4,+L.dur||30);
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  const wk=document.createElement('canvas');wk.width=W;wk.height=H;const wg=wk.getContext('2d');
+  const pick=l=>l.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  const mts=[pick(['video/webm;codecs=vp8','video/webm;codecs=vp9','video/webm']),pick(['video/mp4;codecs=avc1.42E01F','video/mp4;codecs=avc1.42E01E','video/mp4'])].filter(Boolean);
+  if(!mts.length)throw new Error('this computer cannot record video clips');
+  const wrap=x=>((x%1)+1)%1;
+  const paint=t=>{
+    LP.frame(g,L,W,H,wrap(t/D));
+    if(t>T-X){const a=Math.min(1,(t-(T-X))/X);LP.frame(wg,L,W,H,wrap((t-T)/D));g.globalAlpha=a;g.drawImage(wk,0,0);g.globalAlpha=1}
+  };
+  paint(0);
+  const stream=cv.captureStream(30);
+  const recs=mts.map(mt=>{const rec=new MediaRecorder(stream,{mimeType:mt,videoBitsPerSecond:2000000}),parts=[];
+    rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
+    return{rec,parts,mt,stopped:new Promise(ok=>{rec.onstop=ok})}});
+  recs.forEach(r=>r.rec.start(250));
+  const t0=performance.now();
+  await new Promise(ok=>{const iv=setInterval(()=>{const t=(performance.now()-t0)/1000;if(t>=T){clearInterval(iv);ok();return}try{paint(t)}catch(e){}},33)});
+  recs.forEach(r=>r.rec.stop());await Promise.all(recs.map(r=>r.stopped));
+  return recs.map(r=>({blob:new Blob(r.parts,{type:r.mt.split(';')[0]}),ext:/mp4/.test(r.mt)?'mp4':'webm'})).filter(x=>x.blob.size>2000);
+}
+/* the on/off switch shown in the Connect dialog */
+function rmLoopToggleHtml(){return '<label class="row" style="gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="lpVid" style="width:auto"'+(rmLoopOn()?' checked':'')+'> Send animated Loop backgrounds to the phone as moving video</label><div class="hint" style="margin:0 0 4px">Off = the phone gets a still picture of the loop. The first time a loop goes live PreCenter records an 8-second clip of it (about 10 seconds), then the phone repeats it smoothly.</div>'}
+function rmLoopToggleBind(m){const b=m&&m.q&&m.q('#lpVid');if(b)b.onchange=()=>{try{localStorage.setItem('lp-loopvid',b.checked?'1':'0')}catch(e){}try{remotePublish(true)}catch(e){}}}
 async function rmEncodeImg(src,contain){
   const im=new Image();if(!/^(blob:|data:)/i.test(src))im.crossOrigin='anonymous';
   await new Promise((ok,no)=>{im.onload=ok;im.onerror=()=>no(new Error('image could not be read'));im.src=src;setTimeout(()=>no(new Error('image took too long to load')),10000)});
@@ -6287,8 +6317,8 @@ async function rmVidRun(){
       }
       RMV.status='Last '+(c?'upload':'copy')+' OK (picture, '+Math.round(blob.size/1024)+' KB)';remotePublish();RMV.cur='';rmVidRun();return;
     }
-    RMV.status='Making a short clip\u2026';
-    const outs=await rmEncode(j.src);if(!outs.length)throw new Error('the recorded clip was empty');
+    RMV.status=j.kind==='loop'?'Recording the loop\u2026':'Making a short clip\u2026';
+    const outs=j.kind==='loop'?await rmEncodeLoop(j.loop):await rmEncode(j.src);if(!outs.length)throw new Error('the recorded clip was empty');
     const keys=[],lk=[];let kb=0;
     for(const o of outs){
       const key='bg/'+j.vk+'.'+o.ext;kb+=o.blob.size;
@@ -6306,6 +6336,7 @@ function rmVidCfg(host){
   const m=connHost(host,'<div class="row" style="justify-content:space-between;align-items:center"><b>Phone video backgrounds</b><button class="x">Close</button></div>'
     +'<p class="hint">The phone remote can play a short looping copy of a slide\u2019s video background. PreCenter makes a 6-second 720p clip (about 2 MB) for videos, and a 720p picture (about 150 KB, in the img/ folder) for images, and uploads them to your Cloudflare R2 bucket; only its web link goes to the phone. Photos and colours do not need this.</p>'
     +'<label class="row" style="gap:6px;align-items:center"><input type="checkbox" id="r2On"'+(c.on?' checked':'')+' style="width:auto"> Send video backgrounds to the phone</label>'
+    +rmLoopToggleHtml()
     +'<label>Account ID<input id="r2A" value="'+dscEsc(c.acct||'')+'" placeholder="from the R2 overview page"></label>'
     +'<label>Bucket name<input id="r2B" value="'+dscEsc(c.bucket||'')+'"></label>'
     +'<label>Access Key ID<input id="r2I" value="'+dscEsc(c.id||'')+'"></label>'
@@ -6318,6 +6349,7 @@ function rmVidCfg(host){
     +'<p class="hint">The keys stay on this computer only. In the bucket settings turn on public access and add this CORS rule: <code>[{"AllowedOrigins":["*"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedHeaders":["*"],"MaxAgeSeconds":3600}]</code></p>');
   const val=()=>({on:m.q('#r2On').checked,acct:m.q('#r2A').value.trim(),bucket:m.q('#r2B').value.trim(),id:m.q('#r2I').value.trim(),secret:m.q('#r2S').value.trim(),base:m.q('#r2U').value.trim(),stm:m.q('#r2Stm').checked,days:Math.max(0,Math.min(365,parseInt(m.q('#r2D').value,10)||0))});
   const st=t=>{m.q('#r2St').textContent=t};
+  rmLoopToggleBind(m);
   {const x=m.q('.x');if(x)x.onclick=m.done}
   m.q('#r2Sv').onclick=()=>{localStorage.setItem('lp-r2',JSON.stringify(val()));RMV.fail={};st('Saved.');try{remotePublish(true)}catch(e){}};
   m.q('#r2L').onclick=()=>{const v=val();if(!v.base){st('Fill in the public link of the bucket first.');return}localStorage.setItem('lp-r2',JSON.stringify(v));remoteAccessLink()};
@@ -6518,14 +6550,27 @@ function remoteBg(p){
       }
       return o;
     }
-    /* animated loop: the phone gets a still picture of it (the loop engine itself only runs on the computer) */
+    /* animated loop: the phone gets a short looping video of it (Connect > Wi-Fi or Media), and a still picture until that is ready or when the switch is off */
     if(d.bg==='Loop'&&d.loop&&window.dscLoop){
       const key='lp.'+rmHash(JSON.stringify(d.loop));let hit=RMB.cache.get(key);
       if(hit===undefined){
         hit='';try{const c=window.dscLoop.still(d.loop,640,360);hit=c.toDataURL('image/jpeg',.7);if(hit.length>120000)hit=c.toDataURL('image/jpeg',.5);if(hit.length>120000)hit=c.toDataURL('image/jpeg',.35)}catch(e){hit=''}
         RMB.cache.set(key,hit);
       }
-      if(hit)return{k:'img',t:hit,v:key};
+      if(hit){
+        const o={k:'img',t:hit,v:key};
+        if(rmLoopOn()){
+          const c=rmCfg(),lc=rmLanOn();
+          if(c||lc){
+            const vk='l.'+rmHash(JSON.stringify(d.loop)),us=c?rmVidUrl(c,vk):[],lo=lc?RML.done[vk]:null;
+            o.k='vid';
+            if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}
+            if(lo&&lo.length){o.lu=lo[0];if(lo[1])o.lu2=lo[1]}
+            if(((c&&!us.length)||(lc&&!lo))&&!RMV.fail[vk]&&!RMV.q.some(q=>q.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,kind:'loop',loop:JSON.parse(JSON.stringify(d.loop))}),rmVidRun();
+          }
+        }
+        return o;
+      }
     }
     if(d.bg==='Color'&&d.color)return css(String(d.color));
     if(d.bg==='Gradient'&&d.grad&&d.grad.c)return css(d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`);
@@ -6833,6 +6878,7 @@ async function lanDlg(host){
       +(inf.urls.length>1?'<label>If the phone cannot connect, try another address<select id="lnSel">'+inf.urls.map((x,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+dscEsc(x.address+'  ('+x.name+')')+'</option>').join('')+'</select></label>':'')
       +'<div class="row"><button id="lnCp">Copy link</button><button id="lnNp" title="Phones already connected will have to scan again">New PIN</button></div>'
       +'<div class="hint" id="lnVid" style="margin:8px 0 0"></div>'
+      +rmLoopToggleHtml()
       +(N.pageInfo?'<div class="hint" id="lnPg" style="margin:8px 0 0"></div>':'')
       +'<p class="hint">First time on Windows: if the phone cannot connect, allow PreCenter on <b>private networks</b> when Windows asks (or in Windows Security \u203a Firewall).</p>';
     const cl=()=>{const e=m.q('#lnCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}
@@ -6848,6 +6894,7 @@ async function lanDlg(host){
       pg.querySelector('#lnUp').onclick=async()=>{const b=pg.querySelector('#lnUp');b.disabled=true;b.textContent='Checking\u2026';let r=null;try{r=await N.updatePage()}catch(e){}pgDraw(r&&r.message||'Could not check.')};
     }).catch(()=>{})};
     pgDraw();
+    rmLoopToggleBind(m);
     const sel=m.q('#lnSel');if(sel)sel.onchange=()=>{cur=+sel.value;clearInterval(iv);draw()};
     m.q('#lnCp').onclick=async()=>{try{await navigator.clipboard.writeText(u.url);toast('Link copied')}catch(e){window.prompt('Copy this link:',u.url)}};
     m.q('#lnNp').onclick=async()=>{try{const n=await N.newPin();if(n){inf=n;clearInterval(iv);draw();toast('New PIN. Phones must scan the new code.')}}catch(e){toast('Could not change the PIN')}};
