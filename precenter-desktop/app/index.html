@@ -6210,6 +6210,30 @@ function rmLanRes(vid){
   const k=vid?Math.min(1,1920/W,1080/H):Math.min(1,3840/W,2160/H);
   W=Math.max(2,Math.round(W*k/2)*2);H=Math.max(2,Math.round(H*k/2)*2);return[W,H];
 }
+/* Saved copies for the Wi-Fi remote: every picture or clip made for phones is also kept on this computer (browser storage), so when a background
+   comes back, or after PreCenter is restarted, the saved file is simply sent again. Nothing is recorded twice. Oldest copies are dropped past ~400 MB / 80 items. */
+var RMC={p:null,stat:{n:0,b:0},max:400*1048576,cnt:80};
+function rmDb(){return RMC.p||(RMC.p=new Promise((ok,no)=>{try{const r=indexedDB.open('lp-lan-media',1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('c');d.createObjectStore('m')};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}}))}
+const rmReq=q=>new Promise((ok,no)=>{q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)});
+async function rmCacheGet(k){
+  try{const db=await rmDb(),f=await rmReq(db.transaction('c').objectStore('c').get(k));if(!f||!f.length||!f[0].blob||!f[0].blob.size)return null;
+    try{const m=(await rmReq(db.transaction('m').objectStore('m').get(k)))||{};m.at=Date.now();db.transaction('m','readwrite').objectStore('m').put(m,k)}catch(e){}
+    return f}catch(e){return null}
+}
+async function rmCachePut(k,files){
+  try{const db=await rmDb(),sz=files.reduce((a,o)=>a+o.blob.size,0);
+    await new Promise((ok,no)=>{const tx=db.transaction(['c','m'],'readwrite');tx.objectStore('c').put(files.map(o=>({ext:o.ext,blob:o.blob})),k);tx.objectStore('m').put({at:Date.now(),size:sz},k);tx.oncomplete=ok;tx.onerror=tx.onabort=()=>no(tx.error)});
+    await rmCachePrune()}catch(e){}
+}
+async function rmCachePrune(clear){
+  try{const db=await rmDb(),keys=await rmReq(db.transaction('m').objectStore('m').getAllKeys()),vals=await rmReq(db.transaction('m').objectStore('m').getAll());
+    const rows=keys.map((k,i)=>({k,at:(vals[i]&&vals[i].at)||0,size:(vals[i]&&vals[i].size)||0})).sort((a,b)=>a.at-b.at);
+    let tot=rows.reduce((a,r)=>a+r.size,0);const drop=[];
+    while(rows.length&&(clear||tot>RMC.max||rows.length>RMC.cnt)){const r=rows.shift();drop.push(r.k);tot-=r.size}
+    if(drop.length)await new Promise(ok=>{const tx=db.transaction(['c','m'],'readwrite');drop.forEach(k=>{tx.objectStore('c').delete(k);tx.objectStore('m').delete(k)});tx.oncomplete=tx.onerror=tx.onabort=ok});
+    RMC.stat={n:rows.length,b:Math.max(0,tot)};
+  }catch(e){}
+}
 function rmLanOn(){try{return !!(window.dscNative&&dscNative.lan&&dscNative.lan.media&&LANH&&LANH.lan&&(LANH.clients|0)>0)}catch(e){return false}}
 async function rmLanPut(key,blob){try{return await dscNative.lan.media(key,await blob.arrayBuffer(),blob.type||'')}catch(e){return false}}
 function rmSaveDone(){try{localStorage.setItem('lp-r2done',JSON.stringify(RMV.done));localStorage.setItem('lp-r2at',JSON.stringify(RMV.at))}catch(e){}}
@@ -6316,10 +6340,12 @@ async function rmVidRun(){
     const c=rmCfg(),lc=rmLanOn();if(!c&&!lc)throw new Error('turned off');
     /* R2 copies: always 720p (loops 540p), as before. Wi-Fi copies: the PreCenter screen resolution, made separately when that differs. */
     if(j.kind==='img'){
-      const [LW,LH]=rmLanRes(0),same=LW===1280&&LH===720,lvk=j.vk+'.'+LW;let blob=null;
+      const [LW,LH]=rmLanRes(0),same=LW===1280&&LH===720,lvk=j.vk+'.'+LW;let blob=null,again=false;
       if(lc){
-        RMV.status='Making a '+LW+'x'+LH+' picture for the phone (Wi-Fi)\u2026';
-        const lb=await rmEncodeImg(j.src,j.contain,LW,LH);if(same)blob=lb;
+        let lb=null;const sv=await rmCacheGet(lvk);
+        if(sv){lb=sv[0].blob;again=true;RMV.status='Sending the saved picture (Wi-Fi)\u2026'}
+        else{RMV.status='Making a '+LW+'x'+LH+' picture for the phone (Wi-Fi)\u2026';lb=await rmEncodeImg(j.src,j.contain,LW,LH);await rmCachePut(lvk,[{ext:'jpg',blob:lb}])}
+        if(same)blob=lb;
         const lkey='img/'+lvk+'.jpg';if(await rmLanPut(lkey,lb))RML.done[lvk]=['m/'+lkey];
         remotePublish();
       }
@@ -6330,14 +6356,16 @@ async function rmVidRun(){
         await r2Put(c,key,blob,'image/jpeg');
         {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=key;RMV.at[dk]=Date.now();rmSaveDone()}
       }
-      RMV.status='Last '+(c?'upload':'copy')+' OK (picture'+(lc?', '+LW+'x'+LH+' on Wi-Fi':', '+Math.round(blob.size/1024)+' KB')+')';remotePublish();RMV.cur='';rmVidRun();return;
+      RMV.status='Last '+(c?'upload':'copy')+' OK (picture'+(lc?', '+LW+'x'+LH+' on Wi-Fi'+(again?', saved copy sent again':''):', '+Math.round(blob.size/1024)+' KB')+')';remotePublish();RMV.cur='';rmVidRun();return;
     }
     const lp=j.kind==='loop',[BW,BH]=lp?[960,540]:[1280,720],[LW,LH]=rmLanRes(1),same=LW===BW&&LH===BH,lvk=j.vk+'.'+LW;
     const enc=(w,h)=>lp?rmEncodeLoop(j.loop,w,h):rmEncode(j.src,w,h);
-    let base=null,kb=0;const keys=[],lk=[];
+    let base=null,kb=0,again=false;const keys=[],lk=[];
     if(lc){
-      RMV.status=(lp?'Recording the loop':'Making a short clip')+' for the phone (Wi-Fi, '+LW+'x'+LH+')\u2026';
-      const lo=await enc(LW,LH);if(!lo.length)throw new Error('the recorded clip was empty');if(same)base=lo;
+      let lo=await rmCacheGet(lvk);
+      if(lo){again=true;RMV.status='Sending the saved clip (Wi-Fi)\u2026'}
+      else{RMV.status=(lp?'Recording the loop':'Making a short clip')+' for the phone (Wi-Fi, '+LW+'x'+LH+')\u2026';lo=await enc(LW,LH);if(!lo.length)throw new Error('the recorded clip was empty');await rmCachePut(lvk,lo)}
+      if(same)base=lo;
       for(const o of lo){const key='bg/'+lvk+'.'+o.ext;kb+=o.blob.size;if(await rmLanPut(key,o.blob))lk.push('m/'+key)}
       if(lk.length)RML.done[lvk]=lk;
       remotePublish();
@@ -6351,7 +6379,7 @@ async function rmVidRun(){
       }
       {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=keys.join(',');RMV.at[dk]=Date.now();rmSaveDone()}
     }
-    RMV.status='Last '+(c?'upload':'copy')+' OK ('+(keys.length?keys:lk).map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB'+(lc&&!c?', '+LW+'x'+LH+' on Wi-Fi':'')+')';remotePublish();
+    RMV.status='Last '+(c?'upload':'copy')+' OK ('+(keys.length?keys:lk).map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB'+(lc&&!c?', '+LW+'x'+LH+' on Wi-Fi'+(again?', saved copy sent again':''):'')+')';remotePublish();
   }catch(e){RMV.fail[j.vk]=1;RMV.status='Failed: '+(e&&e.message||e);toast('Phone video background: '+RMV.status)}
   RMV.cur='';rmVidRun();
 }
@@ -6902,10 +6930,12 @@ async function lanDlg(host){
       +(inf.urls.length>1?'<label>If the phone cannot connect, try another address<select id="lnSel">'+inf.urls.map((x,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+dscEsc(x.address+'  ('+x.name+')')+'</option>').join('')+'</select></label>':'')
       +'<div class="row"><button id="lnCp">Copy link</button><button id="lnNp" title="Phones already connected will have to scan again">New PIN</button></div>'
       +'<div class="hint" id="lnVid" style="margin:8px 0 0"></div>'
+      +'<div class="hint" id="lnSv" style="margin:4px 0 0"><span id="lnSvT"></span> <button id="lnSvC" style="margin-left:4px">Clear saved</button></div>'
       +rmLoopToggleHtml()
       +(N.pageInfo?'<div class="hint" id="lnPg" style="margin:8px 0 0"></div>':'')
       +'<p class="hint">First time on Windows: if the phone cannot connect, allow PreCenter on <b>private networks</b> when Windows asks (or in Windows Security \u203a Firewall).</p>';
-    const cl=()=>{const e=m.q('#lnCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}
+    const cl=()=>{{const t=m.q('#lnSvT');if(t){const n=RMC.stat.n;t.textContent='Saved on this computer for Wi-Fi: '+(n?n+' item'+(n>1?'s':'')+', '+(RMC.stat.b/1048576).toFixed(1)+' MB. A background that comes back, or one after a restart, is sent again without recording.':'nothing yet.')}}
+      const e=m.q('#lnCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}
       const v=m.q('#lnVid');if(v){const nat=!!(window.dscNative&&dscNative.lan&&dscNative.lan.media),rd=Object.keys(RML.done).length;
         v.textContent='Video and picture backgrounds for phones (made at '+rmLanRes(1).join('x')+', the PreCenter screen size): '+(!nat?'this PreCenter app is too old (install the rebuilt desktop app)':!(LANH&&LANH.clients>0)?'waiting for a phone to connect':(rd?rd+' ready on this computer. ':'none made yet. Show a slide with a video or picture background. ')+(RMV.cur?'Making one now\u2026 ':'')+(RMV.status?'Last: '+RMV.status:''))}};cl();
     const iv=setInterval(()=>{if(!m.w.isConnected){clearInterval(iv);return}cl()},1000);
@@ -6918,7 +6948,8 @@ async function lanDlg(host){
       pg.querySelector('#lnUp').onclick=async()=>{const b=pg.querySelector('#lnUp');b.disabled=true;b.textContent='Checking\u2026';let r=null;try{r=await N.updatePage()}catch(e){}pgDraw(r&&r.message||'Could not check.')};
     }).catch(()=>{})};
     pgDraw();
-    rmLoopToggleBind(m);
+    rmLoopToggleBind(m);rmCachePrune();
+    {const b=m.q('#lnSvC');if(b)b.onclick=async()=>{await rmCachePrune(true);toast('Saved copies cleared. They will be made again when needed.')}}
     const sel=m.q('#lnSel');if(sel)sel.onchange=()=>{cur=+sel.value;clearInterval(iv);draw()};
     m.q('#lnCp').onclick=async()=>{try{await navigator.clipboard.writeText(u.url);toast('Link copied')}catch(e){window.prompt('Copy this link:',u.url)}};
     m.q('#lnNp').onclick=async()=>{try{const n=await N.newPin();if(n){inf=n;clearInterval(iv);draw();toast('New PIN. Phones must scan the new code.')}}catch(e){toast('Could not change the PIN')}};
