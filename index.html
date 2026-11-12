@@ -6203,11 +6203,11 @@ RMV.at=(()=>{try{return JSON.parse(localStorage.getItem('lp-r2at')||'{}')||{}}ca
 /* phones on the Wi-Fi get the same clips straight from this computer (desktop app): no internet and no R2 needed. RML.done[vk] = ['m/bg/x.mp4', ...] */
 var RML={done:{}};
 /* Wi-Fi copies are made at the resolution of PreCenter's main audience screen (Output settings); R2 copies stay 720p.
-   Video is capped at 1920x1080 because the clip is recorded live; the key suffix keeps clips of another size apart. */
-function rmLanRes(vid){
+   Video is capped at 1920x1080 and Loops at 1280x720 because the clip is drawn and recorded live on this computer; the key suffix keeps clips of another size apart. */
+function rmLanRes(vid,loop){
   let W=1920,H=1080;
   try{const D=JSON.parse(localStorage.getItem('lp-screens')||'null');const a=Array.isArray(D)&&(D.find(d=>d.k==='a'&&d.on!==false)||D.find(d=>d.k==='a'));const m=a&&String(a.r||'').match(/^(\d{3,4})x(\d{3,4})$/);if(m){W=+m[1];H=+m[2]}}catch(e){}
-  const k=vid?Math.min(1,1920/W,1080/H):Math.min(1,3840/W,2160/H);
+  const k=loop?Math.min(1,1280/W,720/H):vid?Math.min(1,1920/W,1080/H):Math.min(1,3840/W,2160/H);
   W=Math.max(2,Math.round(W*k/2)*2);H=Math.max(2,Math.round(H*k/2)*2);return[W,H];
 }
 /* Saved copies for the Wi-Fi remote: every picture or clip made for phones is also kept on this computer (browser storage), so when a background
@@ -6311,13 +6311,14 @@ async function rmEncodeLoop(L,W,H){W=W||960;H=H||540;
     if(t>T-X){const a=Math.min(1,(t-(T-X))/X);LP.frame(wg,L,W,H,wrap((t-T)/D));g.globalAlpha=a;g.drawImage(wk,0,0);g.globalAlpha=1}
   };
   paint(0);
-  const stream=cv.captureStream(30);
+  const stream=cv.captureStream(24);
   const recs=mts.map(mt=>{const rec=new MediaRecorder(stream,{mimeType:mt,videoBitsPerSecond:Math.round(2e6*W*H/(960*540))}),parts=[];
     rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
     return{rec,parts,mt,stopped:new Promise(ok=>{rec.onstop=ok})}});
   recs.forEach(r=>r.rec.start(250));
   const t0=performance.now();
-  await new Promise(ok=>{const iv=setInterval(()=>{const t=(performance.now()-t0)/1000;if(t>=T){clearInterval(iv);ok();return}try{paint(t)}catch(e){}},33)});
+  /* paced drawing: about 24 pictures a second, with a short pause after each so PreCenter's own screen and buttons keep running while the clip is recorded */
+  await new Promise(ok=>{const tick=()=>{const a=performance.now(),t=(a-t0)/1000;if(t>=T){ok();return}try{paint(t)}catch(e){}setTimeout(tick,Math.max(10,41-(performance.now()-a)))};tick()});
   recs.forEach(r=>r.rec.stop());await Promise.all(recs.map(r=>r.stopped));
   return recs.map(r=>({blob:new Blob(r.parts,{type:r.mt.split(';')[0]}),ext:/mp4/.test(r.mt)?'mp4':'webm'})).filter(x=>x.blob.size>2000);
 }
@@ -6340,13 +6341,13 @@ async function rmVidRun(){
     const c=rmCfg(),lc=rmLanOn();if(!c&&!lc)throw new Error('turned off');
     /* R2 copies: always 720p (loops 540p), as before. Wi-Fi copies: the PreCenter screen resolution, made separately when that differs. */
     if(j.kind==='img'){
-      const [LW,LH]=rmLanRes(0),same=LW===1280&&LH===720,lvk=j.vk+'.'+LW;let blob=null,again=false;
+      const [LW,LH]=rmLanRes(0),same=LW===1280&&LH===720,lvk=j.vk+'w'+LW;let blob=null,again=false,lanBad=false;
       if(lc){
         let lb=null;const sv=await rmCacheGet(lvk);
         if(sv){lb=sv[0].blob;again=true;RMV.status='Sending the saved picture (Wi-Fi)\u2026'}
         else{RMV.status='Making a '+LW+'x'+LH+' picture for the phone (Wi-Fi)\u2026';lb=await rmEncodeImg(j.src,j.contain,LW,LH);await rmCachePut(lvk,[{ext:'jpg',blob:lb}])}
         if(same)blob=lb;
-        const lkey='img/'+lvk+'.jpg';if(await rmLanPut(lkey,lb))RML.done[lvk]=['m/'+lkey];
+        const lkey='img/'+lvk+'.jpg';if(await rmLanPut(lkey,lb))RML.done[lvk]=['m/'+lkey];else lanBad=true;
         remotePublish();
       }
       if(c){
@@ -6356,18 +6357,19 @@ async function rmVidRun(){
         await r2Put(c,key,blob,'image/jpeg');
         {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=key;RMV.at[dk]=Date.now();rmSaveDone()}
       }
+      if(lanBad)throw new Error('the PreCenter desktop app did not accept the Wi-Fi copy');
       RMV.status='Last '+(c?'upload':'copy')+' OK (picture'+(lc?', '+LW+'x'+LH+' on Wi-Fi'+(again?', saved copy sent again':''):', '+Math.round(blob.size/1024)+' KB')+')';remotePublish();RMV.cur='';rmVidRun();return;
     }
-    const lp=j.kind==='loop',[BW,BH]=lp?[960,540]:[1280,720],[LW,LH]=rmLanRes(1),same=LW===BW&&LH===BH,lvk=j.vk+'.'+LW;
+    const lp=j.kind==='loop',[BW,BH]=lp?[960,540]:[1280,720],[LW,LH]=rmLanRes(1,lp),same=LW===BW&&LH===BH,lvk=j.vk+'w'+LW;
     const enc=(w,h)=>lp?rmEncodeLoop(j.loop,w,h):rmEncode(j.src,w,h);
-    let base=null,kb=0,again=false;const keys=[],lk=[];
+    let base=null,kb=0,again=false,lanBad=false;const keys=[],lk=[];
     if(lc){
       let lo=await rmCacheGet(lvk);
       if(lo){again=true;RMV.status='Sending the saved clip (Wi-Fi)\u2026'}
       else{RMV.status=(lp?'Recording the loop':'Making a short clip')+' for the phone (Wi-Fi, '+LW+'x'+LH+')\u2026';lo=await enc(LW,LH);if(!lo.length)throw new Error('the recorded clip was empty');await rmCachePut(lvk,lo)}
       if(same)base=lo;
       for(const o of lo){const key='bg/'+lvk+'.'+o.ext;kb+=o.blob.size;if(await rmLanPut(key,o.blob))lk.push('m/'+key)}
-      if(lk.length)RML.done[lvk]=lk;
+      if(lk.length)RML.done[lvk]=lk;else lanBad=true;
       remotePublish();
     }
     if(c){
@@ -6379,6 +6381,7 @@ async function rmVidRun(){
       }
       {const dk=c.acct+'/'+c.bucket+'/'+j.vk;RMV.done[dk]=keys.join(',');RMV.at[dk]=Date.now();rmSaveDone()}
     }
+    if(lanBad)throw new Error('the PreCenter desktop app did not accept the Wi-Fi copy');
     RMV.status='Last '+(c?'upload':'copy')+' OK ('+(keys.length?keys:lk).map(k=>k.split('.').pop()).join(' + ')+', '+Math.round(kb/1024)+' KB'+(lc&&!c?', '+LW+'x'+LH+' on Wi-Fi'+(again?', saved copy sent again':''):'')+')';remotePublish();
   }catch(e){RMV.fail[j.vk]=1;RMV.status='Failed: '+(e&&e.message||e);toast('Phone video background: '+RMV.status)}
   RMV.cur='';rmVidRun();
@@ -6585,7 +6588,7 @@ function remoteBg(p){
       if(kind==='vid'){
         const c=rmCfg(),lc=rmLanOn();
         if(c||lc){
-          const ln=d.lib,f=ln&&libFile[ln],vk='x.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),us=c?rmVidUrl(c,vk):[],lo=lc?RML.done[vk+'.'+rmLanRes(1)[0]]:null;
+          const ln=d.lib,f=ln&&libFile[ln],vk='x.'+rmHash(f?('f:'+f.name+'|'+f.size+'|'+f.lastModified):src),us=c?rmVidUrl(c,vk):[],lo=lc?RML.done[vk+'w'+rmLanRes(1)[0]]:null;
           if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}
           if(lo&&lo.length){o.lu=lo[0];if(lo[1])o.lu2=lo[1]}
           if(((c&&!us.length)||(lc&&!lo))&&!RMV.fail[vk]&&!RMV.q.some(j=>j.vk===vk)&&RMV.cur!==vk)RMV.q.push({vk,src}),rmVidRun();
@@ -6594,7 +6597,7 @@ function remoteBg(p){
       if(kind==='img'&&d.bg==='Image'){
         const c=rmCfg(),lc=rmLanOn();
         if(c||lc){
-          const ik='i.'+rmHash(d.fit==='contain'?'c|':'f|'+(src.length>200?src.slice(0,100)+src.length+src.slice(-100):src)),us=c?rmVidUrl(c,ik):[],lo=lc?RML.done[ik+'.'+rmLanRes(0)[0]]:null;
+          const ik='i.'+rmHash(d.fit==='contain'?'c|':'f|'+(src.length>200?src.slice(0,100)+src.length+src.slice(-100):src)),us=c?rmVidUrl(c,ik):[],lo=lc?RML.done[ik+'w'+rmLanRes(0)[0]]:null;
           if(us.length)o.iu=us[0];
           if(lo&&lo.length)o.liu=lo[0];
           if(((c&&!us.length)||(lc&&!lo))&&!RMV.fail[ik]&&!RMV.q.some(j=>j.vk===ik)&&RMV.cur!==ik)RMV.q.push({vk:ik,src,kind:'img',contain:d.fit==='contain'}),rmVidRun();
@@ -6614,7 +6617,7 @@ function remoteBg(p){
         if(rmLoopOn()){
           const c=rmCfg(),lc=rmLanOn();
           if(c||lc){
-            const vk='l.'+rmHash(JSON.stringify(d.loop)),us=c?rmVidUrl(c,vk):[],lo=lc?RML.done[vk+'.'+rmLanRes(1)[0]]:null;
+            const vk='l.'+rmHash(JSON.stringify(d.loop)),us=c?rmVidUrl(c,vk):[],lo=lc?RML.done[vk+'w'+rmLanRes(1,1)[0]]:null;
             o.k='vid';
             if(us.length){o.u=us[0];if(us[1])o.u2=us[1]}
             if(lo&&lo.length){o.lu=lo[0];if(lo[1])o.lu2=lo[1]}
