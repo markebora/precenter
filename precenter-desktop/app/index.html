@@ -3217,18 +3217,41 @@ window.rtSet=function(el,tx){tx=String(tx||'');if(tx.indexOf('\u27e6')<0){el.tex
     m[1].split(';').forEach(f=>{if(f==='b')st.fontWeight='700';else if(f==='i')st.fontStyle='italic';else if(f==='u')st.textDecoration='underline';else if(f==='k')st.textTransform='uppercase';else if(f[0]==='c')st.color=f.slice(1);else if(f[0]==='h'){st.backgroundColor=f.slice(1);st.borderRadius='.12em';st.padding='0 .08em'}else if(f[0]==='f'){try{ensureFont(f.slice(1))}catch(e){}st.fontFamily="'"+f.slice(1)+"',sans-serif"}});
     el.appendChild(sp);i=re.lastIndex}
   if(i<tx.length)el.appendChild(document.createTextNode(tx.slice(i)))};
+window.TA={dirs:['Left','Right','Top','Bottom','Top Left','Top Right','Bottom Left','Bottom Right'],
+  in:['None','Fade','Fly In','Float In','Rise','Drift','Wipe','Blur In','Light Bloom','Zoom','Zoom Out','Spin In','Flip','Bounce','Typewriter','Letters','Words','Lines'],
+  out:['None','Fade','Fly Out','Drift Out','Rise Away','Blur Out','Wipe Out','Zoom','Zoom Away','Spin Out','Drop'],
+  dirIn:['Fly In','Drift','Wipe'],dirOut:['Fly Out','Drift Out','Wipe Out']};
+window.taVec=(dir,x,y)=>{const m={Left:[-1,0],Right:[1,0],Top:[0,-1],Bottom:[0,1],'Top Left':[-1,-1],'Top Right':[1,-1],'Bottom Left':[-1,1],'Bottom Right':[1,1]}[dir]||[-1,0];return[m[0]*x,m[1]*y]};
+window.taClip=(dir,open)=>{const f={Left:'inset(0 100% 0 0)',Right:'inset(0 0 0 100%)',Top:'inset(0 0 100% 0)',Bottom:'inset(100% 0 0 0)','Top Left':'inset(0 100% 100% 0)','Top Right':'inset(0 0 100% 100%)','Bottom Left':'inset(100% 100% 0 0)','Bottom Right':'inset(100% 0 0 100%)'}[dir]||'inset(0 100% 0 0)';return open?[f,'inset(0 0 0 0)']:['inset(0 0 0 0)',f]};
+function taSplit(sp,mode,dur){
+  const w=document.createTreeWalker(sp,NodeFilter.SHOW_TEXT),nodes=[];while(w.nextNode())nodes.push(w.currentNode);
+  const parts=[];
+  nodes.forEach(nd=>{const re=mode==='Letters'?/[\s\S]/gu:mode==='Words'?/\S+|\s+/g:/[^\n]+|\n/g,f=document.createDocumentFragment();
+    (nd.data.match(re)||[]).forEach(t=>{if(/^\s+$/.test(t)){f.appendChild(document.createTextNode(t));return}const c=document.createElement('span');c.textContent=t;f.appendChild(c);parts.push(c)});nd.replaceWith(f)});
+  const n=parts.length||1,total=Math.min(mode==='Letters'?3500:4500,Math.max(500,dur*(mode==='Letters'?3:5))),step=total/n,each=Math.max(260,Math.min(900,dur*1.6));
+  parts.forEach((c,k)=>{c.style.display='inline-block';c.style.whiteSpace='pre-wrap';c.animate([{opacity:0,transform:'translateY(.28em)',filter:'blur(.08em)'},{opacity:1,transform:'none',filter:'none'}],{duration:each,delay:k*step,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'})})}
 function animText(sp,d,dur){
   const ta=d.ta||'Fade';if(ta==='None'||!dur)return;
+  const E1='cubic-bezier(.2,.8,.2,1)',dir=d.dir||'Left';
   if(ta==='Fade')sp.animate([{opacity:0},{opacity:1}],{duration:dur,easing:'ease-out'});
   else if(ta==='Fly In'){
-    const f={Left:'translateX(-100cqw)',Right:'translateX(100cqw)',Top:'translateY(-60cqw)',Bottom:'translateY(60cqw)'}[d.dir||'Left'];
-    sp.animate([{transform:f},{transform:'none'}],{duration:Math.round(dur*1.3),easing:'cubic-bezier(.2,.8,.2,1)'});
+    const v=taVec(dir,100,60);
+    sp.animate([{transform:'translate('+v[0]+'cqw,'+v[1]+'cqw)'},{transform:'none'}],{duration:Math.round(dur*1.3),easing:E1});
   }
-  else if(ta==='Zoom')sp.animate([{transform:'scale(.15)',opacity:0},{transform:'scale(1)',opacity:1}],{duration:dur,easing:'cubic-bezier(.2,.8,.2,1)'});
+  else if(ta==='Float In'||ta==='Rise')sp.animate([{transform:'translateY('+(ta==='Rise'?'7cqw':'3cqw')+')',opacity:0},{transform:'none',opacity:1}],{duration:Math.round(dur*(ta==='Rise'?1.8:1.4)),easing:E1});
+  else if(ta==='Drift'){const v=taVec(dir,9,6);sp.animate([{transform:'translate('+v[0]+'cqw,'+v[1]+'cqw)',opacity:0},{transform:'none',opacity:1}],{duration:Math.round(dur*1.8),easing:'cubic-bezier(.25,.6,.3,1)'})}
+  else if(ta==='Wipe'){const c=taClip(dir,true);sp.animate([{clipPath:c[0]},{clipPath:c[1]}],{duration:Math.round(dur*1.4),easing:'cubic-bezier(.4,0,.2,1)'})}
+  else if(ta==='Blur In')sp.animate([{filter:'blur(2.2cqw)',opacity:0,transform:'scale(1.04)'},{filter:'blur(0)',opacity:1,transform:'none'}],{duration:Math.round(dur*1.6),easing:'ease-out'});
+  else if(ta==='Light Bloom')sp.animate([{filter:'brightness(3) blur(1.4cqw)',opacity:0,transform:'scale(1.06)'},{filter:'brightness(1.6) blur(.3cqw)',opacity:.9,offset:.55},{filter:'none',opacity:1,transform:'none'}],{duration:Math.round(dur*2),easing:'ease-out'});
+  else if(ta==='Zoom')sp.animate([{transform:'scale(.15)',opacity:0},{transform:'scale(1)',opacity:1}],{duration:dur,easing:E1});
+  else if(ta==='Zoom Out')sp.animate([{transform:'scale(1.6)',opacity:0},{transform:'scale(1)',opacity:1}],{duration:Math.round(dur*1.3),easing:E1});
+  else if(ta==='Spin In')sp.animate([{transform:'rotate(-14deg) scale(.6)',opacity:0},{transform:'none',opacity:1}],{duration:Math.round(dur*1.3),easing:E1});
+  else if(ta==='Flip')sp.animate([{transform:'perspective(120cqw) rotateX(-90deg)',opacity:0},{transform:'perspective(120cqw) rotateX(0)',opacity:1}],{duration:Math.round(dur*1.4),easing:E1});
   else if(ta==='Bounce'){
     const e1='cubic-bezier(.55,0,1,.45)',e2='cubic-bezier(0,.55,.45,1)';
     sp.animate([{transform:'translateY(-60cqw)',opacity:0,offset:0,easing:e1},{opacity:1,offset:.08},{transform:'translateY(0)',offset:.5,easing:e2},{transform:'translateY(-6cqw)',offset:.68,easing:e1},{transform:'translateY(0)',offset:.84,easing:e2},{transform:'translateY(-1.8cqw)',offset:.93,easing:e1},{transform:'translateY(0)',offset:1}],{duration:Math.max(600,Math.round(dur*1.8))});
   }
+  else if(ta==='Letters'||ta==='Words'||ta==='Lines')taSplit(sp,ta,dur);
   else if(ta==='Typewriter'){
     const w=document.createTreeWalker(sp,NodeFilter.SHOW_TEXT),nodes=[];while(w.nextNode())nodes.push(w.currentNode);
     const n=nodes.reduce((x,nd)=>x+[...nd.data].length,0),total=Math.min(4000,Math.max(500,dur*3)),step=total/Math.max(n,1);let i=0;
@@ -5308,11 +5331,11 @@ function designPanel(host,sc){
     <label>Text color<input type="color" data-k="fg" value="${d.fg}"></label></div>
     <div class="row" style="margin-top:8px">${ck('shadow','Shadow')}${ck('caps','All caps')}${ck('bold','Bold')}${ck('outline','Outline')}${ck('box','Text box')}${ck('afit','Auto-fit')}${ck('half','Side column')}</div>
     ${H('Animation')}<div class="row">
-    <label>In animation<select data-k="ta">${opt(['None','Fade','Fly In','Typewriter','Zoom','Bounce'],d.ta||'Fade')}</select></label>
-    ${(d.ta||'Fade')==='Fly In'?`<label>Fly in from<select data-k="dir">${opt(['Left','Right','Top','Bottom'],d.dir||'Left')}</select></label>`:''}
+    <label>In animation<select data-k="ta">${opt(TA.in,d.ta||'Fade')}</select></label>
+    ${TA.dirIn.includes(d.ta||'Fade')?`<label>Direction<select data-k="dir">${opt(TA.dirs,d.dir||'Left')}</select></label>`:''}
     <label>In time (${d.tai??d.tr??300} ms)<input type="range" data-k="tai" min="0" max="3000" step="50" value="${d.tai??d.tr??300}"></label>
-    <label>Out animation<select data-k="tao">${opt(['None','Fade','Fly Out','Zoom','Drop'],d.tao||'None')}</select></label>
-    ${d.tao==='Fly Out'?`<label>Fly out to<select data-k="tout">${opt(['Left','Right','Top','Bottom'],d.tout||'Left')}</select></label>`:''}
+    <label>Out animation<select data-k="tao">${opt(TA.out,d.tao||'None')}</select></label>
+    ${TA.dirOut.includes(d.tao)?`<label>Direction<select data-k="tout">${opt(TA.dirs,d.tout||'Left')}</select></label>`:''}
     ${d.tao&&d.tao!=='None'?`<label>Out time (${d.taod??400} ms)<input type="range" data-k="taod" min="100" max="3000" step="50" value="${d.taod??400}"></label>`:''}
     <label>Slide transition<select data-k="st">${opt(TRANS_LIST,d.st||'None')}</select></label>
     ${TRANS_OPTS[d.st||'None']?`<label>Effect options<select data-k="sdir">${opt(TRANS_OPTS[d.st],d.sdir||TRANS_DEF[d.st])}</select></label>`:''}
@@ -5559,7 +5582,7 @@ function openCm(e,i){
     {t:(slideHidden(i)?'Unhide slide':'Hide slide'),fn:()=>window.dscHideSlide&&dscHideSlide(i)},
     {sep:1},
     {t:'Background',sub:bgItems},
-    {t:'Text animation',sub:[{sep:0,scope:'slide',t:'This slide'},{scope:'song',t:'All slides in song'},{sep:1},...[['None','None'],['Fade','Fade'],['Fly In from Left','Fly In','Left'],['Fly In from Right','Fly In','Right'],['Fly In from Top','Fly In','Top'],['Fly In from Bottom','Fly In','Bottom'],['Typewriter','Typewriter'],['Zoom','Zoom'],['Bounce','Bounce']].map(([n,ta,dir])=>({t:(((E.ta||'Fade')===ta&&(ta!=='Fly In'||(E.dir||'Left')===dir))?'\u2713 ':'')+n,fn:()=>putIn(i,dir?{ta,dir}:{ta})}))]},
+    {t:'Text animation',sub:[{sep:0,scope:'slide',t:'This slide'},{scope:'song',t:'All slides in song'},{sep:1},...[['None','None'],['Fade','Fade'],...['Left','Right','Top','Bottom','Top Left','Top Right','Bottom Left','Bottom Right'].map(x=>['Fly In from '+x,'Fly In',x]),['Float In','Float In'],['Rise (soft, slow)','Rise'],...['Left','Right','Top','Bottom'].map(x=>['Drift from '+x,'Drift',x]),...['Left','Right','Top','Bottom'].map(x=>['Wipe from '+x,'Wipe',x]),['Blur In','Blur In'],['Light Bloom','Light Bloom'],['Zoom','Zoom'],['Zoom Out','Zoom Out'],['Spin In','Spin In'],['Flip','Flip'],['Bounce','Bounce'],['Typewriter','Typewriter'],['Letters one by one','Letters'],['Words one by one','Words'],['Lines one by one','Lines']].map(([n,ta,dir])=>({t:(((E.ta||'Fade')===ta&&(!dir||(E.dir||'Left')===dir))?'\u2713 ':'')+n,fn:()=>putIn(i,dir?{ta,dir}:{ta})}))]},
     {t:'Slide transition',sub:[...scopeRows(),...TRANS_LIST.map(n=>({t:((E.st||'None')===n?'\u2713 ':'')+n,fn:()=>putIn(i,{st:n})}))]},
     {t:'Label',sub:['Verse 1','Verse 2','Verse 3','Verse 4','Pre-Chorus','Chorus','Bridge','Intro','Outro','Tag','Interlude','None'].map(l=>({t:((lab||'None')===l?'\u2713 ':'')+l,fn:()=>setLabel(i,l==='None'?'':l)}))},
     {sep:1},
@@ -5714,11 +5737,11 @@ function sedPanel(){
   if(E.tab==='B'){
     const e=eff(cur(),E.i),set=p=>ovSet(E.i,p);
     P.innerHTML=`<p class="hint" style="margin:0">Animation for this slide. Changes here apply right away.</p>
-    <label>In animation<select data-k="ta">${opt(['None','Fade','Fly In','Typewriter','Zoom','Bounce'],e.ta||'Fade')}</select></label>
-    ${(e.ta||'Fade')==='Fly In'?`<label>Fly in from<select data-k="dir">${opt(['Left','Right','Top','Bottom'],e.dir||'Left')}</select></label>`:''}
+    <label>In animation<select data-k="ta">${opt(TA.in,e.ta||'Fade')}</select></label>
+    ${TA.dirIn.includes(e.ta||'Fade')?`<label>Direction<select data-k="dir">${opt(TA.dirs,e.dir||'Left')}</select></label>`:''}
     <label>In time (${e.tai??e.tr??300} ms)<input type="range" data-k="tai" min="0" max="3000" step="50" value="${e.tai??e.tr??300}"></label>
-    <label>Out animation<select data-k="tao">${opt(['None','Fade','Fly Out','Zoom','Drop'],e.tao||'None')}</select></label>
-    ${e.tao==='Fly Out'?`<label>Fly out to<select data-k="tout">${opt(['Left','Right','Top','Bottom'],e.tout||'Left')}</select></label>`:''}
+    <label>Out animation<select data-k="tao">${opt(TA.out,e.tao||'None')}</select></label>
+    ${TA.dirOut.includes(e.tao)?`<label>Direction<select data-k="tout">${opt(TA.dirs,e.tout||'Left')}</select></label>`:''}
     ${e.tao&&e.tao!=='None'?`<label>Out time (${e.taod??400} ms)<input type="range" data-k="taod" min="100" max="3000" step="50" value="${e.taod??400}"></label>`:''}
     <label>Slide transition<select data-k="st">${opt(TRANS_LIST,e.st||'None')}</select></label>
     ${TRANS_OPTS[e.st||'None']?`<label>Effect options<select data-k="sdir">${opt(TRANS_OPTS[e.st],e.sdir||TRANS_DEF[e.st])}</select></label>`:''}
@@ -18059,12 +18082,12 @@ window.quickEdit=function(i0){
   function motionTab(B,e){
     const so=TRANS_OPTS[e.st||'None'];
     B.innerHTML=`<div class="qeH" style="margin-top:0">Text in animation</div>
-    <div class="qeRow"><span>Effect</span><select id="ta" style="flex:1">${opt(['None','Fade','Fly In','Typewriter','Zoom','Bounce'],e.ta||'Fade')}</select></div>
-    ${(e.ta||'Fade')==='Fly In'?`<div class="qeRow"><span>From</span><select id="dir" style="flex:1">${opt(['Left','Right','Top','Bottom'],e.dir||'Left')}</select></div>`:''}
+    <div class="qeRow"><span>Effect</span><select id="ta" style="flex:1">${opt(TA.in,e.ta||'Fade')}</select></div>
+    ${TA.dirIn.includes(e.ta||'Fade')?`<div class="qeRow"><span>Direction</span><select id="dir" style="flex:1">${opt(TA.dirs,e.dir||'Left')}</select></div>`:''}
     <div class="qeRow"><span>In time</span><input type="range" id="tai" min="0" max="3000" step="50" value="${e.tai==null?(e.tr==null?300:e.tr):e.tai}"><b id="taiv" style="width:56px;text-align:right">${e.tai==null?(e.tr==null?300:e.tr):e.tai} ms</b></div>
     <div class="qeH">Text out animation</div>
-    <div class="qeRow"><span>Effect</span><select id="tao" style="flex:1">${opt(['None','Fade','Fly Out','Zoom','Drop'],e.tao||'None')}</select></div>
-    ${e.tao==='Fly Out'?`<div class="qeRow"><span>To</span><select id="tout" style="flex:1">${opt(['Left','Right','Top','Bottom'],e.tout||'Left')}</select></div>`:''}
+    <div class="qeRow"><span>Effect</span><select id="tao" style="flex:1">${opt(TA.out,e.tao||'None')}</select></div>
+    ${TA.dirOut.includes(e.tao)?`<div class="qeRow"><span>Direction</span><select id="tout" style="flex:1">${opt(TA.dirs,e.tout||'Left')}</select></div>`:''}
     ${e.tao&&e.tao!=='None'?`<div class="qeRow"><span>Out time</span><input type="range" id="taod" min="100" max="3000" step="50" value="${e.taod==null?400:e.taod}"><b id="taodv" style="width:56px;text-align:right">${e.taod==null?400:e.taod} ms</b></div>`:''}
     <div class="qeH">Slide transition</div>
     <div class="qeRow"><span>Effect</span><select id="st" style="flex:1">${opt(TRANS_LIST,e.st||'None')}</select></div>
@@ -18203,13 +18226,19 @@ window.dscBgAdjust=function(anchor,getD,done,fit){
 <script>
 /* ---- Out animation for slide text ---- */
 window.animOut=function(el,c){
-  const dur=c.taod==null?400:c.taod,t=c.tao;let kf;
+  const dur=c.taod==null?400:c.taod,t=c.tao,dir=c.tout||'Left';let kf,ease='cubic-bezier(.5,0,.8,.4)';
   if(t==='Fade')kf=[{opacity:1},{opacity:0}];
-  else if(t==='Fly Out'){const f={Left:'translateX(-100cqw)',Right:'translateX(100cqw)',Top:'translateY(-60cqw)',Bottom:'translateY(60cqw)'}[c.tout||'Left'];kf=[{transform:'none'},{transform:f}]}
+  else if(t==='Fly Out'){const v=taVec(dir,100,60);kf=[{transform:'none'},{transform:'translate('+v[0]+'cqw,'+v[1]+'cqw)'}]}
+  else if(t==='Drift Out'){const v=taVec(dir,9,6);kf=[{transform:'none',opacity:1},{transform:'translate('+v[0]+'cqw,'+v[1]+'cqw)',opacity:0}];ease='ease-in'}
+  else if(t==='Rise Away'){kf=[{transform:'none',opacity:1},{transform:'translateY(-7cqw)',opacity:0}];ease='ease-in'}
+  else if(t==='Blur Out'){kf=[{filter:'blur(0)',opacity:1},{filter:'blur(2.2cqw)',opacity:0,transform:'scale(1.04)'}];ease='ease-in'}
+  else if(t==='Wipe Out'){const k=taClip(dir,false);kf=[{clipPath:k[0]},{clipPath:k[1]}];ease='cubic-bezier(.4,0,.2,1)'}
   else if(t==='Zoom')kf=[{transform:'scale(1)',opacity:1},{transform:'scale(.15)',opacity:0}];
+  else if(t==='Zoom Away'){kf=[{transform:'scale(1)',opacity:1},{transform:'scale(1.6)',opacity:0}];ease='ease-in'}
+  else if(t==='Spin Out'){kf=[{transform:'none',opacity:1},{transform:'rotate(14deg) scale(.6)',opacity:0}];ease='ease-in'}
   else if(t==='Drop')kf=[{transform:'none',opacity:1},{transform:'translateY(40cqw)',opacity:0}];
   else{el.remove();return}
-  const a=el.animate(kf,{duration:dur,easing:'cubic-bezier(.5,0,.8,.4)',fill:'forwards'});
+  const a=el.animate(kf,{duration:dur,easing:ease,fill:'forwards'});
   a.onfinish=a.oncancel=()=>el.remove();
   setTimeout(()=>{if(el.isConnected)el.remove()},dur+400)};
 
