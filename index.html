@@ -17910,6 +17910,7 @@ if(window.__qeFull)return;window.__qeFull=1;
 const css=`
 #qeF{position:fixed;inset:0;padding-top:max(env(titlebar-area-height,0px),var(--qeTb,0px));z-index:99990;background:#0b0b0c;color:#f1f1f3;display:flex;flex-direction:column;font:13px/1.35 Inter,system-ui,sans-serif;--ac:#E8B923;--ln:#26262b;--pn:#141417;--mu:#9a9aa2}
 #qeF *{box-sizing:border-box}
+#qeF .qeHint{font-size:11px;color:#8a8a93;margin:-2px 0 8px}
 #qeF .qeSl.flash{animation:qeFl 1.6s ease-out}@keyframes qeFl{0%{box-shadow:0 0 0 3px #E8B923,0 0 18px #E8B92399;background:#2a2410}100%{box-shadow:0 0 0 0 #E8B92300}}
 #qeF .qeSl .ok{display:none;color:#6fdc8c;font-size:11px;font-weight:700}#qeF .qeSl.flash .ok{display:inline}
 #qeApplied{color:#6fdc8c;font-size:12px;font-weight:600;margin-left:8px}
@@ -17967,24 +17968,24 @@ window.quickEdit=function(i0){
   let s=cur();
   if(s.deck||(eff(s,i0).lay&&eff(s,i0).lay.length)){openSed(i0);return}
   const LP=window.dscLoop;
-  let qi=Math.max(0,Math.min(i0||0,expand(s).length-1)),scope='slide',ltab='S',bgTab='Looks',pop='',pend=0,undo=[],redo=[],ft=null,tt=null,tv=null;
+  let qi=Math.max(0,Math.min(i0||0,expand(s).length-1)),scope='sec',ltab='S',bgTab='Looks',pop='',pend=0,undo=[],redo=[],ft=null,tt=null,tv=null;
   const w=document.createElement('div');w.id='qeF';W=w;
   w.innerHTML=`<div class="qeTop"><b>♪ <span id="qeT"></span></b><span class="sp"></span>
    <button id="qeUn" title="Undo (Ctrl+Z)">Undo</button><button id="qeRe" title="Redo (Ctrl+Y)">Redo</button>
    <button id="qePpt" title="The full slide editor with shapes, pictures and layout">Edit as PowerPoint</button><button class="pri" id="qeDone">Done</button></div>
   <div class="qeBody"><div class="qeL"><div class="qeTabs"><button data-t="S">Style</button><button data-t="M">Motion</button><button data-t="N">Notes</button></div><div id="qeLb"></div></div>
-   <div class="qeC"><div class="qeCh"><label>Label <select id="qeLab"></select></label><span class="sp"></span><button id="qePrev">◀</button><span id="qeCnt"></span><button id="qeNext">▶</button></div>
+   <div class="qeC"><div class="qeCh"><label>Label <select id="qeLab"></select></label><span class="sp"></span><button id="qeDup" title="Duplicate this slide">⧉</button><button id="qeDel" title="Delete this slide">✕</button><button id="qePrev">◀</button><span id="qeCnt"></span><button id="qeNext">▶</button></div>
     <div class="qeStW"><div class="stage qeSt" id="qeSt"></div></div>
     <div class="qeTx"><textarea id="qeTa" spellcheck="false" placeholder="Slide text"></textarea></div>
     <div class="qeBar"><button id="qbBg">Background<b id="qbBgN"></b></button><button id="qbAdj">Adjust</button><button id="qbLoop">Edit loop</button><button id="qbTr">Transition<b id="qbTrN"></b></button>
-     <label>Applies to <select id="qeScope"><option value="slide">This slide</option><option value="label">Same type (all Verses, all Choruses…)</option><option value="song">All slides</option></select></label><span id="qeApplied"></span></div>
+     <label>Applies to <select id="qeScope"><option value="sec">This section (all its slides)</option><option value="slide">This slide only</option><option value="label">Same type (all Verses, all Choruses…)</option><option value="song">All slides</option></select></label><span id="qeApplied"></span></div>
     <div id="qePop" hidden></div></div>
-   <div class="qeR"><div class="qeRow"><button class="pri" id="qeNew" style="flex:1">+ New slide</button></div><div class="qeH" style="margin-top:6px">Slides</div><div id="qeList"></div></div></div>`;
+   <div class="qeR"><div class="qeRow"><button class="pri" id="qeNew" style="flex:1">+ New slide</button></div><div class="qeH" style="margin-top:6px">Sections</div><div class="qeHint">Edits apply to every slide in the section.</div><div id="qeList"></div></div></div>`;
   document.body.appendChild(w);
   const $q=x=>w.querySelector(x);
   const E=()=>eff(s,qi),SL=()=>expand(s),txt=()=>{const t=(SL()[qi]||{}).text||'';return t==='​'?'':t};
   const base=l=>String(l||'').toLowerCase().replace(/[\s-]+(\d+[a-z]?|[a-d])$/,'').replace(/\s+/g,' ').trim();
-  const idxs=()=>{if(scope==='song')return null;if(scope==='label'){const l=base((SL()[qi]||{}).label);if(l){const a=[];SL().forEach((x,j)=>{if(base(x.label)===l)a.push(j)});return a}}return[qi]};
+  const idxs=()=>{if(scope==='song')return null;if(scope==='sec'){const g=grpOf(qi),a=[];for(let j=g.a;j<=g.b;j++)a.push(j);return a}if(scope==='label'){const l=base((SL()[qi]||{}).label);if(l){const a=[];SL().forEach((x,j)=>{if(base(x.label)===l)a.push(j)});return a}}return[qi]};
   const snap=()=>JSON.stringify({l:s.lyrics,ov:s.ov||{},d:s.d,nt:s.nt||{}});
   const before=()=>{if(!pend){pend=1;undo.push(snap());if(undo.length>40)undo.shift();redo=[]}};
   const commitText=()=>{clearTimeout(tt);if(tv){const o=tv;tv=null;setSlideText(s,o.i,o.v)}};
@@ -18012,20 +18013,23 @@ window.quickEdit=function(i0){
   function stage(txtOverride){paintTo($q('#qeSt'),E(),txtOverride==null?txt():txtOverride)}
   /* ---- right list ---- */
   let rows=[];
+  const own=x=>x.own!==undefined?x.own:x.label;
+  function groups(){const g=[];SL().forEach((x,j)=>{if(!g.length||own(x)){g.push({a:j,b:j,label:x.label||'',k:g.length})}else g[g.length-1].b=j});return g}
+  const grpOf=j=>groups().find(g=>j>=g.a&&j<=g.b)||{a:j,b:j};
   function renderList(){const L=$q('#qeList'),old=rows;rows=[];L.innerHTML='';
-    SL().forEach((x,j)=>{const e=eff(s,j),sig=JSON.stringify([{...e,img:(e.img||'').length,lay:e.lay&&e.lay.length},x.label,x.text]),o=old[j];
-      if(o&&o.sig===sig){o.el.className='qeSl'+(j===qi?' on':'');o.el.onclick=ev=>{if(ev.target.closest('button'))return;sel(j)};const bs=o.el.querySelectorAll('.ab button');bs[0].onclick=()=>{flushNow();insertAfter(j,[clipOf(j)]);qi=j+1;all()};bs[1].onclick=()=>{if(SL().length<2){toast('A song needs at least one slide.');return}flushNow();removeSlide(j);qi=Math.min(qi>j?qi-1:qi,SL().length-1);all()};o.el.querySelector('b span').textContent=(j+1)+'  '+(x.label||'Slide');rows[j]=o;L.appendChild(o.el);return}
-      const r=document.createElement('div');r.className='qeSl'+(j===qi?' on':'');
-      r.innerHTML='<div class="qt"><div class="stage"></div></div><div class="m"><b><i></i><span></span><em class="ok">&nbsp;✓ applied</em></b><small></small></div><div class="ab"><button title="Duplicate">⧉</button><button title="Delete">✕</button></div>';
-      r.querySelector('i').style.background=labColor(x.label);r.querySelector('b span').textContent=(j+1)+'  '+(x.label||'Slide');
-      r.querySelector('small').textContent=(x.text||'').replace(/​/g,'').replace(/\n/g,' / ');
-      const d=e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0};
-      try{paint(r.querySelector('.stage'),{d,u:libUrl(e),text:x.text==='​'?'':x.text})}catch(er){}
-      r.onclick=ev=>{if(ev.target.closest('button'))return;sel(j)};
-      const [bd,bx]=r.querySelectorAll('.ab button');
-      bd.onclick=()=>{flushNow();insertAfter(j,[clipOf(j)]);qi=j+1;all()};
-      bx.onclick=()=>{if(SL().length<2){toast('A song needs at least one slide.');return}flushNow();removeSlide(j);qi=Math.min(qi>j?qi-1:qi,SL().length-1);all()};
-      rows[j]={sig,el:r};L.appendChild(r)})}
+    groups().forEach((g,k)=>{const on=qi>=g.a&&qi<=g.b,rp=on?qi:g.a,e=eff(s,rp),n=g.b-g.a+1,
+      sig=JSON.stringify([{...e,img:(e.img||'').length,lay:e.lay&&e.lay.length},g.label,n,on,SL()[rp].text]),o=old[k];
+      let r;
+      if(o&&o.sig===sig){r=o.el;r.className='qeSl'+(on?' on':'');r.onclick=()=>sel(on?qi:g.a)}
+      else{
+        r=document.createElement('div');r.className='qeSl'+(on?' on':'');
+        r.innerHTML='<div class="qt"><div class="stage"></div></div><div class="m"><b><i></i><span></span><em class="ok">&nbsp;\u2713 applied</em></b><small></small></div>';
+        r.querySelector('i').style.background=labColor(g.label);r.querySelector('b span').textContent=g.label||'Slide';
+        r.querySelector('small').textContent=n+(n===1?' slide':' slides')+(n>1?' \u00b7 '+(g.a+1)+'\u2013'+(g.b+1):' \u00b7 #'+(g.a+1));
+        const d=e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0};
+        try{paint(r.querySelector('.stage'),{d,u:libUrl(e),text:SL()[rp].text==='\u200b'?'':SL()[rp].text})}catch(er){}
+        r.onclick=()=>sel(on?qi:g.a)}
+      rows[k]={sig,el:r,a:g.a,b:g.b};L.appendChild(r)})}
   function sel(j){flushNow();qi=Math.max(0,Math.min(j,SL().length-1));all()}
   /* ---- left panel ---- */
   function left(){w.querySelectorAll('.qeTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===ltab));
@@ -18117,7 +18121,7 @@ window.quickEdit=function(i0){
   /* ---- everything ---- */
   function all(){$q('#qeT').textContent=s.title||'Untitled';
     const x=SL()[qi]||{},sel=$q('#qeLab');sel.innerHTML='<option value="">(none)</option>'+LABELS.map(l=>`<option${x.label===l?' selected':''}>${l}</option>`).join('')+(x.label&&LABELS.indexOf(x.label)<0?`<option selected>${esc(x.label)}</option>`:'');
-    $q('#qeCnt').textContent=(qi+1)+' of '+SL().length;
+    {const g=grpOf(qi);$q('#qeCnt').textContent=(g.label?g.label+' \u00b7 ':'')+'slide '+(qi+1)+' of '+SL().length}
     const ta=$q('#qeTa');if(document.activeElement!==ta||ta.dataset.i!==String(qi)){ta.value=txt();ta.dataset.i=qi}
     stage();renderList();left();bar();btns();if(pop==='bg')popBg();else if(pop==='adj')popAdj()}
   const fit=()=>{const h=$q('.qeStW'),st=$q('#qeSt');if(!h||!st)return;const cs=getComputedStyle(h),pw=h.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=h.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);st.style.width=Math.max(120,Math.min(pw,ph*16/9))+'px'};
@@ -18125,6 +18129,8 @@ window.quickEdit=function(i0){
   /* wiring */
   w.querySelectorAll('.qeTabs button[data-t]').forEach(b=>b.onclick=()=>{ltab=b.dataset.t;left()});
   $q('#qeLab').onchange=ev=>{flushNow();setLabel(qi,ev.target.value);all()};
+  $q('#qeDup').onclick=()=>{flushNow();insertAfter(qi,[clipOf(qi)]);qi=Math.min(qi+1,SL().length-1);all()};
+  $q('#qeDel').onclick=()=>{if(SL().length<2){toast('A song needs at least one slide.');return}flushNow();removeSlide(qi);qi=Math.min(qi,SL().length-1);all()};
   $q('#qePrev').onclick=()=>sel(qi-1);$q('#qeNext').onclick=()=>sel(qi+1);
   $q('#qeNew').onclick=()=>{flushNow();insertAfter(qi,[{label:'Slide',text:'​'}]);qi=Math.min(qi+1,SL().length-1);all();$q('#qeTa').focus()};
   const SKIP={lay:1};
@@ -18136,7 +18142,7 @@ window.quickEdit=function(i0){
     const list=ix||SL().map((_,j)=>j),n=list.length;
     setK(patch);flushNow();all();
     $q('#qeApplied').textContent='✓ Applied to '+n+' slide'+(n===1?'':'s');
-    list.forEach(j=>{const r=rows[j];if(r){r.el.classList.remove('flash');void r.el.offsetWidth;r.el.classList.add('flash');setTimeout(()=>r.el.classList.remove('flash'),1700)}});
+    rows.filter(r=>list.some(j=>j>=r.a&&j<=r.b)).forEach(r=>{{r.el.classList.remove('flash');void r.el.offsetWidth;r.el.classList.add('flash');setTimeout(()=>r.el.classList.remove('flash'),1700)}});
     try{toast('Applied this slide\u2019s look to '+n+' slide'+(n===1?'':'s')+'.')}catch(e){}
     if(pop==='bg')popBg()}
   $q('#qeScope').onchange=ev=>{scope=ev.target.value;applyScope()};
