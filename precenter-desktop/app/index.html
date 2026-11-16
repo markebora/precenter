@@ -3230,6 +3230,16 @@ function taSplit(sp,mode,dur){
     (nd.data.match(re)||[]).forEach(t=>{if(/^\s+$/.test(t)){f.appendChild(document.createTextNode(t));return}const c=document.createElement('span');c.textContent=t;f.appendChild(c);parts.push(c)});nd.replaceWith(f)});
   const n=parts.length||1,total=Math.min(mode==='Letters'?3500:4500,Math.max(500,dur*(mode==='Letters'?3:5))),step=total/n,each=Math.max(260,Math.min(900,dur*1.6));
   parts.forEach((c,k)=>{c.style.display='inline-block';c.style.whiteSpace='pre-wrap';c.animate([{opacity:0,transform:'translateY(.28em)',filter:'blur(.08em)'},{opacity:1,transform:'none',filter:'none'}],{duration:each,delay:k*step,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'})})}
+window.BXS=[['','None'],['bars','Line bars'],['frame','Frame']];
+window.dscBox=function(d,tx){
+  const w=document.createElement('div'),bars=d.bxs==='bars',bw=d.bxw==null?(bars?70:85):d.bxw,col=d.bxc||'#ffffff',al=d.align==='justify'?'center':(d.align||'center');
+  const side=al==='left'?'0 auto 0 0':al==='right'?'0 0 0 auto':'0 auto',ml=al==='left'?'.2em auto .2em 0':al==='right'?'.2em 0 .2em auto':'.2em auto';
+  w.className='lbx';w.style.cssText='box-sizing:border-box;max-width:100%;margin:'+side+';text-align:'+al+';'+(bw>0?'width:'+bw+'cqw':'width:fit-content');
+  if(bars){
+    String(tx).split('\n').forEach(ln=>{const l=document.createElement('div');window.rtSet(l,ln.trim()===''?'\u200b':ln);
+      l.style.cssText='box-sizing:border-box;background:'+col+';color:'+(d.bxf||'#1a1424')+';padding:.34em .7em;line-height:1.15;text-shadow:none;-webkit-text-stroke:0;border-radius:'+((d.bxr||0)/10)+'em;'+(bw>0?'margin:.2em 0;width:100%':'display:table;margin:'+ml);w.appendChild(l)})}
+  else{window.rtSet(w,tx);w.style.cssText+=';border:'+(d.bxb==null?.45:d.bxb)+'cqw solid '+col+';padding:.5em .9em;line-height:1.3;border-radius:'+((d.bxr||0)/10)+'em'+(d.bxa>0?';background:rgba(0,0,0,'+d.bxa/100+')':'')}
+  return w};
 function animText(sp,d,dur){
   const ta=d.ta||'Fade';if(ta==='None'||!dur)return;
   const E1='cubic-bezier(.2,.8,.2,1)',dir=d.dir||'Left';
@@ -3615,7 +3625,8 @@ function paint(stage,p){
     el=document.createElement('div');el.className='tx';
   el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end',justify:'stretch'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'')+(d.half&&d.align==='left'?';padding-right:48cqw':'')+(d.half&&d.align==='right'?';padding-left:48cqw':'');
     if(d.afit){el.dataset.afit='1';el.dataset.base=String(d.size/19.2)}
-    if(tx){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
+    if(tx&&(d.bxs==='bars'||d.bxs==='frame')){const w=window.dscBox(d,tx);el.appendChild(w);spans.push(w)}
+    else if(tx){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
   }
   stage.appendChild(el);if(stage.isConnected)fitStage(stage);
   if(p.ast!=null&&d.lay&&d.lay.length)animApply(stage,el,d.lay,p,chg?dur:0);
@@ -5330,6 +5341,13 @@ function designPanel(host,sc){
     <label>Position<select data-k="pos">${opt(['Top','Middle','Bottom'],d.pos)}</select></label>
     <label>Text color<input type="color" data-k="fg" value="${d.fg}"></label></div>
     <div class="row" style="margin-top:8px">${ck('shadow','Shadow')}${ck('caps','All caps')}${ck('bold','Bold')}${ck('outline','Outline')}${ck('box','Text box')}${ck('afit','Auto-fit')}${ck('half','Side column')}</div>
+    ${H('Lyric box')}<div class="row">
+    <label>Box style<select data-k="bxs">${BXS.map(([v,n])=>`<option value="${v}"${(d.bxs||'')===v?' selected':''}>${n}</option>`).join('')}</select></label>
+    ${d.bxs?`<label>Box width (${(d.bxw==null?(d.bxs==='bars'?70:85):d.bxw)||'Auto'}${(d.bxw==null?1:d.bxw)?'%':''})<input type="range" data-k="bxw" min="0" max="100" step="1" value="${d.bxw==null?(d.bxs==='bars'?70:85):d.bxw}"></label>
+    <label>Box colour<input type="color" data-k="bxc" value="${d.bxc||'#ffffff'}"></label>
+    ${d.bxs==='bars'?`<label>Text on bar<input type="color" data-k="bxf" value="${d.bxf||'#1a1424'}"></label>`:`<label>Border (${d.bxb==null?.45:d.bxb})<input type="range" data-k="bxb" min="0.1" max="1.5" step="0.05" value="${d.bxb==null?.45:d.bxb}"></label><label>Fill dark (${d.bxa||0}%)<input type="range" data-k="bxa" min="0" max="90" value="${d.bxa||0}"></label>`}
+    <label>Corners (${d.bxr||0})<input type="range" data-k="bxr" min="0" max="10" value="${d.bxr||0}"></label>`:''}
+    </div>
     ${H('Animation')}<div class="row">
     <label>In animation<select data-k="ta">${opt(TA.in,d.ta||'Fade')}</select></label>
     ${TA.dirIn.includes(d.ta||'Fade')?`<label>Direction<select data-k="dir">${opt(TA.dirs,d.dir||'Left')}</select></label>`:''}
@@ -5350,6 +5368,9 @@ function designPanel(host,sc){
   q('align').onchange=v=>{d.align=v.target.value;ch()};
   q('pos').onchange=v=>{d.pos=v.target.value;ch()};
   q('fg').oninput=v=>{d.fg=v.target.value;ch()};
+  q('bxs').onchange=v=>{d.bxs=v.target.value;if(!d.bxs){d.bxw=undefined}ch();again()};
+  ['bxc','bxf'].forEach(k=>{if(q(k))q(k).oninput=v=>{d[k]=v.target.value;ch()}});
+  ['bxw','bxb','bxa','bxr'].forEach(k=>{if(q(k))q(k).oninput=v=>{d[k]=+v.target.value;lbl(v.target,({bxw:'Box width',bxb:'Border',bxa:'Fill dark',bxr:'Corners'})[k]+' ('+(k==='bxw'?(d[k]?d[k]+'%':'Auto'):k==='bxa'?d[k]+'%':d[k])+')');ch()}});
   ['shadow','caps','bold','outline','box','afit','half'].forEach(k=>{q(k).onchange=v=>{d[k]=v.target.checked;ch()}});
   const pl=(k)=>{clearTimeout(pl.t);pl.t=setTimeout(()=>{try{window.dscPlayAnim($('#preview'),d,k,()=>push())}catch(x){}},120)};
   q('ta').onchange=v=>{d.ta=v.target.value;ch();again();pl('in')};
@@ -18078,16 +18099,26 @@ window.quickEdit=function(i0){
     <div class="qeRow"><span>Align</span><div class="qeBtns" id="al"></div></div>
     <div class="qeRow"><span>Position</span><div class="qeBtns" id="po"></div></div>
     <div class="qeH">Style</div><div class="qeBtns" id="tg" style="flex-wrap:wrap"></div>
+    <div class="qeH">Lyric box</div>
+    <div class="qeRow"><span>Style</span><select id="bxs" style="flex:1">${BXS.map(([v,n])=>`<option value="${v}"${(e.bxs||'')===v?' selected':''}>${n}</option>`).join('')}</select></div>
+    ${e.bxs?`<div class="qeRow"><span>Width</span><input type="range" id="bxw" min="0" max="100" value="${e.bxw==null?(e.bxs==='bars'?70:85):e.bxw}"><b id="bxwv" style="width:44px;text-align:right">${(e.bxw==null?(e.bxs==='bars'?70:85):e.bxw)||'Auto'}${(e.bxw==null?1:e.bxw)?'%':''}</b></div>
+    <div class="qeRow"><span>Colour</span><input type="color" id="bxc" value="${e.bxc||'#ffffff'}">${e.bxs==='bars'?`<span style="margin-left:10px">Text</span><input type="color" id="bxf" value="${e.bxf||'#1a1424'}">`:`<span style="margin-left:10px">Border</span><input type="range" id="bxb" min="0.1" max="1.5" step="0.05" value="${e.bxb==null?.45:e.bxb}" style="flex:1">`}</div>
+    ${e.bxs==='frame'?`<div class="qeRow"><span>Fill dark</span><input type="range" id="bxa" min="0" max="90" value="${e.bxa||0}"></div>`:''}
+    <div class="qeRow"><span>Corners</span><input type="range" id="bxr" min="0" max="10" value="${e.bxr||0}"></div>`:''}
     <div class="qeH">Apply to all slides</div><div class="qeBtns"><button id="aS">Style</button><button id="aA">Alignment</button></div>`;
     const q=x=>B.querySelector(x);
     q('#f').onchange=ev=>{if(ev.target.value==='__local'){localFonts().then(left);return}setK({font:ev.target.value})};
     q('#sz').oninput=ev=>{q('#szv').textContent=ev.target.value;setK({size:+ev.target.value})};
     q('#fg').oninput=ev=>{setK({fg:ev.target.value})};
+    q('#bxs').onchange=ev=>{setK(ev.target.value?{bxs:ev.target.value}:{bxs:'',bxw:undefined});left()};
+    if(q('#bxw'))q('#bxw').oninput=ev=>{const v=+ev.target.value;q('#bxwv').textContent=v?v+'%':'Auto';setK({bxw:v})};
+    ['bxc','bxf'].forEach(k=>{if(q('#'+k))q('#'+k).oninput=ev=>setK({[k]:ev.target.value})});
+    ['bxb','bxa','bxr'].forEach(k=>{if(q('#'+k))q('#'+k).oninput=ev=>setK({[k]:+ev.target.value})});
     SW.forEach(c=>{const i=document.createElement('i');i.style.background=c;if(c.toLowerCase()===String(e.fg).toLowerCase())i.className='on';i.onclick=()=>{setK({fg:c});left()};q('#sw').appendChild(i)});
     [['left','⬅'],['center','↔'],['right','➡'],['justify','☰']].forEach(([v,t])=>{const b=document.createElement('button');b.textContent=t;b.title=v;if(e.align===v)b.className='on';b.onclick=()=>{setK({align:v});left()};q('#al').appendChild(b)});
     ['Top','Middle','Bottom'].forEach(v=>{const b=document.createElement('button');b.textContent=v;if(e.pos===v)b.className='on';b.onclick=()=>{setK({pos:v});left()};q('#po').appendChild(b)});
     [['bold','Bold'],['caps','ALL CAPS'],['shadow','Shadow'],['outline','Outline'],['box','Text box'],['afit','Auto-fit']].forEach(([k,t])=>{const b=document.createElement('button');b.textContent=t;if(e[k])b.className='on';b.onclick=()=>{setK({[k]:!E()[k]});left()};q('#tg').appendChild(b)});
-    q('#aS').onclick=()=>{const e2=E();before();const p={};['font','size','fg','shadow','caps','bold','outline','box','afit'].forEach(k=>p[k]=e2[k]);Object.assign(s.d,p);clearOv(Object.keys(p));stage();later();toast('Style applied to all slides.')};
+    q('#aS').onclick=()=>{const e2=E();before();const p={};['font','size','fg','shadow','caps','bold','outline','box','afit','bxs','bxw','bxc','bxf','bxb','bxa','bxr'].forEach(k=>p[k]=e2[k]);Object.assign(s.d,p);clearOv(Object.keys(p));stage();later();toast('Style applied to all slides.')};
     q('#aA').onclick=()=>{const e2=E();before();const p={align:e2.align,pos:e2.pos};Object.assign(s.d,p);clearOv(['align','pos']);stage();later();toast('Alignment applied to all slides.')};
   }
   function motionTab(B,e){
