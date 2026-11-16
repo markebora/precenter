@@ -3780,12 +3780,12 @@ function sections(s){
   parse(s.lyrics).forEach((b,i)=>{
     if(b.label){c={label:b.label,code:secCode(b.label),items:[]};out.push(c)}
     else if(!c){c={label:'',code:'',items:[]};out.push(c)}
-    c.items.push({label:b.label,text:b.text,src:i});
+    c.items.push({label:b.label||c.label,own:b.label,text:b.text,src:i});
   });
   return out;
 }
 function arrange(s){
-  const base=parse(s.lyrics).map((b,i)=>({label:b.label,text:b.text,src:i}));
+  let runL='';const base=parse(s.lyrics).map((b,i)=>{if(b.label)runL=b.label;return{label:b.label||runL,own:b.label,text:b.text,src:i}});
   const ord=(s.order||'').trim();
   if(!ord)return{slides:base,bad:[],used:new Set(),on:false};
   const secs=sections(s),find=t=>{const n=normTok(t);return n?secs.find(x=>x.label&&(normTok(x.code)===n||normTok(x.label)===n)):null};
@@ -5004,7 +5004,7 @@ function drawGridCur(){
 }
 /* ---------- section jump + next/previous song ---------- */
 let autoNext=false;try{autoNext=localStorage.getItem('lp-autonext')==='1'}catch(e){}
-function secStarts(sl){const r=[];sl.forEach((x,i)=>{if(x&&x.label)r.push(i)});return r}
+function secStarts(sl){const r=[];sl.forEach((x,i)=>{if(x&&(x.own!==undefined?x.own:x.label))r.push(i)});return r}
 function drawSecBar(sl){
   const box=$('#secChips');if(!box)return;
   const st=secStarts(sl||expand(cur()));
@@ -5479,7 +5479,7 @@ function commit(s,a,ov,nt){
 }
 function setSlideText(s,i,t){const ex=expand(s)[i],a=slidesOf(s),k=ex?ex.src:i;if(a[k]){a[k].text=t;commit(s,a,s.ov)}}
 const lockArr=s=>{if(arranged(s)){toast('This song uses an Order. Clear the Order (Lyrics tab) to add, delete or relabel slides. Text edits still work.');return true}return false};
-function clipOf(i){const s=cur(),x=expand(s)[i];return{label:x.label,text:x.text,ov:s.ov&&s.ov[i]?{...s.ov[i]}:null,nt:s.nt&&s.nt[i]?{...s.nt[i]}:null}}
+function clipOf(i){const s=cur(),x=expand(s)[i];return{label:x.own!==undefined?x.own:x.label,text:x.text,ov:s.ov&&s.ov[i]?{...s.ov[i]}:null,nt:s.nt&&s.nt[i]?{...s.nt[i]}:null}}
 function insertAfter(i,items){
   if(lockArr(cur()))return;
   const s=cur(),a=slidesOf(s),k=items.length,ov=remapOv(s.ov,j=>j>i?j+k:j),nt=remapOv(s.nt,j=>j>i?j+k:j);
@@ -7471,7 +7471,7 @@ function remoteState(){
   let lab='';for(let i=Math.min(idx,sl.length-1);i>=0;i--){if(sl[i]&&sl[i].label){lab=sl[i].label;break}}
   /* text-only cards for the phone's slide grid: label (Verse 1, Verse 1B, Chorus...) + the words */
   let cbase='',ck=0;const cards=sl.slice(0,80).map(x=>{
-    if(x.label){cbase=String(x.label);ck=0}else ck++;
+    if(x.own!==undefined?x.own:x.label){cbase=String(x.label);ck=0}else ck++;
     return{l:cbase?(ck?cbase+(ck<26?String.fromCharCode(65+ck):ck):cbase):'',t:rtStrip(String(x.text||'')).slice(0,140)};
   });
   return{
