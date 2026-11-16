@@ -5351,12 +5351,13 @@ function designPanel(host,sc){
   q('pos').onchange=v=>{d.pos=v.target.value;ch()};
   q('fg').oninput=v=>{d.fg=v.target.value;ch()};
   ['shadow','caps','bold','outline','box','afit','half'].forEach(k=>{q(k).onchange=v=>{d[k]=v.target.checked;ch()}});
-  q('ta').onchange=v=>{d.ta=v.target.value;ch();again()};
-  if(q('dir'))q('dir').onchange=v=>{d.dir=v.target.value;ch()};
-  if(q('tai'))q('tai').oninput=v=>{d.tai=+v.target.value;lbl(v.target,'In time ('+d.tai+' ms)');ch()};
-  if(q('tao'))q('tao').onchange=v=>{d.tao=v.target.value;ch();again()};
-  if(q('tout'))q('tout').onchange=v=>{d.tout=v.target.value;ch()};
-  if(q('taod'))q('taod').oninput=v=>{d.taod=+v.target.value;lbl(v.target,'Out time ('+d.taod+' ms)');ch()};
+  const pl=(k)=>{clearTimeout(pl.t);pl.t=setTimeout(()=>{try{window.dscPlayAnim($('#preview'),d,k,()=>push())}catch(x){}},120)};
+  q('ta').onchange=v=>{d.ta=v.target.value;ch();again();pl('in')};
+  if(q('dir'))q('dir').onchange=v=>{d.dir=v.target.value;ch();pl('in')};
+  if(q('tai'))q('tai').oninput=v=>{d.tai=+v.target.value;lbl(v.target,'In time ('+d.tai+' ms)');ch();pl('in')};
+  if(q('tao'))q('tao').onchange=v=>{d.tao=v.target.value;ch();again();pl('out')};
+  if(q('tout'))q('tout').onchange=v=>{d.tout=v.target.value;ch();pl('out')};
+  if(q('taod'))q('taod').oninput=v=>{d.taod=+v.target.value;lbl(v.target,'Out time ('+d.taod+' ms)');ch();pl('out')};
   q('st').onchange=v=>{d.st=v.target.value;d.sdir='';ch();again()};
   if(q('sdir'))q('sdir').onchange=v=>{d.sdir=v.target.value;ch()};
   q('tr').oninput=v=>{d.tr=+v.target.value;lbl(v.target,'Duration ('+d.tr+' ms)');ch()};
@@ -17986,6 +17987,16 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 window.bgfCss=function(f){if(!f)return'';const br=f.br==null?100:f.br,ct=f.ct==null?100:f.ct,sa=f.sa==null?100:f.sa,hu=f.hu||0;
   if(br===100&&ct===100&&sa===100&&!hu)return'';return'brightness('+br+'%) contrast('+ct+'%) saturate('+sa+'%) hue-rotate('+hu+'deg)'};
 
+window.dscPlayAnim=function(st,e,kind,repaint){
+  if(!st)return 0;try{repaint()}catch(x){}
+  const tx=st.querySelector(':scope>.tx:not(.txo)');if(!tx)return 0;
+  const dIn=e.tai==null?(e.tr==null?300:e.tr):e.tai,dOut=e.taod==null?400:e.taod,hasOut=e.tao&&e.tao!=='None';
+  let id=0;
+  const doIn=()=>{try{repaint();const t=st.querySelector(':scope>.tx:not(.txo)');if(t&&window.animText)animText(t,{...e,ta:e.ta||'Fade'},dIn)}catch(x){}};
+  const doOut=()=>{try{const t=st.querySelector(':scope>.tx:not(.txo)');if(!t||!hasOut||!window.animOut)return false;const g=t.cloneNode(true);g.classList.add('txo');g.style.pointerEvents='none';t.style.opacity='0';st.appendChild(g);animOut(g,{tao:e.tao,taod:e.taod,tout:e.tout});return true}catch(x){return false}};
+  if(kind==='in'){doIn();return 0}
+  if(kind==='out'){if(doOut())id=setTimeout(doIn,dOut+350);return id}
+  doIn();return setTimeout(()=>{if(doOut())setTimeout(doIn,dOut+350)},Math.max(900,dIn*1.8+700))};
 window.quickEdit=function(i0){
   if(W)return;
   let s=cur();
@@ -18081,7 +18092,7 @@ window.quickEdit=function(i0){
   }
   function motionTab(B,e){
     const so=TRANS_OPTS[e.st||'None'];
-    B.innerHTML=`<div class="qeH" style="margin-top:0">Text in animation</div>
+    B.innerHTML=`<div class="qeRow"><button id="qePlayB" style="flex:1" title="Play the in and out animation on the preview">▶ Play animation</button></div><div class="qeH" style="margin-top:0">Text in animation</div>
     <div class="qeRow"><span>Effect</span><select id="ta" style="flex:1">${opt(TA.in,e.ta||'Fade')}</select></div>
     ${TA.dirIn.includes(e.ta||'Fade')?`<div class="qeRow"><span>Direction</span><select id="dir" style="flex:1">${opt(TA.dirs,e.dir||'Left')}</select></div>`:''}
     <div class="qeRow"><span>In time</span><input type="range" id="tai" min="0" max="3000" step="50" value="${e.tai==null?(e.tr==null?300:e.tr):e.tai}"><b id="taiv" style="width:56px;text-align:right">${e.tai==null?(e.tr==null?300:e.tr):e.tai} ms</b></div>
@@ -18094,12 +18105,13 @@ window.quickEdit=function(i0){
     ${so?`<div class="qeRow"><span>Options</span><select id="sd" style="flex:1">${opt(so,e.sdir||TRANS_DEF[e.st])}</select></div>`:''}
     <div class="qeRow"><span>Time</span><input type="range" id="tr" min="0" max="2000" step="50" value="${e.tr==null?300:e.tr}"><b id="trv" style="width:56px;text-align:right">${e.tr==null?300:e.tr} ms</b></div>`;
     const q=x=>B.querySelector(x);
-    q('#ta').onchange=ev=>{setK({ta:ev.target.value});left()};
-    q('#tai').oninput=ev=>{q('#taiv').textContent=ev.target.value+' ms';setK({tai:+ev.target.value})};
-    q('#tao').onchange=ev=>{setK({tao:ev.target.value});left()};
-    if(q('#tout'))q('#tout').onchange=ev=>setK({tout:ev.target.value});
-    if(q('#taod'))q('#taod').oninput=ev=>{q('#taodv').textContent=ev.target.value+' ms';setK({taod:+ev.target.value})};
-    if(q('#dir'))q('#dir').onchange=ev=>setK({dir:ev.target.value});
+    q('#ta').onchange=ev=>{setK({ta:ev.target.value});left();play('in')};
+    q('#tai').oninput=ev=>{q('#taiv').textContent=ev.target.value+' ms';setK({tai:+ev.target.value});playD('in')};
+    q('#tao').onchange=ev=>{setK({tao:ev.target.value});left();play('out')};
+    if(q('#tout'))q('#tout').onchange=ev=>{setK({tout:ev.target.value});play('out')};
+    if(q('#taod'))q('#taod').oninput=ev=>{q('#taodv').textContent=ev.target.value+' ms';setK({taod:+ev.target.value});playD('out')};
+    if(q('#dir'))q('#dir').onchange=ev=>{setK({dir:ev.target.value});play('in')};
+    q('#qePlayB').onclick=()=>play('both');
     q('#st').onchange=ev=>{setK({st:ev.target.value,sdir:''});left();bar()};
     if(q('#sd'))q('#sd').onchange=ev=>setK({sdir:ev.target.value});
     q('#tr').oninput=ev=>{q('#trv').textContent=ev.target.value+' ms';setK({tr:+ev.target.value});bar()};
@@ -18141,6 +18153,10 @@ window.quickEdit=function(i0){
     const fr=document.createElement('div');fr.className='qeRow';fr.innerHTML='<span style="width:80px">Fit</span><select style="flex:1"><option value="cover">Cover (fill, crop edges)</option><option value="contain">Fit (whole picture)</option><option value="fill">Stretch</option></select>';
     const fs=fr.querySelector('select');fs.value=e.fit==='contain'?'contain':e.fit==='fill'?'fill':'cover';fs.onchange=()=>setK({fit:fs.value==='cover'?'':fs.value});P.appendChild(fr);
     const rs=document.createElement('button');rs.textContent='Reset';rs.onclick=()=>{setK({bgf:null,dim:0,fit:''});popAdj()};P.appendChild(rs);bar()}
+  /* ---- animation preview: plays on the big preview so you can see the effect ---- */
+  let pvT=0,pvD=null;
+  function play(kind){clearTimeout(pvT);pvT=window.dscPlayAnim($q('#qeSt'),E(),kind,stage)}
+  function playD(kind){clearTimeout(pvD);pvD=setTimeout(()=>play(kind),350)}
   /* ---- everything ---- */
   function all(){$q('#qeT').textContent=s.title||'Untitled';
     const x=SL()[qi]||{},sel=$q('#qeLab');sel.innerHTML='<option value="">(none)</option>'+LABELS.map(l=>`<option${x.label===l?' selected':''}>${l}</option>`).join('')+(x.label&&LABELS.indexOf(x.label)<0?`<option selected>${esc(x.label)}</option>`:'');
@@ -18188,7 +18204,7 @@ window.quickEdit=function(i0){
     else if(!inField)ev.stopPropagation();
   };
   document.addEventListener('keydown',kd,true);
-  function close(){flushNow();clearTimeout(tt);removeEventListener('resize',fit);try{ro&&ro.disconnect()}catch(e){}document.removeEventListener('keydown',kd,true);w.remove();W=null;try{drawAll()}catch(e){}}
+  function close(){flushNow();clearTimeout(tt);clearTimeout(pvT);clearTimeout(pvD);removeEventListener('resize',fit);try{ro&&ro.disconnect()}catch(e){}document.removeEventListener('keydown',kd,true);w.remove();W=null;try{drawAll()}catch(e){}}
   all();fit();
 };
 })();
