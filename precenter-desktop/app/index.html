@@ -3663,6 +3663,7 @@ function sbgApply(p,kind,n){
   let L={};try{L=window.__libO||window.__libM||lib||{}}catch(e){}
   const AL=p.alt&&p.alt[kind]&&p.alt[kind][n];
   if(AL){if(AL.blank)p={...p,black:true};else p={...AL,look:p.look,stl:p.stl,sbg:p.sbg,sl:p.sl,sw:p.sw,si:p.si,alt:null,u:(AL.d&&AL.d.lib&&L[AL.d.lib])||''}}
+  if(AL&&AL.lbd&&p.d){const d=({...p.d});SBG_K.forEach(k=>{delete d[k]});Object.assign(d,AL.lbd);p={...p,d,u:(d.lib&&L[d.lib])||''}}
   const A=p.sbg&&p.sbg.a;if(kind!=='a'||!A)return p;
   const o=A[n];if(!o||!o.on||!o.d)return p;
   const d={...p.d};SBG_K.forEach(k=>{delete d[k]});Object.assign(d,o.d);
@@ -9824,7 +9825,7 @@ function annDraw(stage,p){
   stage.appendChild(el);
 }
 const _paint=paint;paint=function(stage,p){if(p&&p.ctx){stage._ctx=p.ctx;window._lastCtx=p.ctx}const r=_paint(stage,p);try{annDraw(stage,p)}catch(e){}return r};
-const _al=applyLook;applyLook=function(p,k){const q=_al(p,k);if(q&&q.ann&&(k!=='a'||(p.look&&p.look.a&&p.look.a.ann===0)))return Object.assign({},q,{ann:null});return q};
+const _al=applyLook;applyLook=function(p,k,n){const q=_al(p,k,n);if(q&&q.ann&&(k!=='a'||(p.look&&p.look.a&&p.look.a.ann===0)))return Object.assign({},q,{ann:null});return q};
 if(/^#(output|stage|layout)/.test(location.hash))return;
 /* ---- main window only ---- */
 const AN=()=>S.ann||(S.ann={items:[],cur:null,on:false,mode:'bar',pos:'bottom',size:5,bg:'#000000',op:80,fg:'#ffffff',speed:9,rot:false,sec:8,since:0});
@@ -18388,7 +18389,7 @@ payload=function(){const p=_pl.apply(this,arguments);
     const a=f('a'),s=f('s');if(a.some(Boolean)||s.some(Boolean))p.sbg={a,s};
     const al=k=>D.filter(d=>d.k===k).map(d=>{const q=d.src;if(!q||!q.m||q.m==='live')return null;if(q.m==='blank')return{blank:1};
       const so=S.songs.find(x=>x.id===q.s);if(!so)return null;const ss=S.sel,si=idx;S.sel=so.id;idx=Math.max(0,Math.min(+q.i||0,expand(so).length-1));
-      try{return _pl.apply(window)}finally{S.sel=ss;idx=si}});
+      let r;try{r=_pl.apply(window)}finally{S.sel=ss;idx=si}if(d.bgl&&p.d){r.lbd={};SBG_K.forEach(k=>{if(p.d[k]!==undefined)r.lbd[k]=p.d[k]})}return r});
     const A2=al('a'),S2=al('s');if(A2.some(Boolean)||S2.some(Boolean))p.alt={a:A2,s:S2}}catch(e){}
   return p};
 const ents=k=>lpScr.get().filter(d=>d.k===k);
@@ -18470,7 +18471,7 @@ function mons(){
     const wr=document.createElement('div');wr.className='stW'+(m.t==='p'?' pv':m.t==='a'?' live':'');
     if(m.t!=='p'){
       const e=ents(m.t)[m.n]||{},custom=e.bgo&&e.bgo.on;
-      const bb=document.createElement('button');bb.textContent='Background: '+(custom?'own':'follows slide');bb.className=custom?'on':'';bb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(bb);
+      const bb=document.createElement('button');bb.textContent='Background: '+(custom?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));bb.className=custom?'on':'';bb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(bb);
       const lb=document.createElement('button');lb.className='lkb'+(e.lk?' on':'');lb.textContent=e.lk?'⛓ '+e.lk:'⛓ link';lb.title='Link backgrounds: screens with the same letter always share one background';lb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(lb)}
     el.append(hd,wr);host.appendChild(el);
     if(m.t==='s'){
@@ -18507,7 +18508,7 @@ function mark(){const same=liveSel()===S.sel,li=liveIdx();sc.forEach((c,i)=>{c.c
 function members(k,n){const g=ents(k),e=g[n];return e.lk?g.filter(x=>x.lk===e.lk):[e]}
 function edit(k,n,fn){const e=ents(k)[n];if(!e.bgo)return;fn(e.bgo.d);if(e.lk){const src=e.bgo;ents(k).forEach(x=>{if(x!==e&&x.lk===e.lk)x.bgo={on:src.on,d:JSON.parse(JSON.stringify(src.d))}})}
   try{lpScr.redraw()}catch(er){}push();paintMons();mons2()}
-function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent='Background: '+(c?'own':'follows slide');b[0].className=c?'on':'';b[1].textContent=e.lk?'⛓ '+e.lk:'⛓ link';b[1].className='lkb'+(e.lk?' on':'')})}
+function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent='Background: '+(c?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));b[0].className=c?'on':'';b[1].textContent=e.lk?'⛓ '+e.lk:'⛓ link';b[1].className='lkb'+(e.lk?' on':'')})}
 function closePop(){if(pop){pop.remove();pop=null}}
 function openPop(k,n,anchor){
   closePop();const host=$('#stMons'),e=ents(k)[n];
@@ -18518,10 +18519,12 @@ function openPop(k,n,anchor){
     const e=ents(k)[n],on=e.bgo&&e.bgo.on;pop.innerHTML='';
     const h=document.createElement('h4');h.textContent=nameOf(k,n)+' background';const x=document.createElement('button');x.textContent='✕';x.onclick=closePop;h.appendChild(x);pop.appendChild(h);
     const sg=document.createElement('span');sg.className='sg';pop.appendChild(sg);
-    seg(sg,[['f','Follow the slide'],['c','Its own background']],on?'c':'f',v=>{
-      if(v==='f'){if(e.bgo)e.bgo.on=false}
+    const pinned=e.src&&e.src.m==='pin';
+    seg(sg,pinned?[['f',"The slide's own"],['l','Same as live'],['c','Choose another']]:[['f','Follow the slide'],['c','Its own background']],on?'c':(e.bgl&&pinned?'l':'f'),v=>{
+      e.bgl=v==='l';
+      if(v==='f'||v==='l'){if(e.bgo)e.bgo.on=false}
       else{if(!e.bgo||!e.bgo.d||!Object.keys(e.bgo.d).length){const cu=eff(cur(),idx),d={};SBG_K.forEach(q=>{if(cu[q]!==undefined)d[q]=JSON.parse(JSON.stringify(cu[q]))});if(!d.bg)d.bg='Gold';e.bgo={on:true,d}}else e.bgo.on=true}
-      if(e.lk)members(k,n).forEach(m=>{if(m!==e)m.bgo=e.bgo?{on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}:undefined});
+      if(e.lk)members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo=e.bgo?{on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}:undefined}});
       try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
     /* link group */
     const lr=document.createElement('div');lr.className='row2';lr.innerHTML='<span class="lbl">Link with:</span>';
@@ -18571,18 +18574,29 @@ window.dscScrTab=function(tab,P,d,saved){
   const q=d.src||{m:'live'},items=flatItems();
   const so=()=>items.find(x=>x.id===q.s)||items[0];
   P.innerHTML='<div class="hint" style="margin:0 0 6px;flex-basis:100%">What this screen shows. It normally follows the slide you are on. Pin it to any slide from any item, or keep it blank, while the other screens carry on.</div>'
+   +'<div class="w" style="flex-basis:100%"><div class="stage" id="srPv" style="width:230px;aspect-ratio:16/9;border:1px solid #444;border-radius:6px;overflow:hidden;position:relative"></div></div>'
    +'<label class="w">Source<select id="srM"><option value="live">Follow the live slide</option><option value="pin">A chosen slide</option><option value="blank">Blank (black)</option></select></label>'
-   +'<label class="w" id="srIw">Item<select id="srI"></select></label><label class="w" id="srSw">Slide<select id="srS"></select></label>';
+   +'<label class="w" id="srIw">Item<select id="srI"></select></label><label class="w" id="srSw">Slide<select id="srS"></select></label>'
+   +'<label class="w" id="srBw">Background<select id="srB"><option value="f">The slide\'s own background</option><option value="l">Same as the live slide</option><option value="c">Choose another\u2026</option></select></label>'
+   +'<div id="srBG" class="row w" style="gap:5px;flex-wrap:wrap"></div>';
   const M=P.querySelector('#srM'),I=P.querySelector('#srI'),Sl=P.querySelector('#srS');
   M.value=q.m||'live';
   const fillS=()=>{const s=items.find(x=>String(x.id)===I.value);Sl.innerHTML='';expand(s).forEach((x,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(i+1)+'  '+(x.label||'');Sl.appendChild(o)});Sl.value=Math.min(+q.i||0,Sl.options.length-1)};
   items.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.title||'Untitled';I.appendChild(o)});
   I.value=so()?so().id:'';fillS();
-  const vis=()=>{P.querySelector('#srIw').style.display=P.querySelector('#srSw').style.display=M.value==='pin'?'':'none'};
+  const B=P.querySelector('#srB'),BG=P.querySelector('#srBG');
+  const bmode=()=>d.bgo&&d.bgo.on?'c':(d.bgl&&d.src&&d.src.m==='pin'?'l':'f');
+  B.value=bmode();
+  const pv=()=>{try{const e=P.querySelector('#srPv'),k=d.k,n=lpScr.get().filter(x=>x.k===k).indexOf(d);paint(e,applyLook(payload(),k==='a'?'a':'a',n))}catch(er){}};
+  const bgUi=()=>{BG.innerHTML='';if(B.value!=='c'||M.value!=='pin')return;
+    Object.keys(G).forEach(q=>{const b=document.createElement('button');b.title=q;b.style.cssText='width:44px;height:28px;border-radius:5px;border:2px solid '+(d.bgo&&d.bgo.d&&d.bgo.d.bg===q?'#E8B923':'#444')+';background:'+G[q];b.onclick=()=>{d.bgo={on:true,d:{bg:q}};d.bgl=false;saved();try{push()}catch(er){}bgUi();pv()};BG.appendChild(b)});
+    const t=document.createElement('div');t.className='hint';t.style.flexBasis='100%';t.textContent='Pictures, videos, colours and loops: use Studio \u25b8 Background on this screen.';BG.appendChild(t)};
+  const vis=()=>{P.querySelector('#srIw').style.display=P.querySelector('#srSw').style.display=P.querySelector('#srBw').style.display=M.value==='pin'?'':'none';bgUi()};
   const commit=()=>{if(M.value==='live')delete d.src;else if(M.value==='blank')d.src={m:'blank'};else d.src={m:'pin',s:items.find(x=>String(x.id)===I.value).id,i:+Sl.value||0};
-    saved();try{push()}catch(e){}};
+    saved();try{push()}catch(e){}pv()};
+  B.onchange=()=>{const v=B.value;d.bgl=v==='l';if(v==='c'){if(!d.bgo||!d.bgo.d||!d.bgo.d.bg)d.bgo={on:true,d:{bg:'Gold'}};else d.bgo.on=true}else if(d.bgo)d.bgo.on=false;saved();try{push()}catch(e){}bgUi();pv()};
   M.onchange=()=>{vis();commit()};I.onchange=()=>{q.i=0;fillS();commit()};Sl.onchange=()=>{q.i=+Sl.value;commit()};
-  vis();
+  vis();setTimeout(pv,50);
 };
 window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
 })();
