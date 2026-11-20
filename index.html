@@ -3658,11 +3658,14 @@ function vcApply(v,c){if(!v)return;if(c.op==='play')v.play().catch(()=>{});else 
 function stripMedia(p){return{...p,u:'',d:{...p.d,bg:'Color',color:'#000000',img:'',lib:'',dim:0,nobg:1}}}
 const SBG_K=['bg','lib','img','loop','color','grad','bgf','dim','fit','pat','tex','bgop','tile','nobg','yt'];
 function sbgApply(p,kind,n){
-  const A=p&&p.sbg&&p.sbg.a;if(kind!=='a'||!A)return p;
-  if(n===undefined){const h=location.hash;n=/^#output/.test(h)?(+((/[&?]n=(\d+)/.exec(h)||[])[1])||0):0}
+  if(!p||(!p.sbg&&!p.alt))return p;
+  if(n===undefined){const h=location.hash;n=kind==='a'?(/^#output/.test(h)?(+((/[&?]n=(\d+)/.exec(h)||[])[1])||0):0):(/^#stage/.test(h)?(parseInt(h.slice(6))||0):0)}
+  let L={};try{L=window.__libO||window.__libM||lib||{}}catch(e){}
+  const AL=p.alt&&p.alt[kind]&&p.alt[kind][n];
+  if(AL){if(AL.blank)p={...p,black:true};else p={...AL,look:p.look,stl:p.stl,sbg:p.sbg,sl:p.sl,sw:p.sw,si:p.si,alt:null,u:(AL.d&&AL.d.lib&&L[AL.d.lib])||''}}
+  const A=p.sbg&&p.sbg.a;if(kind!=='a'||!A)return p;
   const o=A[n];if(!o||!o.on||!o.d)return p;
   const d={...p.d};SBG_K.forEach(k=>{delete d[k]});Object.assign(d,o.d);
-  let L={};try{L=window.__libO||window.__libM||lib||{}}catch(e){}
   return {...p,d,u:(d.lib&&L[d.lib])||''};
 }
 function sbgStage(m,n,L){
@@ -3760,7 +3763,7 @@ if(/^#stage/.test(location.hash)){
     if(m.atok!==undefined){window._atok=m.atok;window._atokAt=Date.now();return}
     if(m.vc){vcApply(o.querySelector('video:not(.mcL):not(.camL)'),m.vc);return}
     if(m.mcc){const v=o.querySelector('video.mcL');if(v){if(m.mcc.op==='stop'){v.pause();try{v.currentTime=+m.mcc.s||0}catch(e){}}else vcApply(v,m.mcc)}return}
-    if(m.blob){if(!libO[m.blob.name])libO[m.blob.name]=URL.createObjectURL(m.blob.file);if(lastP){const nm=m.blob.name,own=lastP.d.lib===nm;if(own)lastP.u=libO[nm];if(own||lastP.sbg||(lastP.d.lay||[]).some(x=>x&&x.lib===nm)||(lastP.mc&&lastP.mc.name===nm))paint(o,applyLook(lastP,'a'))}return}
+    if(m.blob){if(!libO[m.blob.name])libO[m.blob.name]=URL.createObjectURL(m.blob.file);if(lastP){const nm=m.blob.name,own=lastP.d.lib===nm;if(own)lastP.u=libO[nm];if(own||lastP.sbg||lastP.alt||(lastP.d.lay||[]).some(x=>x&&x.lib===nm)||(lastP.mc&&lastP.mc.name===nm))paint(o,applyLook(lastP,'a'))}return}
     if(m.d&&m.only!=='s'){m.u=(m.d.lib&&libO[m.d.lib])||'';lastP=m;paint(o,applyLook(m,'a'))}};
   bc.postMessage({hello:1});
   document.title='Lyrics Output';
@@ -4938,6 +4941,7 @@ function payload(){
 }
 function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
   const ln=p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
+  if(p.alt)['a','s'].forEach(k=>(p.alt[k]||[]).forEach(o=>{const l2=o&&o.d&&o.d.lib;if(l2&&libFile[l2]&&!sent[l2]){sent[l2]=1;bc.postMessage({blob:{name:l2,file:libFile[l2]}})}}));
   if(p.sbg)['a','s'].forEach(k=>(p.sbg[k]||[]).forEach(o=>{const l2=o&&o.on&&o.d&&o.d.lib;if(l2&&libFile[l2]&&!sent[l2]){sent[l2]=1;bc.postMessage({blob:{name:l2,file:libFile[l2]}})}}));
   bc.postMessage(p);
   try{markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd()}catch(e){console.error(e)}
@@ -8608,7 +8612,7 @@ document.querySelectorAll('#ptabs button').forEach(b=>b.onclick=()=>{
  <div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 id="scN"></h3><div class="hint" id="scS" style="margin:0"></div></div><span class="row" style="gap:6px"><label style="flex-direction:row;align-items:center;gap:4px;min-width:0;flex:none">Screen color<input type="color" id="scCol" style="width:34px;padding:0"></label><button id="scRen" title="Rename this screen">Rename</button><button id="scId" title="Show a big label on every screen">Identify</button><button id="scTp" title="Send a test pattern to this screen">Test pattern</button><button id="scDel">Remove</button><button id="scX" class="pri">Done</button></span></div>
  <div class="row"><select id="scMode" style="width:auto" aria-label="Screen type"><option>Single</option><option>Mirror</option></select></div>
  <div class="scBox" id="scBox"></div>
- <div class="scT" id="scT"><button data-t="hw" class="on">Hardware</button><button data-t="co">Color</button><button data-t="cp">Corner Pin</button><button data-t="ly" hidden>Layout</button><button data-t="ak">Alpha Key</button><button data-t="gp">Group / Blend</button><button data-t="mk">Mask</button></div>
+ <div class="scT" id="scT"><button data-t="hw" class="on">Hardware</button><button data-t="co">Color</button><button data-t="sr" title="Choose which slides this screen shows">Source</button><button data-t="cp">Corner Pin</button><button data-t="ly" hidden>Layout</button><button data-t="ak">Alpha Key</button><button data-t="gp">Group / Blend</button><button data-t="mk">Mask</button></div>
  <div class="scP" id="scP"></div>
  <div class="hint" style="margin:0">Output settings are saved now and will drive the NDI sender when it is added.</div>
 </div></div></div>
@@ -8626,7 +8630,7 @@ function list(){const L=g('scL');L.innerHTML='';[['a','Audience'],['s','Stage']]
  h.querySelector('button').onclick=()=>{D.push({k,on:true,n:t+' '+(D.filter(d=>d.k===k).length+1),r:'1920x1080',o:'NDI',tg:'Full',nm:'Disciples PreCenter - '+t,md:'1080p 30',col:'#000000',cp:[0,0,0,0,0,0,0,0],ak:false});sel=D.length-1;save();draw()};L.appendChild(h);
  D.forEach((d,i)=>{if(d.k!==k)return;const e=document.createElement('div');e.className='scI'+(i===sel?' sel':'')+(d.on===false?' off':'');e.innerHTML=`<b></b><small>${d.r.replace('x',' x ')}</small>`;e.firstChild.textContent=d.n;e.onclick=()=>{sel=i;draw()};L.appendChild(e)})})}
 function pane(){const d=D[sel],P=g('scP');
- if((tab==='gp'||tab==='mk')&&window.dscScrTab){window.dscScrTab(tab,P,d,()=>{save();head()});return}
+ if((tab==='gp'||tab==='mk'||tab==='sr')&&window.dscScrTab){window.dscScrTab(tab,P,d,()=>{save();head()});return}
  if(tab==='hw')P.innerHTML=`<label class="w" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" data-f="on" style="width:auto"${d.on!==false?' checked':''}>Screen enabled</label><label class="w">Output<select data-f="o">${opts(['Window','NDI'],d.o)}</select></label><label>Resolution<select data-f="r">${resO(d.r)}</select></label><label class="w" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" data-f="fit" style="width:auto"${d.fit?' checked':''}>Keep this aspect ratio (black bars)</label><label>Output target<select data-f="tg">${opts(['Full','Left half','Right half'],d.tg)}</select></label><label>Mode<select data-f="md">${opts(MODES,d.md)}</select></label><label class="w">Name<input data-f="nm" value=""></label>${d.o==='Window'?'<div class="w" id="dscDispRow"></div>':''}`;
  else if(tab==='co')P.innerHTML=`<label class="w">Screen color<input type="color" data-f="col" value="${d.col}"></label>`;
  else if(tab==='cp')P.innerHTML=['Top left','Top right','Bottom left','Bottom right'].map((n,i)=>`<label>${n} X / Y<span class="row" style="flex-wrap:nowrap"><input type="number" data-c="${i*2}" value="${d.cp[i*2]}"><input type="number" data-c="${i*2+1}" value="${d.cp[i*2+1]}"></span></label>`).join('');
@@ -18381,7 +18385,11 @@ try{view=localStorage.getItem(K_V)||'both';click=localStorage.getItem(K_C)||'liv
 const _pl=payload;
 payload=function(){const p=_pl.apply(this,arguments);
   try{const D=lpScr.get(),f=k=>D.filter(d=>d.k===k).map(d=>d.bgo&&d.bgo.on&&d.bgo.d?{on:true,d:d.bgo.d}:null);
-    const a=f('a'),s=f('s');if(a.some(Boolean)||s.some(Boolean))p.sbg={a,s}}catch(e){}
+    const a=f('a'),s=f('s');if(a.some(Boolean)||s.some(Boolean))p.sbg={a,s};
+    const al=k=>D.filter(d=>d.k===k).map(d=>{const q=d.src;if(!q||!q.m||q.m==='live')return null;if(q.m==='blank')return{blank:1};
+      const so=S.songs.find(x=>x.id===q.s);if(!so)return null;const ss=S.sel,si=idx;S.sel=so.id;idx=Math.max(0,Math.min(+q.i||0,expand(so).length-1));
+      try{return _pl.apply(window)}finally{S.sel=ss;idx=si}});
+    const A2=al('a'),S2=al('s');if(A2.some(Boolean)||S2.some(Boolean))p.alt={a:A2,s:S2}}catch(e){}
   return p};
 const ents=k=>lpScr.get().filter(d=>d.k===k);
 const shown=k=>{const g=ents(k);const on=g.map((d,i)=>d.on!==false?i:-1).filter(i=>i>=0);return on.length?on:[0]};
@@ -18458,7 +18466,7 @@ function mons(){
   list.forEach(m=>{
     const el=document.createElement('div');el.className='stM';el.style.width=w+'px';
     const hd=document.createElement('div');hd.className='stMh';
-    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':nameOf(m.t,m.n)+(m.t==='a'?' · main':' · control');hd.appendChild(nm);
+    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':nameOf(m.t,m.n)+(m.t==='a'?' · main':' · control')+((ents(m.t)[m.n]||{}).src?' · own source':'');hd.appendChild(nm);
     const wr=document.createElement('div');wr.className='stW'+(m.t==='p'?' pv':m.t==='a'?' live':'');
     if(m.t!=='p'){
       const e=ents(m.t)[m.n]||{},custom=e.bgo&&e.bgo.on;
@@ -18556,6 +18564,26 @@ V.addEventListener('click',e=>{if(pop&&!e.composedPath().includes(pop)&&!e.targe
 addEventListener('resize',()=>{if(open)mons()});
 /* keep in step with the real show */
 const _push=push;push=function(){const r=_push.apply(this,arguments);if(open){try{strip();paintMons()}catch(e){}}return r};
+/* ---- Screens dialog: Source tab ---- */
+const _t=window.dscScrTab;
+window.dscScrTab=function(tab,P,d,saved){
+  if(tab!=='sr'){return _t.apply(this,arguments)}
+  const q=d.src||{m:'live'},items=flatItems();
+  const so=()=>items.find(x=>x.id===q.s)||items[0];
+  P.innerHTML='<div class="hint" style="margin:0 0 6px;flex-basis:100%">What this screen shows. It normally follows the slide you are on. Pin it to any slide from any item, or keep it blank, while the other screens carry on.</div>'
+   +'<label class="w">Source<select id="srM"><option value="live">Follow the live slide</option><option value="pin">A chosen slide</option><option value="blank">Blank (black)</option></select></label>'
+   +'<label class="w" id="srIw">Item<select id="srI"></select></label><label class="w" id="srSw">Slide<select id="srS"></select></label>';
+  const M=P.querySelector('#srM'),I=P.querySelector('#srI'),Sl=P.querySelector('#srS');
+  M.value=q.m||'live';
+  const fillS=()=>{const s=items.find(x=>String(x.id)===I.value);Sl.innerHTML='';expand(s).forEach((x,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(i+1)+'  '+(x.label||'');Sl.appendChild(o)});Sl.value=Math.min(+q.i||0,Sl.options.length-1)};
+  items.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.title||'Untitled';I.appendChild(o)});
+  I.value=so()?so().id:'';fillS();
+  const vis=()=>{P.querySelector('#srIw').style.display=P.querySelector('#srSw').style.display=M.value==='pin'?'':'none'};
+  const commit=()=>{if(M.value==='live')delete d.src;else if(M.value==='blank')d.src={m:'blank'};else d.src={m:'pin',s:items.find(x=>String(x.id)===I.value).id,i:+Sl.value||0};
+    saved();try{push()}catch(e){}};
+  M.onchange=()=>{vis();commit()};I.onchange=()=>{q.i=0;fillS();commit()};Sl.onchange=()=>{q.i=+Sl.value;commit()};
+  vis();
+};
 window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
 })();
 </script>
