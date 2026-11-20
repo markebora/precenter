@@ -199,6 +199,7 @@ body.stg .hb{display:flex;justify-content:space-between;align-items:center;font-
 body.stg .tm{color:#E8B923;font-weight:700}
 body.stg .card{position:relative;border:.25vw solid #2d2d32;border-radius:1vw;background:#0c0c0e;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:3.2vw 2.4vw 1.4vw}
 body.stg .card.live{border-color:#d33}
+body.stg.sb .card{background:rgba(0,0,0,.5)}
 body.stg .card.mr{position:fixed;left:1.5vw;top:9vh;width:60vw;padding:0;border-color:#d33;align-items:stretch;justify-content:stretch}
 body.stg .card.mr .stage{width:100%;height:auto}
 body.stg .card.mr .tag{z-index:5;top:.5vw;left:.7vw}
@@ -3655,7 +3656,24 @@ function vidSound(v,mp){v.volume=mp.vol==null?1:Math.max(0,Math.min(1,mp.vol/100
 function vcApply(v,c){if(!v)return;if(c.op==='play')v.play().catch(()=>{});else if(c.op==='pause')v.pause();else if(c.op==='seek'&&isFinite(c.t))v.currentTime=c.t}
 /* ---------- looks: which layers each screen shows ---------- */
 function stripMedia(p){return{...p,u:'',d:{...p.d,bg:'Color',color:'#000000',img:'',lib:'',dim:0,nobg:1}}}
-function applyLook(p,kind){
+const SBG_K=['bg','lib','img','loop','color','grad','bgf','dim','fit','pat','tex','bgop','tile','nobg','yt'];
+function sbgApply(p,kind,n){
+  const A=p&&p.sbg&&p.sbg.a;if(kind!=='a'||!A)return p;
+  if(n===undefined){const h=location.hash;n=/^#output/.test(h)?(+((/[&?]n=(\d+)/.exec(h)||[])[1])||0):0}
+  const o=A[n];if(!o||!o.on||!o.d)return p;
+  const d={...p.d};SBG_K.forEach(k=>{delete d[k]});Object.assign(d,o.d);
+  let L={};try{L=window.__libO||window.__libM||lib||{}}catch(e){}
+  return {...p,d,u:(d.lib&&L[d.lib])||''};
+}
+function sbgStage(m,n,L){
+  let el=document.getElementById('sbg');const o=m.sbg&&m.sbg.s&&m.sbg.s[n];
+  if(!o||!o.on||!o.d){if(el)el.remove();window.__sb=0;return}
+  if(!el){el=document.createElement('div');el.id='sbg';el.className='stage';el.style.cssText='position:fixed;inset:0;z-index:-1;pointer-events:none';document.body.insertBefore(el,document.body.firstChild)}
+  window.__sb=1;
+  paint(el,{...m,d:{...o.d},u:(o.d.lib&&L[o.d.lib])||'',text:'',props:[],msg:'',ch:null,cam:null,te:0,cd:null,og:null,clear:false,black:false});
+}
+function applyLook(p,kind,n){
+  p=sbgApply(p,kind,n);
   const L=p&&p.look&&p.look[kind];if(!L)return p;
   let q={...p};
   if(kind==='a'){
@@ -3705,12 +3723,12 @@ if(/^#stage/.test(location.hash)){
   const fitT=(el,max,min)=>{let f=max;el.style.fontSize=f+'vw';const box=el.parentNode,cs=getComputedStyle(box),av=box.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);while(f>min&&el.scrollHeight>av){f-=.3;el.style.fontSize=f+'vw'}};
   const stgSet=(el,t,ch)=>{if(!ch){el.textContent=t;return}el.textContent='';ch.forEach(ln=>{const d=document.createElement('div');d.className='cl';ln.forEach(q=>{const c=document.createElement('span');c.className='cs';const b=document.createElement('b'),i=document.createElement('i');b.textContent=q[0]||'\u00a0';i.textContent=q[1]||'';c.append(b,i);d.appendChild(c)});el.appendChild(d)})};
   const clk=()=>{$('#sk').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};setInterval(clk,1000);clk();
-  const libM={};let mirP=null,mirOn=false;
+  const libM={};window.__libM=libM;let mirP=null,mirOn=false;
   const mirPaint=()=>{if(!mirOn||!mirP||document.hidden)return;const m=mirP,u=(m.d.lib&&libM[m.d.lib])||m.u||'';try{paint($('#smir'),applyLook({...m,u},'a'));$('#smir').querySelectorAll('video').forEach(v=>{v.muted=true;try{v.pause()}catch(e){}})}catch(e){}};
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)mirPaint()});
-  bc.onmessage=e=>{if(e.data.blob){try{if(!libM[e.data.blob.name])libM[e.data.blob.name]=URL.createObjectURL(e.data.blob.file);mirPaint()}catch(x){}return}if(e.data.tp!==undefined){if(window.dscTpFor&&!dscTpFor(e.data,'s'))return;dscTestPattern(e.data.tp,'STAGE '+(stN+1));return}if(!e.data.d||e.data.only==='a')return;const p=applyLook(e.data,'s');
+  bc.onmessage=e=>{if(e.data.blob){try{if(!libM[e.data.blob.name])libM[e.data.blob.name]=URL.createObjectURL(e.data.blob.file);mirPaint()}catch(x){}return}if(e.data.tp!==undefined){if(window.dscTpFor&&!dscTpFor(e.data,'s'))return;dscTestPattern(e.data.tp,'STAGE '+(stN+1));return}if(!e.data.d||e.data.only==='a')return;const p=applyLook(e.data,'s');try{sbgStage(e.data,stN,libM)}catch(x){}
     const lay=(p.stl&&p.stl[stN])||'both',z=LSIZ[lay]||LSIZ.both;
-    document.body.className='stg lay-'+lay;
+    document.body.className='stg lay-'+lay+(window.__sb?' sb':'');
     document.querySelector('.card.live').hidden=lay==='clock'||lay==='mir';
     {const mr=document.querySelector('.card.mr');mirOn=lay==='mir';mr.hidden=!mirOn;if(mirOn){mirP=e.data;mirPaint()}else{mirP=null;const sm=$('#smir');cancelAnimationFrame(sm._raf);cancelAnimationFrame(sm._lpRaf);sm.innerHTML='';sm.dataset.k='';delete sm.dataset.t}}
     document.querySelector('.card.nx').hidden=lay==='live'||lay==='clock';
@@ -3742,7 +3760,7 @@ if(/^#stage/.test(location.hash)){
     if(m.atok!==undefined){window._atok=m.atok;window._atokAt=Date.now();return}
     if(m.vc){vcApply(o.querySelector('video:not(.mcL):not(.camL)'),m.vc);return}
     if(m.mcc){const v=o.querySelector('video.mcL');if(v){if(m.mcc.op==='stop'){v.pause();try{v.currentTime=+m.mcc.s||0}catch(e){}}else vcApply(v,m.mcc)}return}
-    if(m.blob){if(!libO[m.blob.name])libO[m.blob.name]=URL.createObjectURL(m.blob.file);if(lastP){const nm=m.blob.name,own=lastP.d.lib===nm;if(own)lastP.u=libO[nm];if(own||(lastP.d.lay||[]).some(x=>x&&x.lib===nm)||(lastP.mc&&lastP.mc.name===nm))paint(o,applyLook(lastP,'a'))}return}
+    if(m.blob){if(!libO[m.blob.name])libO[m.blob.name]=URL.createObjectURL(m.blob.file);if(lastP){const nm=m.blob.name,own=lastP.d.lib===nm;if(own)lastP.u=libO[nm];if(own||lastP.sbg||(lastP.d.lay||[]).some(x=>x&&x.lib===nm)||(lastP.mc&&lastP.mc.name===nm))paint(o,applyLook(lastP,'a'))}return}
     if(m.d&&m.only!=='s'){m.u=(m.d.lib&&libO[m.d.lib])||'';lastP=m;paint(o,applyLook(m,'a'))}};
   bc.postMessage({hello:1});
   document.title='Lyrics Output';
@@ -4920,6 +4938,7 @@ function payload(){
 }
 function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
   const ln=p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
+  if(p.sbg)['a','s'].forEach(k=>(p.sbg[k]||[]).forEach(o=>{const l2=o&&o.on&&o.d&&o.d.lib;if(l2&&libFile[l2]&&!sent[l2]){sent[l2]=1;bc.postMessage({blob:{name:l2,file:libFile[l2]}})}}));
   bc.postMessage(p);
   try{markTray();$('#bBlack').classList.toggle('on',black);drawLayers();armAdv();drawNotes();dots();if(!selfEdit)drawSlideEd()}catch(e){console.error(e)}
   remotePublish();r2Stream();scrPrev()}
@@ -18306,6 +18325,239 @@ const v0=ld('dsc.auVol');if(v0!==null&&!isNaN(+v0)){vol.value=v0;vol.dispatchEve
 aud.el.muted=ld('dsc.auMute')==='1';paintMute();paintVol();
 })();
 
+</script>
+<script>
+/* ---- Right panel: see every screen (Audience, each Stage, or Audience + Stage together) ---- */
+(function(){
+if(/^#(output|stage|layout)/.test(location.hash))return;
+const pvw=document.querySelector('.pvw');if(!pvw||!pvw.parentNode)return;
+const KEY='dsc-pv-view',base=()=>location.href.split('#')[0];
+let view='a';try{view=localStorage.getItem(KEY)||'a'}catch(e){}
+const st=document.createElement('style');
+st.textContent='#pvTabs{display:flex;gap:4px;margin:0 0 6px;flex-wrap:wrap}#pvTabs button{flex:1;min-width:0;padding:4px 6px;font-size:11.5px;font-weight:600;border-radius:7px;border:1px solid var(--line);background:var(--card,#141417);color:var(--mut,#9a9aa3);cursor:pointer;white-space:nowrap}#pvTabs button.on{background:#E8B923;border-color:#E8B923;color:#1a1405}#pvTabs button:hover:not(.on){color:var(--tx,#fff);border-color:#4a3b0e}.pvF{position:relative;flex:1;min-width:0;aspect-ratio:16/9;overflow:hidden;background:#000}.pvF iframe{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;pointer-events:none;background:#000}.pvF .pvTag{position:absolute;left:6px;top:5px;font:700 10px system-ui,sans-serif;letter-spacing:.12em;color:#E8B923;background:#000a;border-radius:5px;padding:2px 6px}#pvS{margin-top:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex}';
+document.head.appendChild(st);
+const bar=document.createElement('div');bar.id='pvTabs';bar.setAttribute('role','tablist');bar.setAttribute('aria-label','Which screen to preview');
+pvw.parentNode.insertBefore(bar,pvw);
+const nSt=()=>{try{return Math.max(1,lpScr.get().filter(d=>d.k==='s').length)}catch(e){return 1}};
+let frame=null,ro=null,shown='',cnt=0;
+const prev=document.getElementById('preview');
+function kill(){if(ro){ro.disconnect();ro=null}if(frame){frame.remove();frame=null}const s=document.getElementById('pvS');if(s)s.remove();if(prev)prev.style.display=''}
+function mk(n){
+  const w=document.createElement('div');w.className='pvF';
+  const f=document.createElement('iframe');f.title='Stage '+(n+1)+' preview';f.src=base()+'#stage'+n;
+  f.onload=()=>{try{const s=f.contentDocument.createElement('style');s.textContent='#fsHint{display:none!important}';f.contentDocument.head.appendChild(s)}catch(e){}setTimeout(()=>{try{push()}catch(e){}},500)};
+  const t=document.createElement('span');t.className='pvTag';t.textContent='STAGE '+(n+1);
+  w.append(f,t);
+  ro=new ResizeObserver(()=>{f.style.transform='scale('+(w.clientWidth/1280)+')'});ro.observe(w);
+  return w}
+function apply(){
+  cnt=nSt();if(view!=='a'&&view!=='both'&&!(/^s\d+$/.test(view)&&+view.slice(1)<cnt))view='a';
+  if(view==='both'&&false)return;
+  if(shown===view)return;shown=view;kill();
+  if(view==='a'){}
+  else if(view==='both'){const s=document.createElement('div');s.id='pvS';frame=mk(0);s.appendChild(frame);pvw.after(s)}
+  else{const n=+view.slice(1);frame=mk(n);if(prev)prev.style.display='none';pvw.insertBefore(frame,pvw.firstChild)}
+  paintTabs()}
+function paintTabs(){
+  const items=[['a','Audience']];for(let i=0;i<cnt;i++)items.push(['s'+i,cnt>1?'Stage '+(i+1):'Stage']);items.push(['both','Both']);
+  bar.innerHTML='';items.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.textContent=l;b.className=view===v?'on':'';b.setAttribute('role','tab');b.setAttribute('aria-selected',view===v);b.title=v==='a'?'What the audience sees':v==='both'?'Audience and stage screen together':'What the stage screen shows';b.onclick=()=>{view=v;try{localStorage.setItem(KEY,v)}catch(e){}apply()};bar.appendChild(b)})}
+cnt=nSt();shown='\0';apply();
+setInterval(()=>{if(nSt()!==cnt){cnt=nSt();shown='\0';apply()}},2500);
+})();
+</script>
+<script>
+/* ---- Studio mode: slides in one strip at the bottom, big monitors in the centre ---- */
+(function(){
+if(/^#(output|stage|layout)/.test(location.hash))return;
+const $=s=>document.querySelector(s),base=()=>location.href.split('#')[0];
+const K_V='dsc-st-view',K_C='dsc-st-click';
+let view='both',click='live',open=false,pop=null,bgTab='Looks';
+const TK=f=>window.dscTake?dscTake(f):f();
+const liveIdx=()=>window.dscLiveIdx?dscLiveIdx():idx,liveSel=()=>window.dscLiveSel?dscLiveSel():S.sel;
+function livePay(){const ss=S.sel,si=idx;S.sel=liveSel();idx=liveIdx();try{return payload()}finally{S.sel=ss;idx=si}}
+function needPrev(){const b=document.querySelector('#clrRow button.hold');if(b&&!b.classList.contains('on'))b.click()}
+try{view=localStorage.getItem(K_V)||'both';click=localStorage.getItem(K_C)||'live'}catch(e){}
+/* ---- per-screen backgrounds go out with every payload ---- */
+const _pl=payload;
+payload=function(){const p=_pl.apply(this,arguments);
+  try{const D=lpScr.get(),f=k=>D.filter(d=>d.k===k).map(d=>d.bgo&&d.bgo.on&&d.bgo.d?{on:true,d:d.bgo.d}:null);
+    const a=f('a'),s=f('s');if(a.some(Boolean)||s.some(Boolean))p.sbg={a,s}}catch(e){}
+  return p};
+const ents=k=>lpScr.get().filter(d=>d.k===k);
+const shown=k=>{const g=ents(k);const on=g.map((d,i)=>d.on!==false?i:-1).filter(i=>i>=0);return on.length?on:[0]};
+const nameOf=(k,i)=>(k==='a'?'Audience ':'Stage ')+(i+1);
+/* ---- styles ---- */
+const st=document.createElement('style');
+st.textContent=`
+body.studio #mEdit,body.studio #mShow{background:none!important;color:var(--mute)!important}
+body.studio #lib,body.studio #ctr,body.studio #rgt,body.studio #editSec{visibility:hidden!important}
+#studio{position:fixed;left:0;right:0;z-index:40;background:var(--bg,#0b0b0d);display:none;flex-direction:column;color:var(--ink,#eee);font-size:12px}
+body.studio #studio{display:flex}
+#studio .sthd{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line,#26262b);flex-wrap:wrap}
+#studio .sthd b.tt{font-size:13px;letter-spacing:.04em}
+#studio .sg{display:inline-flex;border:1px solid var(--line,#333);border-radius:8px;overflow:hidden}
+#studio .sg button{border:0;border-radius:0;background:none;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--mute,#999);cursor:pointer}
+#studio .sg button.on{background:#E8B923;color:#1a1405}
+#studio .lbl{color:var(--mute,#999);font-size:11px}
+#studio .sp{flex:1}
+#stTake{background:#d33;color:#fff;border:0;border-radius:8px;padding:6px 16px;font-weight:800;cursor:pointer;letter-spacing:.06em}
+#stTake[hidden]{display:none}
+#stMons{flex:1;min-height:0;padding:8px 10px;display:flex;flex-wrap:wrap;gap:10px;align-content:center;justify-content:center;overflow:hidden;position:relative}
+.stM{display:flex;flex-direction:column;gap:4px;min-width:0}
+.stMh{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.stMh b{font-size:11.5px}
+.stMh button{border:1px solid var(--line,#333);background:var(--card,#141417);color:var(--ink,#ddd);border-radius:6px;padding:2px 8px;font-size:10.5px;cursor:pointer}
+.stMh button.on{border-color:#E8B923;color:#E8B923}
+.stMh button{flex:none;width:auto}.stMh .lkb{margin-left:auto}
+.stW{position:relative;aspect-ratio:16/9;background:#000;border:2px solid var(--line,#2d2d32);border-radius:6px;overflow:hidden}
+.stW.live{border-color:#d33}.stW.pv{border-color:#f5a623}
+.stW .stage{position:absolute;inset:0}
+.stW iframe{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;pointer-events:none}
+.stW .nf{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:#9a9aa3;font-size:11px}
+#stStrip{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:8px 10px 10px;border-top:1px solid var(--line,#26262b);flex:none}
+#stStrip .stS{flex:none;width:168px;cursor:pointer;border:2px solid transparent;border-radius:7px;padding:2px;position:relative}
+#stStrip .stS .stage{aspect-ratio:16/9;width:100%;border-radius:4px;overflow:hidden}
+#stStrip .stS .nm{display:flex;gap:5px;align-items:center;font-size:10.5px;color:var(--mute,#999);padding-top:2px;white-space:nowrap;overflow:hidden}
+#stStrip .stS .nm i{width:8px;height:8px;border-radius:50%;background:var(--c,#888);flex:none}
+#stStrip .stS.cur{border-color:#d33}#stStrip .stS.pnd{border-color:#f5a623}
+#stPop{position:absolute;z-index:5;width:330px;max-height:80%;overflow:auto;background:var(--card,#17171b);border:1px solid #4a3b0e;border-radius:10px;padding:10px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+#stPop h4{margin:0 0 8px;font-size:12.5px;display:flex;align-items:center}
+#stPop h4 button{margin-left:auto}
+#stPop .tabs{display:flex;gap:3px;margin:8px 0;flex-wrap:wrap}
+#stPop .tabs button.on{background:#E8B923;color:#1a1405;border-color:#E8B923}
+#stPop .gr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#stPop .gr button{display:flex;flex-direction:column;gap:3px;padding:3px;font-size:10px;align-items:stretch}
+#stPop .gr .th{height:36px;border-radius:4px;background-size:cover;background-position:center}
+#stPop .row2{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+`;
+document.head.appendChild(st);
+/* ---- toolbar button + view ---- */
+const bS=document.createElement('button');bS.className='tbb';bS.id='mStudio';bS.title='Studio mode: slides in one strip, big monitors for every screen';bS.innerHTML='<b>&#9635;</b>Studio';
+$('#mEdit').after(bS);
+const V=document.createElement('div');V.id='studio';
+V.innerHTML='<div class="sthd"><b class="tt">STUDIO</b><span class="sg" id="stView"></span><span class="lbl">Click a slide:</span><span class="sg" id="stClick"></span><span class="sp"></span><button id="stPrev" title="Previous slide">&#9664;</button><button id="stNext" title="Next slide">&#9654;</button><button id="stTake" hidden>TAKE &#9654;</button><button id="stExit">Exit Studio</button></div><div id="stMons"></div><div id="stStrip"></div>';
+document.body.appendChild(V);
+const place=()=>{const tb=$('#tb').getBoundingClientRect(),sb=$('#sbar');V.style.top=tb.bottom+'px';V.style.bottom=(sb?sb.offsetHeight:0)+'px'};
+function seg(host,items,cur,fn){host.innerHTML='';items.forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.className=v===cur?'on':'';b.onclick=()=>fn(v);host.appendChild(b)})}
+function ctl(){
+  seg($('#stView'),[['a','Audience'],['s','Stage'],['both','Both']],view,v=>{view=v;try{localStorage.setItem(K_V,v)}catch(e){}ctl();mons()});
+  seg($('#stClick'),[['live','Live right away'],['take','Preview, then Take']],click,v=>{click=v;if(v==='take')needPrev();try{localStorage.setItem(K_C,v)}catch(e){}ctl();mons();strip(true)});
+  $('#stTake').hidden=click!=='take'}
+/* ---- monitors ---- */
+let mon=[];const ros=[];
+function mons(){
+  place();const host=$('#stMons');ros.forEach(r=>r.disconnect());ros.length=0;
+  host.querySelectorAll('.stM').forEach(x=>{const s=x.querySelector('.stage');if(s){cancelAnimationFrame(s._raf);cancelAnimationFrame(s._lpRaf)}x.remove()});mon=[];
+  const list=[];
+  if(click==='take')list.push({t:'p'});
+  if(view!=='s')shown('a').forEach(i=>list.push({t:'a',n:i}));
+  if(view!=='a')shown('s').forEach(i=>list.push({t:'s',n:i}));
+  const c=list.length,cols=c<=1?1:c<=4?2:3,rows=Math.ceil(c/cols);
+  const W=host.clientWidth-20,H=host.clientHeight-16,cw=(W-10*(cols-1))/cols,ch=(H-10*(rows-1))/rows-24;
+  const w=Math.max(160,Math.min(cw,ch*16/9));
+  list.forEach(m=>{
+    const el=document.createElement('div');el.className='stM';el.style.width=w+'px';
+    const hd=document.createElement('div');hd.className='stMh';
+    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':nameOf(m.t,m.n)+(m.t==='a'?' · main':' · control');hd.appendChild(nm);
+    const wr=document.createElement('div');wr.className='stW'+(m.t==='p'?' pv':m.t==='a'?' live':'');
+    if(m.t!=='p'){
+      const e=ents(m.t)[m.n]||{},custom=e.bgo&&e.bgo.on;
+      const bb=document.createElement('button');bb.textContent='Background: '+(custom?'own':'follows slide');bb.className=custom?'on':'';bb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(bb);
+      const lb=document.createElement('button');lb.className='lkb'+(e.lk?' on':'');lb.textContent=e.lk?'⛓ '+e.lk:'⛓ link';lb.title='Link backgrounds: screens with the same letter always share one background';lb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(lb)}
+    el.append(hd,wr);host.appendChild(el);
+    if(m.t==='s'){
+      const f=document.createElement('iframe');f.title=nameOf('s',m.n);f.src=base()+'#stage'+m.n;
+      f.onload=()=>{try{const s=f.contentDocument.createElement('style');s.textContent='#fsHint{display:none!important}';f.contentDocument.head.appendChild(s)}catch(e){wr.insertAdjacentHTML('beforeend','<div class="nf">The stage preview needs the app to be opened from a web address (not a loose file).</div>')}setTimeout(()=>{try{push()}catch(e){}},500)};
+      wr.appendChild(f);const ro=new ResizeObserver(()=>{f.style.transform='scale('+(wr.clientWidth/1280)+')'});ro.observe(wr);ros.push(ro);
+    }else{const s=document.createElement('div');s.className='stage';wr.appendChild(s);m.s=s}
+    m.el=el;mon.push(m)});
+  paintMons()}
+function paintMons(){
+  if(!open)return;
+  let p;try{p=livePay()}catch(e){return}
+  mon.forEach(m=>{if(m.t==='a')try{paint(m.s,applyLook(p,'a',m.n))}catch(e){}
+    else if(m.t==='p'){try{const q=payload();paint(m.s||(m.s=(()=>{const s=document.createElement('div');s.className='stage';m.el.querySelector('.stW').appendChild(s);return s})()),applyLook(q,'a',0))}catch(e){}}})}
+/* ---- slide strip ---- */
+let sc=new Map(),ssig='';
+function strip(force){
+  const s=cur(),sl=expand(s),box=$('#stStrip');
+  const sg=s.id+'|'+sl.length;if(force||ssig!==sg||(typeof gridDirty!=='undefined'&&gridDirty)){ssig=sg;box.innerHTML='';sc=new Map()}
+  if(!sc.size){
+    sl.forEach((x,i)=>{
+      const e=eff(s,i),c=document.createElement('div');c.className='stS';
+      c.innerHTML='<div class="stage"></div><div class="nm"><i style="--c:'+labColor(x.label)+'"></i></div>';
+      c.lastChild.append((i+1)+' '+(x.label||''));
+      try{paint(c.firstChild,{d:e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0},u:libUrl(e),text:x.text})}catch(er){}
+      c.onclick=()=>{if(click==='take')go(i);else TK(()=>go(i))};
+      c.ondblclick=()=>{TK(()=>go(i))};
+      box.appendChild(c);sc.set(i,c)});
+    requestAnimationFrame(()=>box.querySelectorAll('.stage').forEach(g=>{try{fitStage(g)}catch(e){}}))}
+  mark()}
+function mark(){const same=liveSel()===S.sel,li=liveIdx();sc.forEach((c,i)=>{c.classList.toggle('cur',same&&i===li);c.classList.toggle('pnd',(!same||i!==li)&&i===idx)});
+  const c=sc.get(idx);if(c)c.scrollIntoView({block:'nearest',inline:'nearest'})}
+/* ---- background popover ---- */
+function members(k,n){const g=ents(k),e=g[n];return e.lk?g.filter(x=>x.lk===e.lk):[e]}
+function edit(k,n,fn){const e=ents(k)[n];if(!e.bgo)return;fn(e.bgo.d);if(e.lk){const src=e.bgo;ents(k).forEach(x=>{if(x!==e&&x.lk===e.lk)x.bgo={on:src.on,d:JSON.parse(JSON.stringify(src.d))}})}
+  try{lpScr.redraw()}catch(er){}push();paintMons();mons2()}
+function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent='Background: '+(c?'own':'follows slide');b[0].className=c?'on':'';b[1].textContent=e.lk?'⛓ '+e.lk:'⛓ link';b[1].className='lkb'+(e.lk?' on':'')})}
+function closePop(){if(pop){pop.remove();pop=null}}
+function openPop(k,n,anchor){
+  closePop();const host=$('#stMons'),e=ents(k)[n];
+  pop=document.createElement('div');pop.id='stPop';host.appendChild(pop);
+  const r=anchor.getBoundingClientRect(),hr=host.getBoundingClientRect();
+  pop.style.left=Math.max(4,Math.min(hr.width-340,r.left-hr.left))+'px';pop.style.top=Math.max(4,Math.min(hr.height-200,r.top-hr.top+22))+'px';
+  const draw=()=>{
+    const e=ents(k)[n],on=e.bgo&&e.bgo.on;pop.innerHTML='';
+    const h=document.createElement('h4');h.textContent=nameOf(k,n)+' background';const x=document.createElement('button');x.textContent='✕';x.onclick=closePop;h.appendChild(x);pop.appendChild(h);
+    const sg=document.createElement('span');sg.className='sg';pop.appendChild(sg);
+    seg(sg,[['f','Follow the slide'],['c','Its own background']],on?'c':'f',v=>{
+      if(v==='f'){if(e.bgo)e.bgo.on=false}
+      else{if(!e.bgo||!e.bgo.d||!Object.keys(e.bgo.d).length){const cu=eff(cur(),idx),d={};SBG_K.forEach(q=>{if(cu[q]!==undefined)d[q]=JSON.parse(JSON.stringify(cu[q]))});if(!d.bg)d.bg='Gold';e.bgo={on:true,d}}else e.bgo.on=true}
+      if(e.lk)members(k,n).forEach(m=>{if(m!==e)m.bgo=e.bgo?{on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}:undefined});
+      try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
+    /* link group */
+    const lr=document.createElement('div');lr.className='row2';lr.innerHTML='<span class="lbl">Link with:</span>';
+    const ls=document.createElement('span');ls.className='sg';lr.appendChild(ls);
+    seg(ls,[['','None'],['A','A'],['B','B'],['C','C']],e.lk||'',v=>{
+      e.lk=v;if(v){const o=ents(k).find(y=>y!==e&&y.lk===v&&y.bgo);if(o)e.bgo={on:o.bgo.on,d:JSON.parse(JSON.stringify(o.bgo.d||{}))};else if(e.bgo)ents(k).forEach(y=>{if(y!==e&&y.lk===v)y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}})}
+      try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
+    if(k==='a'&&ents('a').length>1){const all=document.createElement('button');all.textContent='Link all audience screens';all.onclick=()=>{ents('a').forEach(y=>{y.lk='A';if(y!==e&&e.bgo)y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}});try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()};lr.appendChild(all)}
+    const hint=document.createElement('div');hint.className='lbl';hint.style.marginTop='4px';hint.textContent=e.lk?'Linked screens ('+e.lk+') always share this background.':'Not linked: this screen keeps its own background.';
+    pop.append(lr,hint);
+    if(!on)return;
+    const tb=document.createElement('div');tb.className='tabs';['Looks','Media','Color','Gradient','Loop'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.className=t===bgTab?'on':'';b.onclick=()=>{bgTab=t;if(t==='Loop'&&e.bgo.d.bg!=='Loop'&&window.dscLoop){e.bgo.d.bg='Loop';e.bgo.d.loop=e.bgo.d.loop||dscLoop.defaults(dscLoop.list[0].n);edit(k,n,()=>{})}
+      if(t==='Color'&&e.bgo.d.bg!=='Color'){e.bgo.d.bg='Color';e.bgo.d.color=e.bgo.d.color||'#10264d';edit(k,n,()=>{})}
+      if(t==='Gradient'&&e.bgo.d.bg!=='Gradient'){e.bgo.d.bg='Gradient';e.bgo.d.grad=e.bgo.d.grad||{a:160,c:['#3b2d07','#000000']};edit(k,n,()=>{})}
+      draw()};tb.appendChild(b)});pop.appendChild(tb);
+    const body=document.createElement('div');pop.appendChild(body);
+    const D=e.bgo.d,after=()=>edit(k,n,()=>{});
+    const setBase=o=>{SBG_K.forEach(q=>{if(!(q in o)&&['bg','lib','img','loop','color','grad'].includes(q))delete D[q]});Object.assign(D,o);after();draw()};
+    if(bgTab==='Looks'){const g=document.createElement('div');g.className='gr';
+      Object.keys(G).forEach(q=>{const b=document.createElement('button');b.innerHTML='<div class="th" style="background:'+G[q]+'"></div><span>'+q+'</span>';b.onclick=()=>setBase({bg:q});g.appendChild(b)});body.appendChild(g)}
+    else if(bgTab==='Media'){const g=document.createElement('div');g.className='gr';const m=libList.filter(y=>!y.deck);
+      if(!m.length)body.textContent='No media yet. Add pictures or videos in the Media bar (Edit mode).';
+      m.forEach(y=>{const b=document.createElement('button'),isV=y.type==='video';b.innerHTML='<div class="th" style="background:'+(isV?'#222':"#222 url('"+(lib[y.name]||'')+"') center/cover")+'"></div><span>'+(isV?'▶ ':'')+y.name.split('/').pop().slice(0,16)+'</span>';b.onclick=()=>setBase({bg:isV?'Video':'Image',lib:y.name});g.appendChild(b)});body.appendChild(g)}
+    else if(bgTab==='Color'||bgTab==='Gradient'){bgPanel(body,D,()=>{after()})}
+    else if(bgTab==='Loop'){if(D.bg!=='Loop')body.textContent='…';else loopPanel(body,D,()=>{after()})}
+    const r2=document.createElement('div');r2.className='row2';
+    r2.innerHTML='<span class="lbl">Darken</span>';const rg=document.createElement('input');rg.type='range';rg.min=0;rg.max=90;rg.value=D.dim||0;rg.oninput=()=>{D.dim=+rg.value;edit(k,n,()=>{})};r2.appendChild(rg);pop.appendChild(r2)};
+  draw()}
+/* ---- open / close ---- */
+function enter(){if(open)return;open=true;document.body.classList.add('studio');bS.classList.add('on');$('#mShow').classList.remove('on');$('#mEdit').classList.remove('on');
+  if(click==='take')needPrev();ctl();strip(true);mons()}
+function leave(m){if(!open)return;open=false;closePop();document.body.classList.remove('studio');bS.classList.remove('on');setMode(m||'show')}
+bS.onclick=()=>open?leave('show'):enter();
+$('#stExit').onclick=()=>leave('show');
+$('#mShow').addEventListener('click',()=>{if(open)leave('show')});
+$('#mEdit').addEventListener('click',()=>{if(open){leave('edit')}},true);
+$('#stNext').onclick=()=>advance(true);$('#stPrev').onclick=()=>TK(()=>go(idx-1));
+$('#stTake').onclick=()=>{if(liveSel()!==S.sel||liveIdx()!==idx)document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));else advance(true)};
+V.addEventListener('click',e=>{if(pop&&!e.composedPath().includes(pop)&&!e.target.closest('.stMh'))closePop()});
+addEventListener('resize',()=>{if(open)mons()});
+/* keep in step with the real show */
+const _push=push;push=function(){const r=_push.apply(this,arguments);if(open){try{strip();paintMons()}catch(e){}}return r};
+window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
+})();
 </script>
 </body>
 </html>
