@@ -3611,7 +3611,7 @@ function paint(stage,p){
     else{let c=G[d.bg]||G.Midnight;if(d.bg==='Color')c=d.color;else if(d.bg==='Gradient'&&d.grad)c=d.grad.t==='radial'?`radial-gradient(circle at ${d.grad.x==null?50:d.grad.x}% ${d.grad.y==null?50:d.grad.y}%,${d.grad.c.join(',')})`:`linear-gradient(${d.grad.a}deg,${d.grad.c.join(',')})`;
       h=`<div class="bg${d.bg==='Aurora'?' anim':''}" style="background:${c}"></div>`}
     stage.innerHTML=h+(d.dim?`<div class="dim" style="opacity:${d.dim/100}"></div>`:'');
-    {const lc=stage.querySelector(':scope>canvas.lp');if(lc){try{window.dscLoop.mount(stage,lc,d.loop,stage.id==='o'||(window.dscIsAud&&window.dscIsAud())||stage.id==='preview'||stage.id==='qeSt'||stage.id==='smir')}catch(e){}}}
+    {const lc=stage.querySelector(':scope>canvas.lp');if(lc){try{window.dscLoop.mount(stage,lc,d.loop,stage.id==='o'||(window.dscIsAud&&window.dscIsAud())||stage.id==='preview'||stage.id==='qeSt'||stage.id==='smir'||stage.dataset.live==='1')}catch(e){}}}
     {const be=stage.querySelector(':scope>.bg,:scope>video');if(be&&d.bgop)be.style.opacity=String(1-d.bgop/100)}{const bv=stage.querySelector(':scope>video[data-snd="1"]');if(bv&&!bv.dataset.on){bv.dataset.on='1';if(window.dscIsAud())vidSound(bv,p.mp||{})}}
   }
   {const be=stage.querySelector(':scope>.bg,:scope>video');if(be)be.style.filter=(window.bgfCss&&window.bgfCss(d.bgf))||''}
@@ -18469,14 +18469,14 @@ function mons(){
       const f=document.createElement('iframe');f.title=nameOf('s',m.n);f.src=base()+'#stage'+m.n;
       f.onload=()=>{try{const s=f.contentDocument.createElement('style');s.textContent='#fsHint{display:none!important}';f.contentDocument.head.appendChild(s)}catch(e){wr.insertAdjacentHTML('beforeend','<div class="nf">The stage preview needs the app to be opened from a web address (not a loose file).</div>')}setTimeout(()=>{try{push()}catch(e){}},500)};
       wr.appendChild(f);const ro=new ResizeObserver(()=>{f.style.transform='scale('+(wr.clientWidth/1280)+')'});ro.observe(wr);ros.push(ro);
-    }else{const s=document.createElement('div');s.className='stage';wr.appendChild(s);m.s=s}
+    }else{const s=document.createElement('div');s.className='stage';s.dataset.live='1';wr.appendChild(s);m.s=s}
     m.el=el;mon.push(m)});
   paintMons()}
 function paintMons(){
   if(!open)return;
   let p;try{p=livePay()}catch(e){return}
   mon.forEach(m=>{if(m.t==='a')try{paint(m.s,applyLook(p,'a',m.n))}catch(e){}
-    else if(m.t==='p'){try{const q=payload();paint(m.s||(m.s=(()=>{const s=document.createElement('div');s.className='stage';m.el.querySelector('.stW').appendChild(s);return s})()),applyLook(q,'a',0))}catch(e){}}})}
+    else if(m.t==='p'){try{const q=payload();paint(m.s||(m.s=(()=>{const s=document.createElement('div');s.className='stage';s.dataset.live='1';m.el.querySelector('.stW').appendChild(s);return s})()),applyLook(q,'a',0))}catch(e){}}})}
 /* ---- slide strip ---- */
 let sc=new Map(),ssig='';
 function strip(force){
