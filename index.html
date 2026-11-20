@@ -3668,6 +3668,7 @@ function sbgApply(p,kind,n){
   const A=p.sbg&&p.sbg.a;if(kind!=='a'||!A)return p;
   const o=A[n];if(!o)return p;
   if(o.sp)p={...p,sp:o.sp};
+  if(o.nt)p={...p,clear:true};
   if(!o.on||!o.d)return p;
   const d={...p.d};SBG_K.forEach(k=>{delete d[k]});Object.assign(d,o.d);
   return {...p,d,u:(d.lib&&L[d.lib])||''};
@@ -18389,7 +18390,7 @@ try{view=localStorage.getItem(K_V)||'both';click=localStorage.getItem(K_C)||'liv
 const _pl=payload;
 payload=function(){const p=_pl.apply(this,arguments);
   try{const D=lpScr.get(),spOf=e=>{if(!(e.lk&&e.lkb!==false&&e.span))return null;const m=D.filter(x=>x.k===e.k&&x.lk===e.lk&&x.on!==false),i=m.indexOf(e);return m.length>1&&i>=0?{cols:m.length,c:i}:null},
-      f=k=>D.filter(d=>d.k===k).map(d=>{const on=!!(d.bgo&&d.bgo.on&&d.bgo.d),sp=spOf(d);return on||sp?{on,d:on?d.bgo.d:null,sp}:null});
+      f=k=>D.filter(d=>d.k===k).map(d=>{const on=!!(d.bgo&&d.bgo.on&&d.bgo.d),sp=spOf(d),nt=!!(d.lk&&d.lkb!==false&&d.lkc===false);return on||sp||nt?{on,d:on?d.bgo.d:null,sp,nt}:null});
     const a=f('a'),s=f('s');if(a.some(Boolean)||s.some(Boolean))p.sbg={a,s};
     const al=k=>D.filter(d=>d.k===k).map(d=>{const q=d.src;if(!q||!q.m||q.m==='live')return null;if(q.m==='blank')return{blank:1};
       const so=S.songs.find(x=>x.id===q.s);if(!so)return null;const ss=S.sel,si=idx;S.sel=so.id;idx=Math.max(0,Math.min(+q.i||0,expand(so).length-1));
@@ -18539,20 +18540,21 @@ function openPop(k,n,anchor){
         if(o){e.lkb=o.lkb;e.lkc=o.lkc;e.span=o.span;if(shB(e)){e.bgl=o.bgl;e.bgo=o.bgo?{on:o.bgo.on,d:JSON.parse(JSON.stringify(o.bgo.d||{}))}:undefined}if(shC(e)){if(o.src)e.src=JSON.parse(JSON.stringify(o.src));else delete e.src}}
         else if(shB(e)&&e.bgo)members(k,n).forEach(y=>{if(y!==e){y.bgl=e.bgl;y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}})}
       try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
-    if(k==='a'&&ents('a').length>1){const all=document.createElement('button');all.textContent='Link all audience screens';all.onclick=()=>{ents('a').forEach(y=>{y.lk='A';if(y!==e&&e.bgo)y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}});try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()};lr.appendChild(all)}
+    if(k==='a'&&ents('a').length>1){const all=document.createElement('button');all.textContent='Link all audience screens';all.onclick=()=>{ents('a').forEach(y=>{y.lk='A';if(y!==e){y.lkb=e.lkb;y.lkc=e.lkc;y.span=e.span;if(shB(e)&&e.bgo){y.bgl=e.bgl;y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}if(shC(e)){if(e.src)y.src=JSON.parse(JSON.stringify(e.src));else delete y.src}}});try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()};lr.appendChild(all)}
     const hint=document.createElement('div');hint.className='lbl';hint.style.marginTop='4px';hint.textContent=e.lk?'Screens linked '+e.lk+' stay in step. Choose below what they share.':'Not linked: this screen keeps its own background and content.';
     pop.append(lr,hint);
     if(e.lk){
       const sr=document.createElement('div');sr.className='row2';sr.innerHTML='<span class="lbl">Linked screens share:</span>';
       const ss=document.createElement('span');ss.className='sg';sr.appendChild(ss);
       const cm=e.lkb===false?'c':e.lkc===false?'b':'a';
-      seg(ss,[['a','Everything'],['b','Background only'],['c','Content only']],cm,v=>{
+      seg(ss,[['a','Everything'],['b','Background only (no lyrics)'],['c','Content only']],cm,v=>{
         const flags={lkb:v!=='c',lkc:v!=='b'};members(k,n).forEach(m=>Object.assign(m,flags));
         if(flags.lkb&&e.bgo)members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}});
         if(flags.lkc)members(k,n).forEach(m=>{if(m!==e){if(e.src)m.src=JSON.parse(JSON.stringify(e.src));else delete m.src}});
         if(!flags.lkb)members(k,n).forEach(m=>{m.span=false});
         try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
       pop.appendChild(sr);
+      {const t=document.createElement('div');t.className='lbl';t.textContent=cm==='c'?'Content only: the linked screens show the same lyrics, but every screen can have any background of its own.':cm==='b'?'Background only: the linked screens share one background and show no lyrics.':'Everything: the linked screens share the same background and lyrics.';pop.appendChild(t)}
       if(e.lkb!==false){const w=document.createElement('label');w.className='row2';w.style.cursor='pointer';const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!e.span;
         cb.onchange=()=>{members(k,n).forEach(m=>{m.span=cb.checked});try{lpScr.redraw()}catch(er){}push();paintMons();draw()};
         w.append(cb,document.createTextNode(' Join the backgrounds into one wide picture across the linked screens (left to right, in list order)'));pop.appendChild(w)}
