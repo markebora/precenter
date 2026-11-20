@@ -8630,10 +8630,11 @@ if(!D||!D.length)D=[{k:'a',n:'Main',r:'1920x1080',o:'Window',tg:'Full',nm:'Disci
 let sel=0,tab='hw';const g=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}document.dispatchEvent(new Event('lp-screens-save'))};
 const opts=(a,v)=>a.map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('');
 const resO=v=>(RES.includes(v)?RES:RES.concat([v])).map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('')+'<option value="custom">Custom\u2026</option>';
+const RL={main:'Main screen',side:'Side screen',back:'Back screen'};const roleOf=d=>d.k!=='a'?null:(d.role&&RL[d.role]?d.role:(D.filter(x=>x.k==='a').indexOf(d)===0?'main':'side'));window.dscRoleOf=roleOf;window.dscRoleName=RL;
 function list(){const L=g('scL');L.innerHTML='';[['a','Audience'],['s','Stage']].forEach(([k,t])=>{
  const h=document.createElement('div');h.className='scH';const grp=D.filter(d=>d.k===k);h.innerHTML=`<span class="scHt"><label class="tgs" title="Turn all ${t.toLowerCase()} screens on or off"><input type="checkbox" aria-label="${t} screens on or off"${grp.some(d=>d.on!==false)?' checked':''}${grp.length?'':' disabled'}><i></i></label><span>${t}</span></span><button title="Add ${t.toLowerCase()} screen">+</button>`;h.querySelector('input').onchange=ev=>{grp.forEach(d=>d.on=ev.target.checked);save();draw();document.dispatchEvent(new CustomEvent('lp-screens',{detail:{k,on:ev.target.checked}}))};
  h.querySelector('button').onclick=()=>{D.push({k,on:true,n:t+' '+(D.filter(d=>d.k===k).length+1),r:'1920x1080',o:'NDI',tg:'Full',nm:'Disciples PreCenter - '+t,md:'1080p 30',col:'#000000',cp:[0,0,0,0,0,0,0,0],ak:false});sel=D.length-1;save();draw()};L.appendChild(h);
- D.forEach((d,i)=>{if(d.k!==k)return;const e=document.createElement('div');e.className='scI'+(i===sel?' sel':'')+(d.on===false?' off':'');e.innerHTML=`<b></b><small>${d.r.replace('x',' x ')}</small>`;e.firstChild.textContent=d.n;e.onclick=()=>{sel=i;draw()};L.appendChild(e)})})}
+ D.forEach((d,i)=>{if(d.k!==k)return;const e=document.createElement('div');e.className='scI'+(i===sel?' sel':'')+(d.on===false?' off':'');e.innerHTML='<b></b><small></small>';e.lastChild.textContent=(d.k==='a'?RL[roleOf(d)]+' \u00b7 ':'')+d.r.replace('x',' x ');e.firstChild.textContent=d.n;e.onclick=()=>{sel=i;draw()};if(d.k==='a'){e.title='Right-click to make this a Main, Side or Back screen';e.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();if(window.dscRoleMenu)dscRoleMenu(ev.clientX,ev.clientY,d)}};L.appendChild(e)})})}
 function pane(){const d=D[sel],P=g('scP');
  if((tab==='gp'||tab==='mk'||tab==='sr')&&window.dscScrTab){window.dscScrTab(tab,P,d,()=>{save();head()});return}
  if(tab==='hw')P.innerHTML=`<label class="w" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" data-f="on" style="width:auto"${d.on!==false?' checked':''}>Screen enabled</label><label class="w">Output<select data-f="o">${opts(['Window','NDI'],d.o)}</select></label><label>Resolution<select data-f="r">${resO(d.r)}</select></label><label class="w" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" data-f="fit" style="width:auto"${d.fit?' checked':''}>Keep this aspect ratio (black bars)</label><label>Output target<select data-f="tg">${opts(['Full','Left half','Right half'],d.tg)}</select></label><label>Mode<select data-f="md">${opts(MODES,d.md)}</select></label><label class="w">Name<input data-f="nm" value=""></label>${d.o==='Window'?'<div class="w" id="dscDispRow"></div>':''}`;
@@ -18398,8 +18399,9 @@ payload=function(){const p=_pl.apply(this,arguments);
     const A2=al('a'),S2=al('s');if(A2.some(Boolean)||S2.some(Boolean))p.alt={a:A2,s:S2}}catch(e){}
   return p};
 const ents=k=>lpScr.get().filter(d=>d.k===k);
+const roleOf=d=>window.dscRoleOf?dscRoleOf(d):'main';const RLn=window.dscRoleName||{main:'Main screen',side:'Side screen',back:'Back screen'};
 const shown=k=>{const g=ents(k);const on=g.map((d,i)=>d.on!==false?i:-1).filter(i=>i>=0);return on.length?on:[0]};
-const nameOf=(k,i)=>(k==='a'?'Audience ':'Stage ')+(i+1);
+const nameOf=(k,i)=>{const d=ents(k)[i];return (d&&d.n)||((k==='a'?'Audience ':'Stage ')+(i+1))};
 /* ---- styles ---- */
 const st=document.createElement('style');
 st.textContent=`
@@ -18472,13 +18474,14 @@ function mons(){
   list.forEach(m=>{
     const el=document.createElement('div');el.className='stM';el.style.width=w+'px';
     const hd=document.createElement('div');hd.className='stMh';
-    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':nameOf(m.t,m.n)+(m.t==='a'?' · main':' · control')+((ents(m.t)[m.n]||{}).src?' · own source':'');hd.appendChild(nm);
+    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':nameOf(m.t,m.n)+(m.t==='a'?' · '+RLn[roleOf(ents('a')[m.n])]:' · control')+((ents(m.t)[m.n]||{}).src?' · own source':'');hd.appendChild(nm);
     const wr=document.createElement('div');wr.className='stW'+(m.t==='p'?' pv':m.t==='a'?' live':'');
     if(m.t!=='p'){
       const e=ents(m.t)[m.n]||{},custom=e.bgo&&e.bgo.on;
       const bb=document.createElement('button');bb.textContent='Background: '+(custom?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));bb.className=custom?'on':'';bb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(bb);
-      const lb=document.createElement('button');lb.className='lkb'+(e.lk?' on':'');lb.textContent=e.lk?'⛓ '+e.lk:'⛓ link';lb.title='Link backgrounds: screens with the same letter always share one background';lb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(lb)}
+      const lb=document.createElement('button');lb.className='lkb'+(e.lk?' on':'');lb.textContent=syncTxt(e);lb.title='Sync: choose whether a change here also changes the other screens of the same role. Right-click a screen to set Main / Side / Back.';lb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(lb)}
     el.append(hd,wr);host.appendChild(el);
+    if(m.t==='a')el.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();dscRoleMenu(ev.clientX,ev.clientY,ents('a')[m.n])};
     if(m.t==='s'){
       const f=document.createElement('iframe');f.title=nameOf('s',m.n);f.src=base()+'#stage'+m.n;
       f.onload=()=>{try{const s=f.contentDocument.createElement('style');s.textContent='#fsHint{display:none!important}';f.contentDocument.head.appendChild(s)}catch(e){wr.insertAdjacentHTML('beforeend','<div class="nf">The stage preview needs the app to be opened from a web address (not a loose file).</div>')}setTimeout(()=>{try{push()}catch(e){}},500)};
@@ -18511,10 +18514,26 @@ function mark(){const same=liveSel()===S.sel,li=liveIdx();sc.forEach((c,i)=>{c.c
   const c=sc.get(idx);if(c)c.scrollIntoView({block:'nearest',inline:'nearest'})}
 /* ---- background popover ---- */
 function members(k,n){const g=ents(k),e=g[n];return e.lk?g.filter(x=>x.lk===e.lk):[e]}
+function adopt(e,o){e.lkb=o.lkb;e.lkc=o.lkc;e.span=o.span;if(shB(e)){e.bgl=o.bgl;e.bgo=o.bgo?{on:o.bgo.on,d:JSON.parse(JSON.stringify(o.bgo.d||{}))}:undefined}if(shC(e)){if(o.src)e.src=JSON.parse(JSON.stringify(o.src));else delete e.src}}
+function syncTxt(e){return !e.lk?'⛓ only this':e.lk==='ALL'?'⛓ all':String(e.lk).startsWith('R:')?'⛓ all '+e.lk.slice(2):'⛓ group '+e.lk}
+function freezeRoles(){ents('a').forEach(y=>{if(!y.role)y.role=roleOf(y)})}
+function setRole(d,r){freezeRoles();const was=d.lk;d.role=r;
+  if(was&&String(was).startsWith('R:')){const key='R:'+r,o=ents('a').find(y=>y!==d&&y.lk===key);d.lk=key;if(o)adopt(d,o)}}
+function setSync(k,e,mode){
+  if(mode==='none'){e.lk='';e.span=false;return}
+  if(k==='a')freezeRoles();
+  const key=mode==='all'?'ALL':'R:'+roleOf(e);
+  const grp=ents(k).filter(y=>y===e||mode==='all'||(k==='a'&&roleOf(y)===roleOf(e)));
+  const have=grp.find(y=>y!==e&&y.lk===key)||e;
+  grp.forEach(y=>{y.lk=key});grp.forEach(y=>{if(y!==have)adopt(y,have)})}
+window.dscRoleMenu=function(x,y,d){
+  if(!d||d.k!=='a')return;const cur=roleOf(d);
+  const it=[{t:d.n+' is a…',off:true},{sep:1}].concat([['main','Main screen (the congregation)'],['side','Side screen'],['back','Back screen (outside, announcements)']].map(([r,n])=>({t:(cur===r?'✓ ':' ')+n,fn:()=>{setRole(d,r);try{lpScr.redraw()}catch(er){}try{push()}catch(er){}if(open)mons()}})));
+  showMenu(x,y,it)};
 const shB=e=>e.lk&&e.lkb!==false,shC=e=>e.lk&&e.lkc!==false;
 function edit(k,n,fn){const e=ents(k)[n];if(!e.bgo)return;fn(e.bgo.d);if(shB(e)){const src=e.bgo;ents(k).forEach(x=>{if(x!==e&&x.lk===e.lk)x.bgo={on:src.on,d:JSON.parse(JSON.stringify(src.d))}})}
   try{lpScr.redraw()}catch(er){}push();paintMons();mons2()}
-function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent='Background: '+(c?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));b[0].className=c?'on':'';b[1].textContent=e.lk?'⛓ '+e.lk:'⛓ link';b[1].className='lkb'+(e.lk?' on':'')})}
+function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent='Background: '+(c?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));b[0].className=c?'on':'';b[1].textContent=syncTxt(e);b[1].className='lkb'+(e.lk?' on':'')})}
 function closePop(){if(pop){pop.remove();pop=null}}
 function openPop(k,n,anchor){
   closePop();const host=$('#stMons'),e=ents(k)[n];
@@ -18532,19 +18551,18 @@ function openPop(k,n,anchor){
       else{if(!e.bgo||!e.bgo.d||!Object.keys(e.bgo.d).length){const cu=eff(cur(),idx),d={};SBG_K.forEach(q=>{if(cu[q]!==undefined)d[q]=JSON.parse(JSON.stringify(cu[q]))});if(!d.bg)d.bg='Gold';e.bgo={on:true,d}}else e.bgo.on=true}
       if(shB(e))members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo=e.bgo?{on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}:undefined}});
       try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
-    /* link group */
-    const lr=document.createElement('div');lr.className='row2';lr.innerHTML='<span class="lbl">Link with:</span>';
+    /* role + sync */
+    if(k==='a'){const rr=document.createElement('div');rr.className='row2';rr.innerHTML='<span class="lbl">This screen is:</span>';const rs=document.createElement('span');rs.className='sg';rr.appendChild(rs);
+      seg(rs,[['main','Main'],['side','Side'],['back','Back']],roleOf(e),v=>{setRole(e,v);try{lpScr.redraw()}catch(er){}push();paintMons();mons();const m2=mon.find(z=>z.t===k&&z.n===n);openPop(k,n,m2?m2.el:anchor)});pop.appendChild(rr)}
+    const lr=document.createElement('div');lr.className='row2';lr.innerHTML='<span class="lbl">Changes apply to:</span>';
     const ls=document.createElement('span');ls.className='sg';lr.appendChild(ls);
-    seg(ls,[['','None'],['A','A'],['B','B'],['C','C']],e.lk||'',v=>{
-      e.lk=v;if(v){const o=ents(k).find(y=>y!==e&&y.lk===v);
-        if(o){e.lkb=o.lkb;e.lkc=o.lkc;e.span=o.span;if(shB(e)){e.bgl=o.bgl;e.bgo=o.bgo?{on:o.bgo.on,d:JSON.parse(JSON.stringify(o.bgo.d||{}))}:undefined}if(shC(e)){if(o.src)e.src=JSON.parse(JSON.stringify(o.src));else delete e.src}}
-        else if(shB(e)&&e.bgo)members(k,n).forEach(y=>{if(y!==e){y.bgl=e.bgl;y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}})}
-      try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
-    if(k==='a'&&ents('a').length>1){const all=document.createElement('button');all.textContent='Link all audience screens';all.onclick=()=>{ents('a').forEach(y=>{y.lk='A';if(y!==e){y.lkb=e.lkb;y.lkc=e.lkc;y.span=e.span;if(shB(e)&&e.bgo){y.bgl=e.bgl;y.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}if(shC(e)){if(e.src)y.src=JSON.parse(JSON.stringify(e.src));else delete y.src}}});try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()};lr.appendChild(all)}
-    const hint=document.createElement('div');hint.className='lbl';hint.style.marginTop='4px';hint.textContent=e.lk?'Screens linked '+e.lk+' stay in step. Choose below what they share.':'Not linked: this screen keeps its own background and content.';
+    const rw=k==='a'?roleOf(e):'stage',mode=!e.lk?'none':e.lk==='ALL'?'all':String(e.lk).startsWith('R:')?'role':'old';
+    seg(ls,k==='a'?[['none','Only this screen'],['role','All '+rw+' screens'],['all','All audience screens']]:[['none','Only this screen'],['all','All stage screens']],mode,v=>{setSync(k,e,v);try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
+    const hint=document.createElement('div');hint.className='lbl';hint.style.marginTop='4px';
+    hint.textContent=mode==='none'?'Only this screen changes. Every other screen keeps its own background and content.':mode==='role'?(members(k,n).length<2?'No other '+rw+' screen yet. Right-click another screen to make it a '+rw+' screen.':'All '+rw+' screens change together. Other screens are not touched.'):mode==='all'?'Every '+(k==='a'?'audience':'stage')+' screen changes together.':'This screen is in an older link group ('+e.lk+'). Choose an option above to replace it.';
     pop.append(lr,hint);
     if(e.lk){
-      const sr=document.createElement('div');sr.className='row2';sr.innerHTML='<span class="lbl">Linked screens share:</span>';
+      const sr=document.createElement('div');sr.className='row2';sr.innerHTML='<span class="lbl">Synced screens share:</span>';
       const ss=document.createElement('span');ss.className='sg';sr.appendChild(ss);
       const cm=e.lkb===false?'c':e.lkc===false?'b':'a';
       seg(ss,[['a','Everything'],['b','Background only (no lyrics)'],['c','Content only']],cm,v=>{
