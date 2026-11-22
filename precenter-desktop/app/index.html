@@ -411,6 +411,15 @@ body.stg.lay-clock .hb{font-size:12vw;justify-content:center;gap:5vw;color:#fff}
 body.stg.lay-clock .tm{font-size:12vw}body.stg.lay-clock #ss{display:none}
 #vtr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:6px 0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--chip)}#vtr .opl{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--mute);margin-right:2px}#vtr button{padding:2px 8px;font-size:12px;min-width:28px}#vtr button:disabled,#vtr input:disabled{opacity:.4}#vtr .vtT{margin-left:auto;font-size:10.5px;color:var(--mute);font-variant-numeric:tabular-nums}#vtr #vtSc{flex:1 0 100%;width:100%;margin:2px 0 0}
 </style>
+<style id="gfxCss">html[data-gfx=gpu] .stage canvas,html[data-gfx=gpu] .stage video{will-change:transform}html[data-gfx=cpu] *{will-change:auto!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}</style>
+<script>
+(function(){var m='gpu';try{m=localStorage.getItem('lp-gfx')==='cpu'?'cpu':'gpu'}catch(e){}
+document.documentElement.setAttribute('data-gfx',m);
+if(m==='cpu'){var _g=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(t,a){if(t==='2d')a=Object.assign({},a||{},{willReadFrequently:true});return _g.call(this,t,a)};
+if(window.OffscreenCanvas){var _o=OffscreenCanvas.prototype.getContext;OffscreenCanvas.prototype.getContext=function(t,a){if(t==='2d')a=Object.assign({},a||{},{willReadFrequently:true});return _o.call(this,t,a)}}}
+window.dscGfx={mode:m,set:function(v){try{localStorage.setItem('lp-gfx',v==='cpu'?'cpu':'gpu')}catch(e){}},info:function(){try{var c=document.createElement('canvas'),g=c.getContext('webgl')||c.getContext('experimental-webgl');if(!g)return 'no GPU available to this page';var x=g.getExtension('WEBGL_debug_renderer_info');return x?g.getParameter(x.UNMASKED_RENDERER_WEBGL):'GPU available'}catch(e){return 'unknown'}}};
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style id="ui2">
 /* UI refresh: hierarchy, live state, calmer panels (no size changes to the toolbar) */
@@ -3087,8 +3096,8 @@ function mount(stage,cv,L,live){
   if(!live){cv.width=320;cv.height=180;cv.getContext('2d').drawImage(still(L,320,180),0,0);return}
   var lite=document.body.classList.contains('lite')&&stage.id!=='o'&&!(window.dscIsAud&&window.dscIsAud()),W=+stage.dataset.w||(stage.id==='preview'?640:1280);if(lite)W=Math.min(W,480);var H=W*9/16,gap=lite?50:30;var sp=null;try{sp=stage.dataset.sp?JSON.parse(stage.dataset.sp):null}catch(e){}var CW=sp?sp.cols:1;cv.width=W*CW;cv.height=H;
   var g=cv.getContext('2d'),D=(L.dur||30)*1000,t0=performance.now(),last=0;
-  var out=stage.id==='o'||(window.dscIsAud&&window.dscIsAud()),cost=0;if(!out&&!lite)gap=Math.max(gap,40);
-  (function tick(now){if(!cv.isConnected)return;stage._lpRaf=requestAnimationFrame(tick);if(document.hidden||now-last<gap)return;last=now;var c0=performance.now();try{draw(g,W*CW,H,(sp?(Date.now()%D)/D:((now-t0)%D)/D),L)}catch(e){}cost=cost*.8+(performance.now()-c0)*.2;var want=Math.min(out?50:66,Math.max(out?30:gap,cost*2.4));gap+=(want-gap)*.1})(t0)}
+  var out=stage.id==='o'||(window.dscIsAud&&window.dscIsAud()),cost=0,cpuM=window.dscGfx&&dscGfx.mode==='cpu',minOut=cpuM?33:17;if(!out&&!lite)gap=Math.max(gap,40);if(out)gap=Math.max(gap,minOut);if(cpuM&&!out)gap=Math.max(gap,66);
+  (function tick(now){if(!cv.isConnected)return;stage._lpRaf=requestAnimationFrame(tick);if(document.hidden||now-last<gap)return;last=now;var c0=performance.now();try{draw(g,W*CW,H,(sp?(Date.now()%D)/D:((now-t0)%D)/D),L)}catch(e){}cost=cost*.8+(performance.now()-c0)*.2;var want=Math.min(out?50:66,Math.max(out?minOut:(cpuM?66:gap),cost*2.4));gap+=(want-gap)*.1})(t0)}
 window.dscLoop={list:LOOPS.map(function(l){return{n:l.n,cat:l.cat,d:l.d,grp:l.grp}}),defaults:defaults,mount:mount,still:still,frame:function(g,L,W,H,p){draw(g,W,H,p,L)}};
 })();
 </script>
@@ -8388,9 +8397,16 @@ window.DSC_VERSION=DSC_VERSION;
       g('aV').oninput=()=>setPr('vol',+g('aV').value);g('aF').onchange=()=>setPr('fadeOut',+g('aF').value);g('aRt').onclick=()=>{done();window.dscAudioDlg&&dscAudioDlg()};
     };
     const adv=()=>{
-      body.innerHTML='<h3>Advanced</h3><div class="pfCard"><b>Diagnostics</b><div class="hint" style="margin:0">Copy a short report to send with a problem report.</div><div class="row" style="margin-top:6px">'+btn('dCp','Copy diagnostics')+'</div></div><div class="pfCard"><b>Preferences</b><div class="hint" style="margin:0">Put the preferences on this page back to their standard values. Your services and songs are kept.</div><div class="row" style="margin-top:6px">'+btn('dRp','Reset preferences')+btn('dRs','Reset screen settings')+'</div></div><div class="pfCard"><b>Erase everything</b><div class="hint" style="margin:0">Deletes all services, songs, settings and saved sign-in from this browser. Take a backup first.</div><div class="row" style="margin-top:6px">'+btn('dEr','Erase all data…')+'</div></div>';
+      body.innerHTML='<h3>Advanced</h3><div class="pfCard"><b>Graphics</b><div class="hint" style="margin:0">Choose how dynamic backgrounds, loops and video are drawn.</div><label class="pfC"><input type="radio" name="gx" id="gxG"> Use GPU (smoother, recommended)</label><label class="pfC"><input type="radio" name="gx" id="gxC"> Use CPU only (try this if the picture flickers or the GPU is busy)</label><div class="hint" id="gxI" style="margin:6px 0 0"></div><div class="row" style="margin-top:6px"><button id="gxR" class="pri" hidden>Reload to apply</button></div></div><div class="pfCard"><b>Diagnostics</b><div class="hint" style="margin:0">Copy a short report to send with a problem report.</div><div class="row" style="margin-top:6px">'+btn('dCp','Copy diagnostics')+'</div></div><div class="pfCard"><b>Preferences</b><div class="hint" style="margin:0">Put the preferences on this page back to their standard values. Your services and songs are kept.</div><div class="row" style="margin-top:6px">'+btn('dRp','Reset preferences')+btn('dRs','Reset screen settings')+'</div></div><div class="pfCard"><b>Erase everything</b><div class="hint" style="margin:0">Deletes all services, songs, settings and saved sign-in from this browser. Take a backup first.</div><div class="row" style="margin-top:6px">'+btn('dEr','Erase all data…')+'</div></div>';
+      {const G=window.dscGfx||{mode:'gpu',set(){},info:()=>'unknown'};g('gxG').checked=G.mode!=='cpu';g('gxC').checked=G.mode==='cpu';g('gxI').textContent='This computer: '+G.info()+'. Running now: '+(G.mode==='cpu'?'CPU only':'GPU')+'.';
+        const N=window.dscNative&&dscNative.app,D=N&&N.setGpu?{getGpu:N.gpu,setGpu:N.setGpu}:null;
+        if(D)D.getGpu().then(r=>{if(!r)return;g('gxG').checked=r.gpu;g('gxC').checked=!r.gpu;g('gxI').textContent+=' Desktop app: hardware acceleration is '+(r.gpu?'on':'off')+'.'}).catch(()=>{});
+        const ch=v=>{
+          if(D){if(!confirm('PreCenter will restart to apply this. Continue?')){g('gxG').checked=G.mode!=='cpu';g('gxC').checked=G.mode==='cpu';return}G.set(v);D.setGpu(v==='gpu');return}
+          G.set(v);g('gxR').hidden=(v===G.mode);toast('Saved. Reload the app, and reopen the audience and stage screens, to apply.')};
+        g('gxG').onchange=()=>ch('gpu');g('gxC').onchange=()=>ch('cpu');g('gxR').onclick=()=>location.reload()}
       g('dCp').onclick=()=>{let u=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);u+=(k.length+(localStorage.getItem(k)||'').length)*2}}catch(e){}
-        const t=['Disciples PreCenter '+DSC_VERSION,'Page: '+location.href.split('#')[0],'Browser: '+navigator.userAgent,'Screen: '+screen.width+'x'+screen.height+' @'+devicePixelRatio,'Online: '+navigator.onLine,'Items: '+S.songs.length+', sections: '+S.secs.length+', macros: '+(S.macros||[]).length,'Saved data: '+(u/1024).toFixed(0)+' KB'].join('\n');
+        const t=['Disciples PreCenter '+DSC_VERSION,'Page: '+location.href.split('#')[0],'Browser: '+navigator.userAgent,'Screen: '+screen.width+'x'+screen.height+' @'+devicePixelRatio,'Online: '+navigator.onLine,'Graphics: '+(window.dscGfx?dscGfx.mode.toUpperCase()+' ('+dscGfx.info()+')':'?'),'Items: '+S.songs.length+', sections: '+S.secs.length+', macros: '+(S.macros||[]).length,'Saved data: '+(u/1024).toFixed(0)+' KB'].join('\n');
         (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied.')).catch(()=>{prompt('Copy this:',t)})};
       g('dRp').onclick=()=>{try{localStorage.removeItem('lp-prefs')}catch(e){}toast('Preferences are back to standard. Reload to apply everything.')};
       g('dRs').onclick=()=>{try{localStorage.removeItem('lp-screens')}catch(e){}toast('Screen settings will be reset the next time you open the app.')};
@@ -18474,12 +18490,11 @@ function mons(){
   list.forEach(m=>{
     const el=document.createElement('div');el.className='stM';el.style.width=w+'px';
     const hd=document.createElement('div');hd.className='stMh';
-    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':nameOf(m.t,m.n)+(m.t==='a'?' · '+RLn[roleOf(ents('a')[m.n])]:' · control')+((ents(m.t)[m.n]||{}).src?' · own source':'');hd.appendChild(nm);
+    const nm=document.createElement('b');nm.textContent=m.t==='p'?'PREVIEW · not live yet':mtitle(m);hd.appendChild(nm);
     const wr=document.createElement('div');wr.className='stW'+(m.t==='p'?' pv':m.t==='a'?' live':'');
     if(m.t!=='p'){
       const e=ents(m.t)[m.n]||{},custom=e.bgo&&e.bgo.on;
-      const bb=document.createElement('button');bb.textContent='Background: '+(custom?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));bb.className=custom?'on':'';bb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(bb);
-      const lb=document.createElement('button');lb.className='lkb'+(e.lk?' on':'');lb.textContent=syncTxt(e);lb.title='Sync: choose whether a change here also changes the other screens of the same role. Right-click a screen to set Main / Side / Back.';lb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(lb)}
+      const bb=document.createElement('button');bb.textContent=custom?'Background ●':'Background';bb.className=custom?'on':'';bb.onclick=ev=>{ev.stopPropagation();openPop(m.t,m.n,el)};hd.appendChild(bb);}
     el.append(hd,wr);host.appendChild(el);
     if(m.t==='a')el.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();dscRoleMenu(ev.clientX,ev.clientY,ents('a')[m.n])};
     if(m.t==='s'){
@@ -18533,56 +18548,61 @@ window.dscRoleMenu=function(x,y,d){
 const shB=e=>e.lk&&e.lkb!==false,shC=e=>e.lk&&e.lkc!==false;
 function edit(k,n,fn){const e=ents(k)[n];if(!e.bgo)return;fn(e.bgo.d);if(shB(e)){const src=e.bgo;ents(k).forEach(x=>{if(x!==e&&x.lk===e.lk)x.bgo={on:src.on,d:JSON.parse(JSON.stringify(src.d))}})}
   try{lpScr.redraw()}catch(er){}push();paintMons();mons2()}
-function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent='Background: '+(c?'own':(e.bgl&&e.src&&e.src.m==='pin'?'same as live':'follows slide'));b[0].className=c?'on':'';b[1].textContent=syncTxt(e);b[1].className='lkb'+(e.lk?' on':'')})}
+function mtitle(m){const e=ents(m.t)[m.n]||{};return nameOf(m.t,m.n)+(m.t==='a'?' · '+RLn[roleOf(e)]:' · control')+(e.lk?' · synced':'')+(e.src?' · own source':'')}
+function mons2(){mon.forEach(m=>{if(m.t==='p')return;const e=ents(m.t)[m.n]||{},c=e.bgo&&e.bgo.on,b=m.el.querySelectorAll('.stMh button');b[0].textContent=c?'Background ●':'Background';b[0].className=c?'on':'';m.el.querySelector('.stMh b').textContent=mtitle(m)})}
 function closePop(){if(pop){pop.remove();pop=null}}
 function openPop(k,n,anchor){
   closePop();const host=$('#stMons'),e=ents(k)[n];
   pop=document.createElement('div');pop.id='stPop';host.appendChild(pop);
   const r=anchor.getBoundingClientRect(),hr=host.getBoundingClientRect();
   pop.style.left=Math.max(4,Math.min(hr.width-340,r.left-hr.left))+'px';pop.style.top=Math.max(4,Math.min(hr.height-200,r.top-hr.top+22))+'px';
+  let more=false;
   const draw=()=>{
-    const e=ents(k)[n],on=e.bgo&&e.bgo.on;pop.innerHTML='';
-    const h=document.createElement('h4');h.textContent=nameOf(k,n)+' background';const x=document.createElement('button');x.textContent='✕';x.onclick=closePop;h.appendChild(x);pop.appendChild(h);
-    const sg=document.createElement('span');sg.className='sg';pop.appendChild(sg);
-    const pinned=e.src&&e.src.m==='pin';
-    seg(sg,pinned?[['f',"The slide's own"],['l','Same as live'],['c','Choose another']]:[['f','Follow the slide'],['c','Its own background']],on?'c':(e.bgl&&pinned?'l':'f'),v=>{
-      e.bgl=v==='l';
-      if(v==='f'||v==='l'){if(e.bgo)e.bgo.on=false}
-      else{if(!e.bgo||!e.bgo.d||!Object.keys(e.bgo.d).length){const cu=eff(cur(),idx),d={};SBG_K.forEach(q=>{if(cu[q]!==undefined)d[q]=JSON.parse(JSON.stringify(cu[q]))});if(!d.bg)d.bg='Gold';e.bgo={on:true,d}}else e.bgo.on=true}
-      if(shB(e))members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo=e.bgo?{on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}:undefined}});
-      try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
-    /* role + sync */
-    if(k==='a'){const rr=document.createElement('div');rr.className='row2';rr.innerHTML='<span class="lbl">This screen is:</span>';const rs=document.createElement('span');rs.className='sg';rr.appendChild(rs);
-      seg(rs,[['main','Main'],['side','Side'],['back','Back']],roleOf(e),v=>{setRole(e,v);try{lpScr.redraw()}catch(er){}push();paintMons();mons();const m2=mon.find(z=>z.t===k&&z.n===n);openPop(k,n,m2?m2.el:anchor)});pop.appendChild(rr)}
-    const lr=document.createElement('div');lr.className='row2';lr.innerHTML='<span class="lbl">Changes apply to:</span>';
-    const ls=document.createElement('span');ls.className='sg';lr.appendChild(ls);
-    const rw=k==='a'?roleOf(e):'stage',mode=!e.lk?'none':e.lk==='ALL'?'all':String(e.lk).startsWith('R:')?'role':'old';
-    seg(ls,k==='a'?[['none','Only this screen'],['role','All '+rw+' screens'],['all','All audience screens']]:[['none','Only this screen'],['all','All stage screens']],mode,v=>{setSync(k,e,v);try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
-    const hint=document.createElement('div');hint.className='lbl';hint.style.marginTop='4px';
-    hint.textContent=mode==='none'?'Only this screen changes. Every other screen keeps its own background and content.':mode==='role'?(members(k,n).length<2?'No other '+rw+' screen yet. Right-click another screen to make it a '+rw+' screen.':'All '+rw+' screens change together. Other screens are not touched.'):mode==='all'?'Every '+(k==='a'?'audience':'stage')+' screen changes together.':'This screen is in an older link group ('+e.lk+'). Choose an option above to replace it.';
-    pop.append(lr,hint);
-    if(e.lk){
-      const sr=document.createElement('div');sr.className='row2';sr.innerHTML='<span class="lbl">Synced screens share:</span>';
-      const ss=document.createElement('span');ss.className='sg';sr.appendChild(ss);
-      const cm=e.lkb===false?'c':e.lkc===false?'b':'a';
-      seg(ss,[['a','Everything'],['b','Background only (no lyrics)'],['c','Content only']],cm,v=>{
-        const flags={lkb:v!=='c',lkc:v!=='b'};members(k,n).forEach(m=>Object.assign(m,flags));
-        if(flags.lkb&&e.bgo)members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}});
-        if(flags.lkc)members(k,n).forEach(m=>{if(m!==e){if(e.src)m.src=JSON.parse(JSON.stringify(e.src));else delete m.src}});
-        if(!flags.lkb)members(k,n).forEach(m=>{m.span=false});
-        try{lpScr.redraw()}catch(er){}push();paintMons();mons2();draw()});
-      pop.appendChild(sr);
-      {const t=document.createElement('div');t.className='lbl';t.textContent=cm==='c'?'Content only: the linked screens show the same lyrics, but every screen can have any background of its own.':cm==='b'?'Background only: the linked screens share one background and show no lyrics.':'Everything: the linked screens share the same background and lyrics.';pop.appendChild(t)}
-      if(e.lkb!==false){const w=document.createElement('label');w.className='row2';w.style.cursor='pointer';const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!e.span;
-        cb.onchange=()=>{members(k,n).forEach(m=>{m.span=cb.checked});try{lpScr.redraw()}catch(er){}push();paintMons();draw()};
-        w.append(cb,document.createTextNode(' Join the backgrounds into one wide picture across the linked screens (left to right, in list order)'));pop.appendChild(w)}
+    const e=ents(k)[n],on=!!(e.bgo&&e.bgo.on);pop.innerHTML='';
+    const h=document.createElement('h4');h.textContent=nameOf(k,n)+' background';const x=document.createElement('button');x.textContent='\u2715';x.onclick=closePop;h.appendChild(x);pop.appendChild(h);
+    const sync=()=>{try{lpScr.redraw()}catch(er){}push();paintMons();mons2()};
+    const copyBg=()=>{if(shB(e))members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo=e.bgo?{on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}:undefined}})};
+    /* 1. which screens change */
+    if(ents(k).length>1){
+      const rw=k==='a'?roleOf(e):'stage',mode=!e.lk?'none':(e.lk==='ALL'?(k==='s'?'role':'all'):String(e.lk).startsWith('R:')?'role':'old');
+      const wr=document.createElement('div');wr.className='row2';wr.innerHTML='<span class="lbl">Change</span>';
+      const ws=document.createElement('span');ws.className='sg';wr.appendChild(ws);
+      seg(ws,[['none','Only this screen'],['role',k==='a'?'All '+rw+' screens':'All stage screens']].concat(mode==='all'?[['all','All screens']]:[]),mode==='old'?'':mode,v=>{setSync(k,e,v==='role'&&k==='s'?'all':v);sync();draw()});
+      pop.appendChild(wr);
+      if(mode==='role'&&members(k,n).length<2){const t=document.createElement('div');t.className='lbl';t.textContent='No other '+rw+' screen yet. Right-click a screen to set its role.';pop.appendChild(t)}
+      if(e.lk&&members(k,n).length>1){
+        const mb=document.createElement('button');mb.className='lkb';mb.style.marginTop='6px';mb.textContent=more?'Fewer options':'More options';mb.onclick=()=>{more=!more;draw()};pop.appendChild(mb);
+        if(more){
+          const sr=document.createElement('div');sr.className='row2';sr.innerHTML='<span class="lbl">Synced screens share</span>';
+          const ss=document.createElement('span');ss.className='sg';sr.appendChild(ss);
+          const cm=e.lkb===false?'c':e.lkc===false?'b':'a';
+          seg(ss,[['a','Everything'],['b','Background only (no lyrics)'],['c','Lyrics only']],cm,v=>{
+            const flags={lkb:v!=='c',lkc:v!=='b'};members(k,n).forEach(m=>Object.assign(m,flags));
+            if(flags.lkb&&e.bgo)members(k,n).forEach(m=>{if(m!==e){m.bgl=e.bgl;m.bgo={on:e.bgo.on,d:JSON.parse(JSON.stringify(e.bgo.d||{}))}}});
+            if(flags.lkc)members(k,n).forEach(m=>{if(m!==e){if(e.src)m.src=JSON.parse(JSON.stringify(e.src));else delete m.src}});
+            if(!flags.lkb)members(k,n).forEach(m=>{m.span=false});
+            sync();draw()});
+          pop.appendChild(sr);
+          if(e.lkb!==false){const w=document.createElement('label');w.className='row2';w.style.cursor='pointer';const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!e.span;
+            cb.onchange=()=>{members(k,n).forEach(m=>{m.span=cb.checked});sync()};
+            w.append(cb,document.createTextNode(' One wide picture across these screens (left to right)'));pop.appendChild(w)}
+        }
+      }
     }
-    if(!on&&!(e.lk&&e.span))return;
-    if(!on){const t=document.createElement('div');t.className='lbl';t.style.marginTop='6px';t.textContent='The slide\'s background is being stretched across the linked screens. Choose "Its own background" to pick one for them.';pop.appendChild(t);return}
-    const tb=document.createElement('div');tb.className='tabs';['Looks','Media','Color','Gradient','Loop'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.className=t===bgTab?'on':'';b.onclick=()=>{bgTab=t;if(t==='Loop'&&e.bgo.d.bg!=='Loop'&&window.dscLoop){e.bgo.d.bg='Loop';e.bgo.d.loop=e.bgo.d.loop||dscLoop.defaults(dscLoop.list[0].n);edit(k,n,()=>{})}
-      if(t==='Color'&&e.bgo.d.bg!=='Color'){e.bgo.d.bg='Color';e.bgo.d.color=e.bgo.d.color||'#10264d';edit(k,n,()=>{})}
-      if(t==='Gradient'&&e.bgo.d.bg!=='Gradient'){e.bgo.d.bg='Gradient';e.bgo.d.grad=e.bgo.d.grad||{a:160,c:['#3b2d07','#000000']};edit(k,n,()=>{})}
-      draw()};tb.appendChild(b)});pop.appendChild(tb);
+    /* 2. the background */
+    const own=()=>{e.bgl=false;if(!e.bgo||!e.bgo.d||!Object.keys(e.bgo.d).length){const cu=eff(cur(),idx),d={};SBG_K.forEach(q=>{if(cu[q]!==undefined)d[q]=JSON.parse(JSON.stringify(cu[q]))});if(!d.bg)d.bg='Gold';e.bgo={on:true,d}}else e.bgo.on=true;copyBg()};
+    const tb=document.createElement('div');tb.className='tabs';
+    ['Slide','Looks','Media','Color','Gradient','Loop'].forEach(t=>{
+      const b=document.createElement('button');b.textContent=t==='Slide'?'Follow slide':t;b.className=(t==='Slide'?!on:(on&&t===bgTab))?'on':'';
+      b.onclick=()=>{
+        if(t==='Slide'){e.bgl=false;if(e.bgo)e.bgo.on=false;copyBg();sync();draw();return}
+        if(!on)own();bgTab=t;
+        if(t==='Loop'&&e.bgo.d.bg!=='Loop'&&window.dscLoop){e.bgo.d.bg='Loop';e.bgo.d.loop=e.bgo.d.loop||dscLoop.defaults(dscLoop.list[0].n)}
+        if(t==='Color'&&e.bgo.d.bg!=='Color'){e.bgo.d.bg='Color';e.bgo.d.color=e.bgo.d.color||'#10264d'}
+        if(t==='Gradient'&&e.bgo.d.bg!=='Gradient'){e.bgo.d.bg='Gradient';e.bgo.d.grad=e.bgo.d.grad||{a:160,c:['#3b2d07','#000000']}}
+        edit(k,n,()=>{});draw()};
+      tb.appendChild(b)});pop.appendChild(tb);
+    if(!on)return;
     const body=document.createElement('div');pop.appendChild(body);
     const D=e.bgo.d,after=()=>edit(k,n,()=>{});
     const setBase=o=>{SBG_K.forEach(q=>{if(!(q in o)&&['bg','lib','img','loop','color','grad'].includes(q))delete D[q]});Object.assign(D,o);after();draw()};

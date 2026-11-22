@@ -157,3 +157,8 @@ After approval, a signing step is added to the workflow so the Setup installer i
 * **Windows were placed on the wrong screen**: make sure `window-management` is `true` and the screens are set to Extend.
 * **The program does not update**: check `logs\main.log` for lines starting with `updater:`. Make sure the release has
   `latest.yml` attached, the tag is higher than the installed version, and `autoUpdate` is `true`.
+
+## Graphics (GPU or CPU)
+
+In PreCenter: Profile > Advanced > Graphics. Choose GPU (smoother) or CPU only. The app restarts to apply it.
+The choice is saved in graphics.json in the data folder (Help > Show data folder). Delete that file to go back to GPU.

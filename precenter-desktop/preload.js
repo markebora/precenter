@@ -79,7 +79,9 @@ contextBridge.exposeInMainWorld('dscNative', {
     info: () => ipcRenderer.invoke('app:info'),
     setNdi: on => ipcRenderer.invoke('app:setNdi', !!on),
     openConfig: () => ipcRenderer.invoke('app:openConfig'),
-    openData: () => ipcRenderer.invoke('app:openData')
+    openData: () => ipcRenderer.invoke('app:openData'),
+    gpu: () => ipcRenderer.invoke('app:gpu:get'),
+    setGpu: on => ipcRenderer.invoke('app:gpu:set', !!on)
   }
 });
 

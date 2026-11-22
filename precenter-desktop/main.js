@@ -441,6 +441,15 @@ function setupIpc() {
   ipcMain.handle('app:setNdi', (_e, on) => setNdi(on, false));
   ipcMain.handle('app:openConfig', () => shell.openPath(cfgResult.path));
   ipcMain.handle('app:openData', () => shell.openPath(app.getPath('userData')));
+  ipcMain.handle('app:gpu:get', () => {
+    let status = null; try { status = app.getGPUFeatureStatus(); } catch (e) { /* not available */ }
+    return { gpu: gpuOn, status };
+  });
+  ipcMain.handle('app:gpu:set', (_e, on) => {
+    try { fs.writeFileSync(gpuFile, JSON.stringify({ gpu: !!on })); } catch (e) { log.warn('Could not save graphics setting: ' + e.message); return false; }
+    app.relaunch(); app.exit(0);
+    return true;
+  });
   ipcMain.handle('ndi:sync', async (_e, list) => {
     const cfgs = Array.isArray(list) ? list : [];
     if (cfgs.length && !cfg.ndi.enabled) throw new Error('NDI is turned off. Turn it on from File > NDI video output (or Help > NDI output in the app).');
@@ -457,6 +466,11 @@ cfgResult = loadConfig(app.getPath('userData'), defaultConfigFile());
 cfg = cfgResult.config;
 policy = createUrlPolicy(cfg);
 log.init(app.getPath('userData'));
+// Graphics: the Profile > Advanced > Graphics choice is saved in graphics.json. It must be applied before the app is ready.
+const gpuFile = path.join(app.getPath('userData'), 'graphics.json');
+let gpuOn = true;
+try { gpuOn = JSON.parse(fs.readFileSync(gpuFile, 'utf8')).gpu !== false; } catch (e) { /* no file yet: GPU on */ }
+if (!gpuOn) app.disableHardwareAcceleration();
  
 if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
   app.quit();
