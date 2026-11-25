@@ -17,6 +17,8 @@ const path = require('path');
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const MAX_FRAME = 64 * 1024;        // a phone only sends small button presses
 const MAX_CLIENTS = 12;
+const MAX_BCLIENTS = 8;             // OBS browser sources
+const MAX_BCACHE = 300;
 const MAX_BUFFER = 8 * 1024 * 1024; // drop a phone that cannot keep up
 
 function newPinValue() { return String(crypto.randomInt(0, 1000000)).padStart(6, '0'); }
@@ -46,23 +48,38 @@ function frame(opcode, payload) {
   return Buffer.concat([head, payload]);
 }
 
+// Broadcast links for OBS (browser source). Each has its own address and shares one link key (?k=...):
+//   /broadcast/full?k=KEY&n=0     the full audience screen (the app's own output page, fed over /bws)
+//   /broadcast/overlay?k=KEY      only the lyrics / Bible text on a transparent page, styled from Connect > Broadcast overlay
+// extra options: appHtml() -> Promise<string> (the app page), overlayFile (path), shimFile (path), onBHello(), onBClients({full,overlay})
 // options: { pin, port, pageFile (path, or a function that returns the path to use for each request), onCommand(cmd), onClients(count), dir (folder to remember the PIN in) }
 function create(opt) {
   opt = opt || {};
   let pin = opt.pin || '';
+  let bkey = '';
   let server = null, port = 0, lastState = null, timer = null;
   const clients = new Set();
+  const bclients = new Set();           // OBS browser sources
+  const bcache = new Map();             // last message of each kind for the full screen, so a new source is drawn at once
+  let ovState = '', ovStyle = '';       // last overlay text and overlay style
   const fails = new Map(); // ip -> { n, t }
 
   if (!pin && opt.dir) {
-    try { const j = JSON.parse(fs.readFileSync(path.join(opt.dir, 'lan.json'), 'utf8')); if (/^\d{6}$/.test(j.pin)) pin = j.pin; } catch (e) { /* first run */ }
+    try { const j = JSON.parse(fs.readFileSync(path.join(opt.dir, 'lan.json'), 'utf8')); if (/^\d{6}$/.test(j.pin)) pin = j.pin; if (/^[a-f0-9]{16}$/.test(j.bk || '')) bkey = j.bk; } catch (e) { /* first run */ }
   }
   if (!pin) pin = newPinValue();
-  const savePin = () => { if (opt.dir) { try { fs.mkdirSync(opt.dir, { recursive: true }); fs.writeFileSync(path.join(opt.dir, 'lan.json'), JSON.stringify({ pin })); } catch (e) { /* not fatal */ } } };
+  if (!bkey) bkey = crypto.randomBytes(8).toString('hex');
+  const savePin = () => { if (opt.dir) { try { fs.mkdirSync(opt.dir, { recursive: true }); fs.writeFileSync(path.join(opt.dir, 'lan.json'), JSON.stringify({ pin, bk: bkey })); } catch (e) { /* not fatal */ } } };
   savePin();
 
   const count = () => clients.size;
   const tell = () => { try { if (opt.onClients) opt.onClients(count()); } catch (e) { /* page gone */ } };
+  const bcount = () => { let full = 0, overlay = 0; for (const c of bclients) { if (c.mode === 'overlay') overlay++; else full++; } return { full, overlay }; };
+  const tellB = () => { try { if (opt.onBClients) opt.onBClients(bcount()); } catch (e) { /* page gone */ } };
+  function keyOk(given) {
+    const a = Buffer.from(String(given || '')), b = Buffer.from(bkey);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
 
   function pinOk(given, ip) {
     const f = fails.get(ip);
@@ -85,9 +102,10 @@ function create(opt) {
   function drop(c) {
     if (c.dead) return;
     c.dead = true;
+    const wasB = bclients.delete(c);
     clients.delete(c);
     try { c.socket.destroy(); } catch (e) { /* gone */ }
-    tell();
+    if (wasB) tellB(); else tell();
   }
 
   function onFrame(c, op, data) {
@@ -100,6 +118,7 @@ function create(opt) {
     try { m = JSON.parse(data.toString('utf8')); } catch (e) { return; }
     if (!m || typeof m !== 'object') return;
     if (m.t === 'hb') { send(c, '{"t":"hb"}'); return; }
+    if (c.b) { if (m.t === 'hello') { try { if (opt.onBHello) opt.onBHello(); } catch (e) { /* the app handles its own errors */ } } return; }
     if (m.t === 'cmd' && m.c && typeof m.c === 'object' && typeof m.c.t === 'string' && m.c.t.length < 24) {
       try { if (opt.onCommand) opt.onCommand(m.c); } catch (e) { /* the app handles its own errors */ }
     }
@@ -110,14 +129,15 @@ function create(opt) {
     let u;
     try { u = new URL(req.url, 'http://x'); } catch (e) { socket.destroy(); return; }
     const key = req.headers['sec-websocket-key'];
-    if (u.pathname !== '/ws' || !key || String(req.headers.upgrade || '').toLowerCase() !== 'websocket') { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); return; }
-    if (!pinOk(u.searchParams.get('pin'), ip)) { socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n'); return; }
-    if (clients.size >= MAX_CLIENTS) { socket.end('HTTP/1.1 503 Service Unavailable\r\n\r\n'); return; }
+    const isB = u.pathname === '/bws';
+    if ((u.pathname !== '/ws' && !isB) || !key || String(req.headers.upgrade || '').toLowerCase() !== 'websocket') { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); return; }
+    if (isB ? !keyOk(u.searchParams.get('k')) : !pinOk(u.searchParams.get('pin'), ip)) { socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n'); return; }
+    if ((isB ? bclients.size : clients.size) >= (isB ? MAX_BCLIENTS : MAX_CLIENTS)) { socket.end('HTTP/1.1 503 Service Unavailable\r\n\r\n'); return; }
     const accept = crypto.createHash('sha1').update(key + GUID).digest('base64');
     socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
     socket.setNoDelay(true);
-    const c = { socket, buf: Buffer.alloc(0), alive: true, dead: false, frag: null };
-    clients.add(c);
+    const c = { socket, buf: Buffer.alloc(0), alive: true, dead: false, frag: null, b: isB, mode: u.searchParams.get('m') === 'overlay' ? 'overlay' : 'full' };
+    (isB ? bclients : clients).add(c);
     socket.on('data', chunk => {
       c.buf = Buffer.concat([c.buf, chunk]);
       for (;;) {
@@ -143,6 +163,12 @@ function create(opt) {
     socket.on('close', () => drop(c));
     socket.on('error', () => drop(c));
     send(c, JSON.stringify({ t: 'hello', ok: true }));
+    if (isB) {
+      if (c.mode === 'overlay') { if (ovStyle) send(c, ovStyle); if (ovState) send(c, ovState); }
+      else for (const j of bcache.values()) send(c, j);
+      tellB();
+      return;
+    }
     if (lastState) send(c, lastState);
     tell();
   }
@@ -185,6 +211,27 @@ function create(opt) {
       try { html = fs.readFileSync(typeof opt.pageFile === 'function' ? opt.pageFile() : opt.pageFile, 'utf8'); } catch (e) { html = '<!doctype html><meta charset=utf-8><title>Remote</title><p style="font:16px sans-serif;padding:24px">The remote page is missing from this copy of PreCenter.</p>'; }
       res.writeHead(200, Object.assign({ 'Content-Type': 'text/html; charset=utf-8' }, headers)); res.end(html); return;
     }
+    if (u.pathname === '/bcast.js') {
+      let js = '';
+      try { js = fs.readFileSync(opt.shimFile, 'utf8'); } catch (e) { res.writeHead(404, headers); res.end('Not found'); return; }
+      res.writeHead(200, Object.assign({ 'Content-Type': 'application/javascript; charset=utf-8' }, headers)); res.end(js); return;
+    }
+    if (u.pathname === '/broadcast/full' || u.pathname === '/broadcast/overlay') {
+      if (!keyOk(u.searchParams.get('k'))) { res.writeHead(401, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, headers)); res.end('This link is not valid any more. Copy the new link from PreCenter (Connect).'); return; }
+      const page = html => { res.writeHead(200, Object.assign({ 'Content-Type': 'text/html; charset=utf-8' }, headers)); res.end(html); };
+      const fail = () => { res.writeHead(500, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, headers)); res.end('The page could not be loaded.'); };
+      if (u.pathname === '/broadcast/overlay') { try { page(fs.readFileSync(opt.overlayFile, 'utf8')); } catch (e) { fail(); } return; }
+      const n = Math.max(0, Math.min(20, parseInt(u.searchParams.get('n') || '0', 10) || 0));
+      const tag = '<script src="/bcast.js?k=' + bkey + '&n=' + n + (u.searchParams.get('sound') === '1' ? '&sound=1' : '') + '"></script>';
+      Promise.resolve().then(() => opt.appHtml()).then(h => {
+        h = String(h || '');
+        const i = h.search(/<head[^>]*>/i);
+        if (i < 0) { fail(); return; }
+        const m = /<head[^>]*>/i.exec(h);
+        page(h.slice(0, m.index + m[0].length) + tag + h.slice(m.index + m[0].length));
+      }).catch(fail);
+      return;
+    }
     if (u.pathname.startsWith('/m/') && (req.method === 'GET' || req.method === 'HEAD')) { serveMedia(req, res, decodeURIComponent(u.pathname.slice(3)), headers); return; }
     res.writeHead(404, headers); res.end('Not found');
   }
@@ -209,7 +256,7 @@ function create(opt) {
     server.on('error', () => { /* keep running */ });
     port = server.address().port;
     timer = setInterval(() => {
-      for (const c of Array.from(clients)) {
+      for (const c of Array.from(clients).concat(Array.from(bclients))) {
         if (!c.alive) { drop(c); continue; }
         c.alive = false;
         try { c.socket.write(frame(9, Buffer.alloc(0))); } catch (e) { drop(c); }
@@ -221,7 +268,7 @@ function create(opt) {
 
   function stop() {
     clearInterval(timer);
-    for (const c of Array.from(clients)) drop(c);
+    for (const c of Array.from(clients).concat(Array.from(bclients))) drop(c);
     if (server) { try { server.close(); } catch (e) { /* closed */ } server = null; }
     port = 0;
   }
@@ -231,6 +278,30 @@ function create(opt) {
     for (const c of clients) send(c, lastState);
   }
 
+  // the app sends every message it sends to its own audience window (slides, loops, media links); OBS "full screen" sources replay them
+  function bFrame(text) {
+    if (typeof text !== 'string' || text.length > 16 * 1024 * 1024) return;
+    let m; try { m = JSON.parse(text); } catch (e) { return; }
+    if (!m || typeof m !== 'object' || m.hello) return;
+    const key = m.bcBlob ? 'bb:' + String(m.bcBlob.name) : (m.d ? 'p' : Object.keys(m)[0] || 'x');
+    bcache.delete(key); bcache.set(key, '{"t":"f","m":' + text + '}');
+    for (const k of bcache.keys()) { if (bcache.size <= MAX_BCACHE) break; bcache.delete(k); }
+    const j = bcache.get(key);
+    for (const c of bclients) if (c.mode !== 'overlay') send(c, j);
+  }
+  function bOverlay(obj) {
+    ovState = JSON.stringify({ t: 'ov', d: obj });
+    for (const c of bclients) if (c.mode === 'overlay') send(c, ovState);
+  }
+  function bStyle(obj) {
+    ovStyle = JSON.stringify({ t: 'ovs', d: obj });
+    for (const c of bclients) if (c.mode === 'overlay') send(c, ovStyle);
+  }
+  function newKey() {
+    bkey = crypto.randomBytes(8).toString('hex'); savePin();
+    for (const c of Array.from(bclients)) drop(c);   // sources using the old link must be given the new one
+    return bkey;
+  }
   function newPin() {
     pin = newPinValue(); savePin();
     for (const c of Array.from(clients)) drop(c);   // phones paired with the old PIN must scan again
@@ -239,10 +310,13 @@ function create(opt) {
 
   function info() {
     const urls = port ? lanAddresses().map(a => ({ name: a.name, address: a.address, url: 'http://' + a.address + ':' + port + '/?pin=' + pin })) : [];
-    return { running: !!server, port, pin, urls, clients: count() };
+    const hosts = port ? [{ name: 'This computer', address: '127.0.0.1' }].concat(lanAddresses()) : [];
+    const bc = bcount();
+    return { running: !!server, port, pin, urls, clients: count(),
+      bcast: { key: bkey, hosts: hosts.map(h => ({ name: h.name, address: h.address, full: 'http://' + h.address + ':' + port + '/broadcast/full?k=' + bkey, overlay: 'http://' + h.address + ':' + port + '/broadcast/overlay?k=' + bkey })), full: bc.full, overlay: bc.overlay } };
   }
 
-  return { start, stop, setState, newPin, info, count, putMedia };
+  return { start, stop, setState, newPin, info, count, putMedia, bFrame, bOverlay, bStyle, newKey };
 }
 
 module.exports = { create, lanAddresses, frame };

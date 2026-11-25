@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>PreCenter overlay</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:transparent;overflow:hidden}#root{position:fixed;inset:0}</style>
+</head><body><div id="root"></div>
+<script>
+/* Overlay renderer: draws the lyrics / Bible text for OBS. Sizes are in pixels of a 1920 x 1080 picture and scale with the window. */
+function dscOvMake(root){
+  var wr=document.createElement('div'),bx=document.createElement('div'),tx=document.createElement('div'),rf=document.createElement('div');
+  wr.style.cssText='position:absolute;box-sizing:border-box;display:flex;opacity:0;pointer-events:none';
+  bx.style.cssText='box-sizing:border-box;max-width:100%;display:flex;flex-direction:column';
+  tx.style.cssText='white-space:pre-wrap;overflow-wrap:break-word';rf.style.cssText='white-space:pre-wrap;overflow-wrap:break-word';
+  bx.appendChild(tx);bx.appendChild(rf);wr.appendChild(bx);root.appendChild(wr);
+  var S={},cur={kind:'lyrics',text:'',ref:''},tm=0,empty=true;
+  function ring(w,c){if(!w)return[];var a=[],i;for(i=0;i<12;i++){var r=i*Math.PI/6;a.push((Math.cos(r)*w).toFixed(2)+'px '+(Math.sin(r)*w).toFixed(2)+'px 0 '+c)}return a}
+  function rgba(h,a){var m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return'rgba(0,0,0,'+a+')';var n=parseInt(m[1],16);return'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')'}
+  function lay(mul){
+    var st=S[cur.kind]||{},u=root.clientWidth/1920,pos=st.pos||'bottom',oy=+st.oy||0,w=st.w==null?86:+st.w,al=st.align||'center',bp=st.bx||'center';
+    wr.style.left=((100-w)/2)+'%';wr.style.width=w+'%';wr.style.top='auto';wr.style.bottom='auto';wr.style.transform='none';
+    wr.style.justifyContent=bp==='left'?'flex-start':bp==='right'?'flex-end':'center';
+    if(pos==='top')wr.style.top=(5+oy)+'%';
+    else if(pos==='center'){wr.style.top=(50+oy)+'%';wr.style.transform='translateY(-50%)'}
+    else if(pos==='lower')wr.style.bottom=(14-oy)+'%';
+    else wr.style.bottom=(5-oy)+'%';
+    var sh=ring((+st.outline||0)*u,st.outlineColor||'#000000');
+    if(+st.shadow>0)sh.push('0 '+(+st.shadow*u*.4).toFixed(1)+'px '+(+st.shadow*u).toFixed(1)+'px '+rgba(st.shadowColor||'#000000',.85));
+    tx.style.fontFamily=(st.font?"'"+st.font+"',":'')+'sans-serif';tx.style.fontSize=((+st.size||60)*u*mul).toFixed(1)+'px';tx.style.fontWeight=st.weight||700;
+    tx.style.color=st.color||'#ffffff';tx.style.lineHeight=st.lh==null?1.25:st.lh;tx.style.letterSpacing=((+st.ls||0)*u).toFixed(2)+'px';
+    tx.style.textTransform=st.upper?'uppercase':'none';tx.style.textAlign=al;tx.style.textShadow=sh.join(',');
+    var bo=st.box||{};
+    bx.style.background=bo.on?rgba(bo.color||'#000000',bo.opacity==null?.55:+bo.opacity):'transparent';
+    bx.style.borderRadius=((+bo.radius||0)*u).toFixed(1)+'px';
+    var pd=bo.on?(bo.pad==null?24:+bo.pad):0;bx.style.padding=(pd*u).toFixed(1)+'px '+(pd*1.6*u).toFixed(1)+'px';
+    var showRef=cur.kind==='bible'&&st.refOn!==false&&cur.ref;
+    rf.style.display=showRef?'block':'none';rf.textContent=showRef?cur.ref:'';
+    rf.style.fontFamily=tx.style.fontFamily;rf.style.fontSize=((+st.refSize||40)*u*mul).toFixed(1)+'px';rf.style.fontWeight=st.refWeight||600;
+    rf.style.color=st.refColor||'#f5c518';rf.style.textAlign=al;rf.style.textShadow=sh.join(',');rf.style.textTransform='none';
+    var above=st.refPos==='above';bx.style.flexDirection=above?'column-reverse':'column';
+    rf.style.margin=showRef?((above?0:10*u)+'px 0 '+(above?10*u:0)+'px'):'0';
+  }
+  function paint(){
+    tx.textContent=cur.text;var mul=1,maxh=(S[cur.kind]&&S[cur.kind].maxh)||60,i;
+    lay(mul);
+    for(i=0;i<24&&mul>.35&&wr.offsetHeight>root.clientHeight*maxh/100;i++){mul*=.94;lay(mul)}
+    var f=(S[cur.kind]&&S[cur.kind].fade!=null)?+S[cur.kind].fade:250;
+    wr.style.transition='opacity '+f+'ms';wr.style.opacity=empty?'0':'1';
+  }
+  return{
+    style:function(s){S=s||{};paint()},
+    data:function(d){
+      d=d||{};var kind=d.kind==='bible'?'bible':'lyrics',st=S[kind]||{};
+      var next={kind:kind,text:String(d.text||''),ref:String(d.ref||'')};
+      var ne=!next.text||st.on===false;
+      if(next.kind===cur.kind&&next.text===cur.text&&next.ref===cur.ref&&ne===empty)return;
+      var f=st.fade!=null?+st.fade:250;clearTimeout(tm);
+      if(!empty&&f>0){wr.style.transition='opacity '+f+'ms';wr.style.opacity='0';tm=setTimeout(function(){cur=next;empty=ne;paint()},f)}
+      else{cur=next;empty=ne;paint()}
+    },
+    resize:function(){paint()}
+  };
+}
+
+(function(){
+  var q=new URL(location.href).searchParams,K=q.get('k')||'',root=document.getElementById('root');
+  if(q.get('test')==='1')document.body.style.background='repeating-conic-gradient(#555 0 25%,#333 0 50%) 0 0/40px 40px';
+  var ov=dscOvMake(root),ws=null,tm=0,got=false;
+  var DEF={lyrics:{pos:'bottom',oy:0,w:86,align:'center',bx:'center',font:'',size:64,weight:700,color:'#ffffff',lh:1.25,ls:0,upper:false,outline:3,outlineColor:'#000000',shadow:10,shadowColor:'#000000',box:{on:false,color:'#000000',opacity:.55,radius:16,pad:24},fade:250,maxh:60,on:true},
+           bible:{pos:'lower',oy:0,w:80,align:'center',bx:'center',font:'',size:52,weight:600,color:'#ffffff',lh:1.3,ls:0,upper:false,outline:0,outlineColor:'#000000',shadow:0,shadowColor:'#000000',box:{on:true,color:'#000000',opacity:.6,radius:18,pad:28},fade:250,maxh:60,on:true,refOn:true,refSize:40,refColor:'#f5c518',refWeight:600,refPos:'below'}};
+  ov.style(DEF);
+  var loaded={};function fonts(l){(l||[]).forEach(function(u){if(loaded[u])return;loaded[u]=1;var k=document.createElement('link');k.rel='stylesheet';k.href=u;k.onload=function(){ov.resize()};document.head.appendChild(k)})}
+  try{document.fonts.addEventListener('loadingdone',function(){ov.resize()})}catch(e){}
+  function connect(){
+    try{ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/bws?m=overlay&k='+encodeURIComponent(K))}catch(e){setTimeout(connect,2000);return}
+    ws.onmessage=function(e){var j;try{j=JSON.parse(e.data)}catch(x){return}
+      if(j.t==='ovs'){ov.style(j.d);fonts(j.d&&j.d.fontUrls)}else if(j.t==='ov'){got=true;ov.data(j.d)}};
+    ws.onclose=function(){clearTimeout(tm);tm=setTimeout(connect,1500)};
+    ws.onerror=function(){try{ws.close()}catch(x){}};
+  }
+  connect();
+  window.addEventListener('resize',function(){ov.resize()});
+  if(q.get('test')==='1')setTimeout(function(){if(!got)ov.data({kind:'bible',text:'For God so loved the world, that he gave his only Son.',ref:'John 3:16'})},1200);
+})();
+</script></body></html>

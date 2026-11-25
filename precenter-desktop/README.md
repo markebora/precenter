@@ -162,3 +162,12 @@ After approval, a signing step is added to the workflow so the Setup installer i
 
 In PreCenter: Profile > Advanced > Graphics. Choose GPU (smoother) or CPU only. The app restarts to apply it.
 The choice is saved in graphics.json in the data folder (Help > Show data folder). Delete that file to go back to GPU.
+
+## Broadcast links for OBS
+
+Connect has two tabs, each with its own link (shown with the computer address and a link key):
+
+- **Broadcast full screen**: a browser source for OBS that shows the audience screen exactly as the audience sees it (backgrounds, loops, lyrics). Pick which audience screen to send; sound is off unless you tick it.
+- **Broadcast overlay**: only the lyrics and Bible text on a see-through page. **Overlay Edit** changes position, font, size, outline, shadow, box, reference and fade for lyrics and Bible text separately.
+
+In OBS: Sources, +, Browser, paste the link, Width 1920, Height 1080. "New link" in Connect stops old links. Needs the Wi-Fi server on (config `lan.enabled`).

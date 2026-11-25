@@ -245,17 +245,15 @@ button{font:inherit;cursor:pointer}
     }
     sp.style.fontSize=best+'px';
   }
-  /* The computer uploads a short looping clip and sends its https link in bg.u (only for k:'vid').
-     Only https links to .mp4/.webm files are played; the thumbnail stays underneath until the clip is really playing. */
-  const VID_RE=/^https:\/\/[^\s"'<>()]+\.(mp4|webm)(\?[^\s"'<>()]*)?$/i;
-  /* candidate clip links: PreCenter may send a WebM and an MP4 copy (bg.u, bg.u2); try the one this phone says it can play first */
+  /* The computer makes a short looping clip and serves it itself (bg.lu); the thumbnail stays underneath until the clip is really playing. */
+  /* candidate clip links: PreCenter may send a WebM and an MP4 copy (bg.lu, bg.lu2); try the one this phone says it can play first */
   /* On the Wi-Fi page the computer serves the clips itself (bg.lu / bg.lu2 / bg.liu, paths like m/bg/x.mp4): no internet needed */
   const LAN_RE=/^m\/[A-Za-z0-9._\-\/]{1,160}\.(mp4|webm|jpe?g|png|webp)$/i;
   const lanUrl=x=>(window.dscLan&&typeof x==='string'&&LAN_RE.test(x)&&x.indexOf('..')<0)?location.origin+'/'+x:'';
   function bgVidList(){
     const b=state&&state.bg;
     if(!b||b.k!=='vid')return [];
-    const l=[lanUrl(b.lu),lanUrl(b.lu2)].filter(Boolean).concat([b.u,b.u2].filter(x=>typeof x==='string'&&VID_RE.test(x)));
+    const l=[lanUrl(b.lu),lanUrl(b.lu2)].filter(Boolean);
     const v=document.createElement('video');
     const ok=x=>{const m=/\.webm(\?|$)/i.test(x)?'video/webm; codecs="vp8"':'video/mp4';return v.canPlayType(m)?0:1};
     return l.sort((x,y)=>ok(x)-ok(y)||(/\.webm/i.test(y)?1:0)-(/\.webm/i.test(x)?1:0));
@@ -269,11 +267,10 @@ button{font:inherit;cursor:pointer}
       catch(e2){return 'cannot reach '+host+' (wrong public link, or blocked network)'}
     }
   }
-  const IMG_RE=/^https:\/\/[^\s"'<>()]+\.(jpe?g|png|webp)(\?[^\s"'<>()]*)?$/i;
-  /* sharper 720p picture from the computer's R2 bucket (bg.iu); the small thumbnail stays until it has loaded */
+  /* sharper picture served by the computer (bg.liu); the small thumbnail stays until it has loaded */
   function paintImg(){
     const b=state&&state.bg,el=$('rmtPrevBg');if(!el)return;
-    const u=b&&b.k==='img'&&!state.black?(lanUrl(b.liu)||(typeof b.iu==='string'&&IMG_RE.test(b.iu)?b.iu:'')):'';
+    const u=b&&b.k==='img'&&!state.black?lanUrl(b.liu):'';
     const css='url("'+u+'") center/cover no-repeat';
     if(!u){el._iu='';el._ok='';return}
     if(el._iu===u){if(el._ok===u)el.style.background=css;return}
@@ -283,7 +280,7 @@ button{font:inherit;cursor:pointer}
   function paintVid(show){
     const v=$('rmtPrevVid');if(!v)return;
     const list=show?bgVidList():[];
-    const raw=state&&state.bg&&state.bg.k==='vid'?(state.bg.u||state.bg.lu):'';
+    const raw=state&&state.bg&&state.bg.k==='vid'?state.bg.lu:'';
     if(!list.length){
       if(v.getAttribute('src')){try{v.pause()}catch(e){}v.removeAttribute('src');try{v.load()}catch(e){}}
       v._k='';v.hidden=true;

@@ -345,6 +345,20 @@ function showAbout() {
 const builtInPage = () => path.join(__dirname, 'lan', 'remote.html');
 const customPage = () => path.join(app.getPath('userData'), 'lan', 'remote.html');      // a file you put there yourself wins
 let lanPage = null;                                                                       // rebuilds remote.auto.html from Harmony
+// The page OBS shows for "Broadcast full screen" is the app itself (its audience screen). In remote mode that is the hosted page,
+// kept for 10 minutes; if it cannot be reached (or in bundled mode) the copy inside the program is used.
+let bAppCache = { at: 0, html: '' };
+async function broadcastAppHtml() {
+  if (cfg.mode === 'remote' && cfg.startUrl) {
+    if (bAppCache.html && Date.now() - bAppCache.at < 10 * 60 * 1000) return bAppCache.html;
+    try {
+      const r = await net.fetch(cfg.startUrl, { headers: { 'cache-control': 'no-cache' } });
+      const t = r.ok ? await r.text() : '';
+      if (t.length > 200 * 1024 && /<head/i.test(t)) { bAppCache = { at: Date.now(), html: t }; return t; }
+    } catch (e) { log.warn('Broadcast page: hosted app not reachable, using the copy inside the program (' + e.message + ')'); }
+  }
+  return fs.promises.readFile(path.join(APP_DIR, 'index.html'), 'utf8');
+}
 function setupLan() {
   const fromMain = e => mainWin && !mainWin.isDestroyed() && e.sender === mainWin.webContents;
   const toPage = (ch, ...a) => { try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(ch, ...a); } catch (e) { /* closing */ } };
@@ -367,6 +381,11 @@ function setupLan() {
     return shell.openPath(dir).then(r => !r, () => false);
   });
   ipcMain.handle('lan:newPin', e => { if (fromMain(e) && lan) { lan.newPin(); return lan.info(); } return null; });
+  // OBS links: the full-screen picture (same messages the audience window gets) and the lyrics / Bible overlay
+  ipcMain.handle('lan:newBkey', e => { if (fromMain(e) && lan) { lan.newKey(); return lan.info(); } return null; });
+  ipcMain.on('lan:bframe', (e, json) => { if (lan && fromMain(e) && typeof json === 'string') lan.bFrame(json); });
+  ipcMain.on('lan:bov', (e, json) => { if (!lan || !fromMain(e) || typeof json !== 'string' || json.length > 200000) return; try { lan.bOverlay(JSON.parse(json)); } catch (err) { /* ignore */ } });
+  ipcMain.on('lan:bstyle', (e, json) => { if (!lan || !fromMain(e) || typeof json !== 'string' || json.length > 200000) return; try { lan.bStyle(JSON.parse(json)); } catch (err) { /* ignore */ } });
   ipcMain.handle('lan:media', (e, key, data, type) => {
     if (!lan || !fromMain(e) || !data) return false;
     try { return lan.putMedia(String(key), Buffer.from(data), String(type || '')); } catch (err) { return false; }
@@ -382,7 +401,12 @@ function setupLan() {
     // A remote.html in the app's data folder (lan/remote.html) wins over the one built into the app, so a new phone page is a file copy, not a rebuild.
     pageFile: () => { const c = customPage(); if (fs.existsSync(c)) return c; return lanPage && fs.existsSync(lanPage.autoFile) ? lanPage.autoFile : builtInPage(); },
     onCommand: c => toPage('lan:cmd', c),
-    onClients: n => toPage('lan:clients', n)
+    onClients: n => toPage('lan:clients', n),
+    appHtml: broadcastAppHtml,
+    overlayFile: path.join(__dirname, 'lan', 'overlay.html'),
+    shimFile: path.join(__dirname, 'lan', 'bcast-shim.js'),
+    onBHello: () => toPage('lan:bhello'),
+    onBClients: n => toPage('lan:bclients', n)
   });
   if (cfg.lan.autoUpdatePage) {
     lanPage = lanPageLib.create({

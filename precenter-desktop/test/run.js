@@ -538,6 +538,115 @@ test('Wi-Fi remote is on by default and the app wires it up', () => {
   ["lan:info", "lan:state", "lan:newPin", "lan:cmd"].forEach(c => { assert.ok(main.includes("'" + c + "'"), 'main ' + c); assert.ok(pre.includes("'" + c + "'"), 'preload ' + c); });
 });
 
+// ---- Broadcast links for OBS (full screen + overlay) ----
+function wsPath(port, pathAndQuery) {
+  return new Promise((resolve, reject) => {
+    const key = crypto.randomBytes(16).toString('base64');
+    const req = http.request({ host: '127.0.0.1', port, path: pathAndQuery, headers: { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Key': key, 'Sec-WebSocket-Version': '13' } });
+    req.on('response', res => { res.resume(); reject(new Error('HTTP ' + res.statusCode)); });
+    req.on('upgrade', (res, socket, head) => {
+      const msgs = []; let buf = Buffer.alloc(0);
+      const onData = d => {
+        buf = Buffer.concat([buf, d]);
+        for (;;) {
+          if (buf.length < 2) return;
+          let len = buf[1] & 0x7f, off = 2;
+          if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); off = 4; }
+          else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); off = 10; }
+          if (buf.length < off + len) return;
+          if ((buf[0] & 0x0f) === 1) msgs.push(JSON.parse(buf.subarray(off, off + len).toString()));
+          buf = buf.subarray(off + len);
+        }
+      };
+      socket.on('data', onData);
+      if (head && head.length) onData(head);
+      const send = text => {
+        const pay = Buffer.from(text), mask = crypto.randomBytes(4);
+        const hd = Buffer.from([0x81, 0x80 | pay.length]);
+        const body = Buffer.from(pay); for (let i = 0; i < body.length; i++) body[i] ^= mask[i & 3];
+        socket.write(Buffer.concat([hd, mask, body]));
+      };
+      resolve({ msgs, send, socket });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+const httpGet = (port, p) => new Promise((resolve, reject) => {
+  http.get({ host: '127.0.0.1', port, path: p }, res => { let b = ''; res.on('data', d => b += d); res.on('end', () => resolve({ status: res.statusCode, body: b })); }).on('error', reject);
+});
+function mkBroadcast(extra) {
+  const fs2 = require('fs'), os2 = require('os');
+  const dir = fs2.mkdtempSync(path.join(os2.tmpdir(), 'bcast-'));
+  return lan.create(Object.assign({ pin: '123456', port: 0, dir, pageFile: path.join(root, 'lan', 'remote.html'),
+    appHtml: async () => '<!doctype html><html><head><title>App</title></head><body>app</body></html>',
+    overlayFile: path.join(root, 'lan', 'overlay.html'), shimFile: path.join(root, 'lan', 'bcast-shim.js') }, extra || {}));
+}
+test('Broadcast links: each page needs the link key, the full-screen page is the app plus the OBS shim', async () => {
+  const srv = mkBroadcast();
+  const port = await srv.start();
+  try {
+    const key = srv.info().bcast.key;
+    assert.ok(/^[a-f0-9]{16}$/.test(key));
+    assert.strictEqual((await httpGet(port, '/broadcast/overlay?k=wrong')).status, 401);
+    assert.strictEqual((await httpGet(port, '/broadcast/full')).status, 401);
+    const ov = await httpGet(port, '/broadcast/overlay?k=' + key);
+    assert.strictEqual(ov.status, 200); assert.ok(/dscOvMake/.test(ov.body) && /\/bws\?m=overlay/.test(ov.body));
+    const full = await httpGet(port, '/broadcast/full?k=' + key + '&n=2');
+    assert.strictEqual(full.status, 200);
+    assert.ok(full.body.indexOf('<head><script src="/bcast.js?k=' + key + '&n=2"></script>') >= 0, 'the shim is the first thing in <head>');
+    assert.ok(/<body>app<\/body>/.test(full.body));
+    const js = await httpGet(port, '/bcast.js');
+    assert.strictEqual(js.status, 200); assert.ok(/lyrics-presenter/.test(js.body));
+    const urls = srv.info().bcast.hosts;
+    assert.strictEqual(urls[0].address, '127.0.0.1');
+    assert.ok(urls[0].full.endsWith('/broadcast/full?k=' + key) && urls[0].overlay.endsWith('/broadcast/overlay?k=' + key));
+  } finally { srv.stop(); }
+});
+test('Broadcast links: OBS sources get the slide messages and the overlay text, a new link stops the old one', async () => {
+  const seen = { hello: 0, counts: [] };
+  const srv = mkBroadcast({ onBHello: () => { seen.hello++; }, onBClients: n => seen.counts.push(n) });
+  const port = await srv.start();
+  try {
+    const key = srv.info().bcast.key;
+    await assert.rejects(wsPath(port, '/bws?k=nope&m=full'), /401/);
+    srv.bFrame(JSON.stringify({ d: { bg: 'Gold' }, text: 'Line one' }));                 // sent before any source connected
+    srv.bFrame(JSON.stringify({ bcBlob: { name: 'a.png', url: '/m/bc/x.png' } }));
+    srv.bFrame(JSON.stringify({ hello: 1 }));                                           // never forwarded
+    const f = await wsPath(port, '/bws?k=' + key + '&m=full');
+    await wait(80);
+    assert.strictEqual(f.msgs[0].t, 'hello');
+    const got = f.msgs.slice(1).map(m => m.m);
+    assert.ok(got.some(m => m.d && m.text === 'Line one') && got.some(m => m.bcBlob && m.bcBlob.name === 'a.png'), 'a new source is caught up at once');
+    assert.ok(!got.some(m => m.hello));
+    srv.bFrame(JSON.stringify({ d: { bg: 'Gold' }, text: 'Line two' }));
+    await wait(80);
+    assert.strictEqual(f.msgs[f.msgs.length - 1].m.text, 'Line two');
+    f.send(JSON.stringify({ t: 'hello' })); await wait(80);
+    assert.strictEqual(seen.hello, 1);
+    srv.bStyle({ lyrics: { size: 70 } });
+    srv.bOverlay({ kind: 'lyrics', text: 'Hi', ref: '' });
+    const o = await wsPath(port, '/bws?k=' + key + '&m=overlay');
+    await wait(80);
+    assert.deepStrictEqual(o.msgs.slice(1).map(m => m.t), ['ovs', 'ov'], 'the overlay source gets style then text, and no slide frames');
+    srv.bOverlay({ kind: 'bible', text: 'Verse', ref: 'John 3:16' });
+    srv.bFrame(JSON.stringify({ d: { bg: 'Gold' }, text: 'Line three' }));
+    await wait(80);
+    assert.strictEqual(o.msgs[o.msgs.length - 1].d.ref, 'John 3:16');
+    assert.ok(!o.msgs.some(m => m.t === 'f'));
+    assert.deepStrictEqual(srv.info().bcast.full, 1); assert.deepStrictEqual(srv.info().bcast.overlay, 1);
+    assert.deepStrictEqual(seen.counts[seen.counts.length - 1], { full: 1, overlay: 1 });
+    const old = key; srv.newKey();
+    await wait(100);
+    assert.deepStrictEqual(srv.info().bcast.full, 0);
+    assert.notStrictEqual(srv.info().bcast.key, old);
+    await assert.rejects(wsPath(port, '/bws?k=' + old + '&m=full'), /401/);
+    assert.strictEqual((await httpGet(port, '/broadcast/overlay?k=' + old)).status, 401);
+    // the phone remote still works with its own PIN
+    const ph = await wsPath(port, '/ws?pin=123456'); await wait(50); assert.strictEqual(ph.msgs[0].t, 'hello'); ph.socket.destroy();
+  } finally { srv.stop(); }
+});
+
 (async () => {
   for (const [name, fn] of queue) {
     try { await fn(); pass++; console.log('PASS ' + name); }

@@ -63,7 +63,13 @@ contextBridge.exposeInMainWorld('dscNative', {
     state: json => ipcRenderer.send('lan:state', String(json)),
     media: (key, data, type) => ipcRenderer.invoke('lan:media', String(key), data, String(type || '')),
     onCmd: cb => { ipcRenderer.on('lan:cmd', (_e, c) => cb(c)); },
-    onClients: cb => { ipcRenderer.on('lan:clients', (_e, n) => cb(n)); }
+    onClients: cb => { ipcRenderer.on('lan:clients', (_e, n) => cb(n)); },
+    newBkey: () => ipcRenderer.invoke('lan:newBkey'),
+    bframe: json => ipcRenderer.send('lan:bframe', String(json)),
+    bov: json => ipcRenderer.send('lan:bov', String(json)),
+    bstyle: json => ipcRenderer.send('lan:bstyle', String(json)),
+    onBhello: cb => { ipcRenderer.on('lan:bhello', () => cb()); },
+    onBclients: cb => { ipcRenderer.on('lan:bclients', (_e, n) => cb(n)); }
   },
   platform: process.platform,
   ndi: {
