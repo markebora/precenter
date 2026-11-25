@@ -3682,8 +3682,9 @@ function paint(stage,p){
     el=document.createElement('div');el.className='tx';
   el.style.cssText=`align-items:${{left:'flex-start',center:'center',right:'flex-end',justify:'stretch'}[d.align]};${d.outline?'-webkit-text-stroke:.045em #000;paint-order:stroke fill;':''}justify-content:${j};text-align:${d.align};color:${d.fg};font-family:'${d.font}',sans-serif;font-size:calc(${d.size}*1cqw/19.2);text-shadow:${sh};text-transform:${d.caps?'uppercase':'none'};font-weight:${d.bold?700:400};font-style:${d.ital?'italic':'normal'};text-decoration:${d.ul?'underline':'none'}`+(p.cd?';padding-bottom:30cqw':'')+(d.half&&d.align==='left'?';padding-right:48cqw':'')+(d.half&&d.align==='right'?';padding-left:48cqw':'');
     if(d.afit){el.dataset.afit='1';el.dataset.base=String(d.size/19.2)}
-    if(tx&&(d.bxs==='bars'||d.bxs==='frame')){const w=window.dscBox(d,tx);el.appendChild(w);spans.push(w)}
-    else if(tx){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
+    const blank=!tx||!(window.rtStrip?rtStrip(String(tx)):String(tx)).replace(/[\u200b-\u200d\ufeff\s]/g,'');   /* a slide with no words draws no text box */
+    if(tx&&!blank&&(d.bxs==='bars'||d.bxs==='frame')){const w=window.dscBox(d,tx);el.appendChild(w);spans.push(w)}
+    else if(tx&&!blank){const sp=document.createElement('span');window.rtSet(sp,tx);if(d.box)sp.style.cssText='background:rgba(0,0,0,.5);padding:.12em .4em;border-radius:.25em;box-decoration-break:clone;-webkit-box-decoration-break:clone';el.appendChild(sp);spans.push(sp)}
   }
   stage.appendChild(el);if(stage.isConnected)fitStage(stage);
   if(p.ast!=null&&d.lay&&d.lay.length)animApply(stage,el,d.lay,p,chg?dur:0);
@@ -3735,6 +3736,8 @@ function sbgStage(m,n,L){
   window.__sb=1;
   paint(el,{...m,d:{...o.d},sp:o.sp,u:(o.d.lib&&L[o.d.lib])||'',text:'',props:[],msg:'',ch:null,cam:null,te:0,cd:null,og:null,clear:false,black:false});
 }
+/* the small preview shows the screen that is set as Main (first audience screen if none is) */
+function prevN(){try{const a=lpScr.get().filter(d=>d.k==='a'),i=a.findIndex(d=>window.dscRoleOf&&dscRoleOf(d)==='main');return i<0?0:i}catch(e){return 0}}
 function applyLook(p,kind,n){
   p=sbgApply(p,kind,n);
   const L=p&&p.look&&p.look[kind];if(!L)return p;
@@ -4799,7 +4802,7 @@ function openBible(sec){
       p.black=false;p.clear=false;p.msg='';p.sm='';p.note='';p.next='';p.sid=undefined;p.ast=undefined;p.atg=undefined;p.mst=[];
       p.d=e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0};
       p.text=txt;
-      paint(st,applyLook(p,'a'));fitStage(st);
+      paint(st,applyLook(p,'a',prevN()));fitStage(st);
     }catch(err){}
   }
   function openEd(c,x,k){
@@ -4999,7 +5002,7 @@ function payload(){
   const p={look:{a:{...L.a},s:{...L.s}},props:S.props.filter(x=>x.on).map(x=>({t:x.t,pos:x.pos,size:x.size,img:x.img,text:x.t==='ccli'?ccliLine(s):x.text})).filter(x=>x.img||x.text),sm:smsgOn?smsg:'',note:ntOf(s,idx).n||'',stl:window.lpScr?window.lpScr.layouts():[],d:eff(s,idx),mp:(window.dscMpGet?dscMpGet(eff(s,idx).lib||''):{}),u:libUrl(eff(s,idx)),text:slideText(s,idx),ch:chordsFor(s,idx),chn:chordsFor(s,idx+1),next:slideText(s,idx+1)||(adjItem(1)?'\u25b6 Next: '+(adjItem(1).title||'Untitled'):''),black,clear,msg:msgOn?msg:'',te,sid:s.id+':'+idx,mst:(mstMap[s.id+':'+idx]||[]).slice(),ast:SHOW().noAnim?undefined:(astMap[s.id+':'+idx]||0),atg:SHOW().noAnim?undefined:(atgMap[s.id+':'+idx]||[]).slice()};
   return noMedia?stripMedia(p):p;
 }
-function push(){const p=payload();paint($('#preview'),applyLook(p,'a'));
+function push(){const p=payload();paint($('#preview'),applyLook(p,'a',prevN()));
   const ln=p.d.lib;if(ln&&libFile[ln]&&!sent[ln]){sent[ln]=1;bc.postMessage({blob:{name:ln,file:libFile[ln]}})}
   if(p.alt)['a','s'].forEach(k=>(p.alt[k]||[]).forEach(o=>{const l2=o&&o.d&&o.d.lib;if(l2&&libFile[l2]&&!sent[l2]){sent[l2]=1;bc.postMessage({blob:{name:l2,file:libFile[l2]}})}}));
   if(p.sbg)['a','s'].forEach(k=>(p.sbg[k]||[]).forEach(o=>{const l2=o&&o.on&&o.d&&o.d.lib;if(l2&&libFile[l2]&&!sent[l2]){sent[l2]=1;bc.postMessage({blob:{name:l2,file:libFile[l2]}})}}));
@@ -5493,7 +5496,7 @@ function scrPrev(){
     const p=payload(),e=p.d,n=expand(cur()).length;
     p.black=false;p.clear=false;p.msg='';p.sm='';p.ast=undefined;p.atg=undefined;
     p.d=e.bg==='YouTube'&&e.yt?{...e,bg:'Image',img:'https://img.youtube.com/vi/'+e.yt+'/mqdefault.jpg',tr:0}:{...e,bg:e.bg==='Video'?'Midnight':e.bg,tr:0};
-    paint(st,applyLook(p,'a'));fitStage(st);
+    paint(st,applyLook(p,'a',prevN()));fitStage(st);
     const c=document.getElementById('scrPc');if(c)c.textContent='Slide '+(idx+1)+' of '+n;
   }catch(x){}
 }
@@ -17879,7 +17882,7 @@ window.dscDesign={applyDesign,TH,variantPatch};
     const q=Object.assign({},p,{text:nt,note:'',sm:'',props:[]});
     try{q.d=eff(s,idx+1)||p.d}catch(e){}
     if(q.d&&q.d.bg==='YouTube'&&q.d.yt)q.d={...q.d,bg:'Image',img:'https://img.youtube.com/vi/'+q.d.yt+'/mqdefault.jpg'};
-    paint(pv,applyLook(q,'a'));
+    paint(pv,applyLook(q,'a',prevN()));
   }catch(e){}};
   new MutationObserver(()=>{clearTimeout(t);t=setTimeout(draw,60)}).observe(pr,{childList:true,subtree:true});
   setTimeout(draw,1200);
