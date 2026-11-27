@@ -7995,8 +7995,8 @@ function dscGuestNeed(what){
   function guest(){const had=dscGoogleUser();try{localStorage.setItem(DSC_GUEST_KEY,'1')}catch(_){}close();if(!had)toast('Guest mode. Sign in any time from Profile \u203a Account.');try{window.dscHomeOpen&&dscHomeOpen()}catch(_){}}
   function form(note,retry){
     const b=shell(),gu=dscGoogleUser();
-    const gBtn=gu?'':'<button id="gGoo" class="pri" type="button">Continue with Google</button><div class="hint" style="margin:0">New here? This creates your free account. Songs you save while signed in are shared with all PreCenter users.</div><div class="hint" id="gGe" role="status" style="margin:0"></div>';
-    const guBtn='<button id="gGu" type="button">'+(gu?'Back':'Continue as guest')+'</button>';
+    const gBtn=gu?'':'<button id="gGoo" class="pri" type="button">Continue with Google</button><div class="hint" style="margin:0">New here? This creates your free account. Your songs are backed up and synced, and only your account can see them.</div><div class="hint" id="gGe" role="status" style="margin:0"></div>';
+    const guBtn='<button id="gGu" type="button">'+(gu?'Back':'Continue as guest')+'</button><div class="hint" style="margin:0;text-align:center"><a href="https://precenter-bay.vercel.app/privacy.html" target="_blank" rel="noopener" style="color:inherit">Privacy Policy</a> \u00b7 <a href="https://precenter-bay.vercel.app/terms.html" target="_blank" rel="noopener" style="color:inherit">Terms</a></div>';
     b.innerHTML=retry?`${gBtn}<div class="hint" id="gEr" style="margin:0;color:#c0392b">${dscEsc(note||'')}</div><button id="gGo">Try again</button>${guBtn}`
       :`${gBtn}<details id="gTm"${gu||note?' open':''}><summary class="hint" style="margin:0;cursor:pointer">Disciples team member? Sign in with email</summary><div style="display:flex;flex-direction:column;gap:10px;margin-top:10px"><label>Email<input id="gEm" type="email" autocomplete="username"></label><label>Password<input id="gPw" type="password" autocomplete="current-password"></label><button id="gGo">Sign in</button></div></details><div class="hint" id="gEr" style="margin:0;color:#c0392b">${dscEsc(note||'')}</div>${guBtn}`;
     const er=b.querySelector('#gEr');b.querySelector('#gGu').onclick=guest;
@@ -8409,7 +8409,7 @@ window.DSC_VERSION=DSC_VERSION;
 
     function acc(){
       const gu=dscGoogleUser();
-      if(gu&&dscIsGuest()){body.innerHTML='<h3>Account</h3><div class="pfAcc"><div class="pfAv">'+dscEsc(ini({displayName:gu.name,email:gu.email}))+'</div><div><b style="font-size:17px">'+dscEsc(gu.name||gu.email||'Signed in')+'</b><div class="hint" style="margin:0">'+dscEsc(gu.email||'')+'</div><div class="hint" style="margin:0">Signs in with Google</div></div></div><div class="pfCard"><b>Song database</b><div class="hint" style="margin:0">Songs you save are synced and shared with all PreCenter users. The Disciples team library, Harmony lineup and Disciples phone remote need a team sign-in.</div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button id="pfSync" class="pri">Song database</button><button id="pfIn">Team sign-in</button><button id="pfGo">Sign out</button></div>';g('pfSync').onclick=()=>{done();connDlg('songs')};g('pfIn').onclick=()=>{done();dscSignInNow()};g('pfGo').onclick=()=>{done();sbAuth.signOut()};return}
+      if(gu&&dscIsGuest()){body.innerHTML='<h3>Account</h3><div class="pfAcc"><div class="pfAv">'+dscEsc(ini({displayName:gu.name,email:gu.email}))+'</div><div><b style="font-size:17px">'+dscEsc(gu.name||gu.email||'Signed in')+'</b><div class="hint" style="margin:0">'+dscEsc(gu.email||'')+'</div><div class="hint" style="margin:0">Signs in with Google</div></div></div><div class="pfCard"><b>Song database</b><div class="hint" style="margin:0">Your songs are synced privately: only your account can see them. The Disciples team library, Harmony lineup and Disciples phone remote need a team sign-in.</div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button id="pfSync" class="pri">Song database</button><button id="pfIn">Team sign-in</button><button id="pfGo">Sign out</button></div>';g('pfSync').onclick=()=>{done();connDlg('songs')};g('pfIn').onclick=()=>{done();dscSignInNow()};g('pfGo').onclick=()=>{done();sbAuth.signOut()};return}
       if(dscIsGuest()){body.innerHTML='<h3>Account</h3><div class="pfAcc"><div class="pfAv">G</div><div><b style="font-size:17px">Guest</b><div class="hint" style="margin:0">Using PreCenter without an account</div></div></div><div class="pfCard"><b>Switched off in guest mode</b><div class="hint" style="margin:0">The Disciples team library, the Harmony lineup on Home, and the Disciples phone remote. Everything else works as normal.</div></div><div class="row"><button id="pfIn" class="pri">Sign in</button></div>';g('pfIn').onclick=()=>{done();dscSignInNow()};return}
       const u=dscAuth&&dscAuth.currentUser;let saved='';try{saved=localStorage.getItem('lp-dsc-user')||''}catch(e){}
       const email=u?(u.email||''):(saved&&saved!=='1'?saved:'');
@@ -18760,7 +18760,7 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
 <script>
 /* ---- Song database: a copy of every library song in a folder on this computer (desktop app) and a free Supabase table ----
    Local first: the app always works from its own copy. It asks Supabase for songs changed since the last check (a tiny answer when nothing
-   changed), merges those in, and uploads songs you added or edited while signed in with Google. Anyone can read; only the owner can edit.
+   changed), merges those in, and uploads your songs while you are signed in with Google. Private: each account reads and edits only its own.
    The project address and key are built in: window.DSC_SUPABASE at the top of this file.
    Settings: localStorage lp-sb {url,key,auto,since,proj}. Session: lp-sb-sess. Per-song marks: lp-sb-h {gid:{m:folder hash,p:uploaded hash,t:remote time}}. */
 (function(){
@@ -18831,48 +18831,49 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
     const rows=[];
     songs().forEach(it=>{
       if(!it.gid)return;const b=body(it),h=hash(JSON.stringify(b)),m=H[it.gid]||(H[it.gid]={});
+      if(m.o&&m.o!==sess.uid)return;                  /* belongs to another account used on this computer */
       if(m.p!==h&&!(m.x===h))rows.push({it,h,row:{gid:it.gid,title:b.title,lyrics:b.lyrics,data:b.data,owner:sess.uid,deleted:false}});
     });
     let sent=0;
     for(let i=0;i<rows.length;i+=40){
       const part=rows.slice(i,i+40);
       let r;
-      try{r=await fetch(base()+'/rest/v1/songs?on_conflict=gid',{method:'POST',headers:Object.assign(await hdr(true),{prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(part.map(x=>x.row))})}
+      try{r=await fetch(base()+'/rest/v1/songs?on_conflict=owner,gid',{method:'POST',headers:Object.assign(await hdr(true),{prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(part.map(x=>x.row))})}
       catch(e){throw new Error('No internet connection.')}
-      if(r.ok){part.forEach(x=>{(H[x.it.gid]||(H[x.it.gid]={})).p=x.h});sent+=part.length}
+      if(r.ok){part.forEach(x=>{const m=H[x.it.gid]||(H[x.it.gid]={});m.p=x.h;m.o=x.row.owner});sent+=part.length}
       else if(r.status===401){throw new Error('Sign in with Google again.')}
+      else if(r.status===400&&/42P10/.test(await r.clone().text())){throw new Error('The database is out of date. Run the new supabase-setup.sql in Supabase.')}
       else{
-        /* one song may belong to someone else: send them one by one so the rest still go */
+        /* one song may be refused: send them one by one so the rest still go */
         for(const x of part){
-          let r2;try{r2=await fetch(base()+'/rest/v1/songs?on_conflict=gid',{method:'POST',headers:Object.assign(await hdr(true),{prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([x.row])})}catch(e){throw new Error('No internet connection.')}
+          let r2;try{r2=await fetch(base()+'/rest/v1/songs?on_conflict=owner,gid',{method:'POST',headers:Object.assign(await hdr(true),{prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([x.row])})}catch(e){throw new Error('No internet connection.')}
           const m=H[x.it.gid]||(H[x.it.gid]={});
-          if(r2.ok){m.p=x.h;sent++}else m.x=x.h;   /* x = not allowed to change this song (owned by another account): left alone until you edit it again */
+          if(r2.ok){m.p=x.h;m.o=x.row.owner;sent++}else m.x=x.h;   /* x = the database refused this song (for example too large): left alone until you edit it again */
         }
       }
     }
     saveH();return sent;
   }
   /* ---------- download ---------- */
-  /* Anyone can sign up, so treat downloaded songs as untrusted: no markup may come in with them. */
-  function clean(v,depth){
-    if(typeof v==='string')return v.replace(/[<>"]/g,'');
-    if(depth>12||!v||typeof v!=='object')return typeof v==='object'?null:v;
-    if(Array.isArray(v))return v.map(x=>clean(x,depth+1));
-    const o={};Object.keys(v).forEach(k=>{if(k!=='__proto__'&&!/[<>"'&]/.test(k))o[k]=clean(v[k],depth+1)});return o;
-  }
   async function pull(){
-    if(!ready())return 0;
+    if(!ready()||!sess)return 0;
+    if(!await token())throw new Error('Sign in with Google again, or check your internet connection.');
+    const me=sess.uid;
+    if(C.uid!==me){C.uid=me;C.since='';save()}
     let got=0,since=C.since?new Date(Date.parse(C.since)-120000).toISOString():'',changed=false;
     for(let guard=0;guard<40;guard++){
-      const q='/rest/v1/songs?select=gid,title,lyrics,data,updated_at,deleted&order=updated_at.asc&limit=300'+(since?'&updated_at=gt.'+encodeURIComponent(since):'');
-      let r;try{r=await fetch(base()+q,{headers:await hdr(false)})}catch(e){throw new Error('No internet connection.')}
+      const q='/rest/v1/songs?owner=eq.'+encodeURIComponent(me)+'&select=gid,title,lyrics,data,updated_at,deleted&order=updated_at.asc&limit=300'+(since?'&updated_at=gt.'+encodeURIComponent(since):'');
+      let r;try{r=await fetch(base()+q,{headers:await hdr(true)})}catch(e){throw new Error('No internet connection.')}
       if(!r.ok)throw new Error(r.status===401||r.status===403?'The Supabase key is not accepted.':r.status===404?'The songs table was not found. Run the SQL setup in Supabase.':'Supabase answered '+r.status+'.');
       const rows=await r.json();if(!Array.isArray(rows)||!rows.length)break;
       const by=new Map();songs().forEach(x=>{if(x.gid)by.set(x.gid,x)});
       const all=S.library||[];
+      if(!sess||sess.uid!==me)break;            /* signed out or switched account while loading */
       for(const row of rows){
         if(!row||!/^[0-9a-f-]{36}$/i.test(row.gid||''))continue;
         const m=H[row.gid]||(H[row.gid]={});let it=by.get(row.gid);
+        if(m.o&&m.o!==me){delete m.p;delete m.t;delete m.x}
+        m.o=me;
         if(it){
           const h=hash(JSON.stringify(body(it)));
           if(m.p&&m.p!==h)continue;                       /* edited on this computer and not uploaded yet: keep the local one */
@@ -18885,10 +18886,9 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
           if(it){it.gid=row.gid}
           else{it={id:Date.now()*1000+(Math.random()*999|0),gid:row.gid,type:'song'};all.push(it)}
         }
-        const d=row.data&&typeof row.data==='object'&&!Array.isArray(row.data)?clean(row.data,0):{};
-        DROP.forEach(k=>delete d[k]);
+        const d=row.data&&typeof row.data==='object'?row.data:{};
         Object.keys(it).forEach(k=>{if(!DROP.includes(k))delete it[k]});
-        Object.assign(it,d);it.title=String(row.title||'Untitled').replace(/[<>]/g,'');it.lyrics=String(row.lyrics||'').replace(/<(?=[a-z\/!?])/gi,'‹');
+        Object.assign(it,d);it.title=String(row.title||'Untitled');it.lyrics=String(row.lyrics||'');
         if(!it.d&&typeof dd==='function')it.d=dd();
         m.t=row.updated_at;m.p=hash(JSON.stringify(body(it)));delete m.m;changed=true;got++;
       }
@@ -18906,8 +18906,8 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
       if(ready()){down=await pull();up=await push()}
       const k=await mirror();
       lastOk=Date.now();
-      setSt((ready()?'Up to date. ':'Saved on this computer. ')+(down?down+' song'+(down>1?'s':'')+' downloaded. ':'')+(up?up+' uploaded. ':'')+(N()?(k?k+' written to the songs folder.':''):' '));
-      if(manual)try{toast(down||up?'Songs synced.':'Songs are up to date.')}catch(e){}
+      setSt((ready()&&sess?'Up to date. ':'Saved on this computer. ')+(down?down+' song'+(down>1?'s':'')+' downloaded. ':'')+(up?up+' uploaded. ':'')+(N()?(k?k+' written to the songs folder.':''):' '));
+      if(manual)try{toast(!sess?'Sign in with Google to sync your songs.':down||up?'Songs synced.':'Songs are up to date.')}catch(e){}
     }catch(e){setSt('Problem: '+(e&&e.message||e));if(manual)try{toast('Songs: '+(e&&e.message||e))}catch(_){}}
     busy=false;
   }
@@ -18968,7 +18968,7 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
   })();
   /* ---------- panel (Connection > Song database) ---------- */
   window.sbPanel=function(h){
-    h.innerHTML='<p class="hint">Your library songs are saved on this computer and in the PreCenter song database. Anyone can read the songs there. Sign in with Google to add your own: songs you save while signed in are shared with all PreCenter users, and only you can change yours.</p>'+
+    h.innerHTML='<p class="hint">Your library songs are saved on this computer. Sign in with Google to back them up online and sync them to your other computers. Only your account can see them.</p>'+
     '<div class="hint" style="margin:0">Account: <b id="sbWho"></b></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="pri" id="sbG">Sign in with Google</button><button id="sbOut" hidden>Sign out</button></div>'+
     '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><button id="sbNow">Sync now</button><button id="sbBak">Download backup</button><button id="sbOpen" hidden>Open songs folder</button></div>'+
     '<label class="row" style="flex-direction:row;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="sbAuto" style="width:auto"> Check for new songs automatically</label>'+

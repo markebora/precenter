@@ -2,21 +2,12 @@
 
 Your users set up nothing: they open PreCenter and press **Continue with Google**.
 
-## 1. Put your project in the app
-Supabase > **Project Settings > API**. Open `index.html`, find `window.DSC_SUPABASE` near the top and paste:
-
-```js
-window.DSC_SUPABASE={
-  url:'https://xxxx.supabase.co',
-  key:'sb_publishable_... (or the anon key, eyJ...)'
-};
-```
-
-Copy the same `index.html` to `precenter-desktop/app/index.html` (the two files must match).
-The publishable/anon key is meant to be public. **Never** use the `service_role` / `sb_secret_` key.
+## 1. Your project (already filled in)
+`window.DSC_SUPABASE` near the top of `index.html` holds your Project URL and publishable key.
+Keep `precenter-desktop/app/index.html` identical. **Never** put a `service_role` / `sb_secret_` key there.
 
 ## 2. Run the SQL again
-**SQL Editor > New query**, paste all of `supabase-setup.sql`, **Run**. Safe to run again; it adds size limits for public use.
+**SQL Editor > New query**, paste all of `supabase-setup.sql`, **Run**. Safe to run again. It makes songs private to each account and adds size limits. Run it before deploying.
 
 ## 3. Allow the sign-in to come back
 **Authentication > URL Configuration**
@@ -35,9 +26,8 @@ The publishable/anon key is meant to be public. **Never** use the `service_role`
 1. Deploy to Vercel.
 2. Build a new desktop installer (the old one cannot do Google sign-in) and release it.
 
-## Before you share it
-- Everyone can read every song in the database, even without signing in. Anyone with a Google account can add songs,
-  and their whole local library is uploaded once they sign in.
-- Lyrics are often copyrighted. Sharing them publicly may need permission or a licence.
-- To remove a bad song: Table Editor > songs > set `deleted` to true. To block a person: Authentication > Users.
-- Free projects pause after a week without use; press **Restore** in the dashboard.
+## Good to know
+- Each account sees only its own songs. People who are not signed in keep songs on their computer only.
+- You, as the project owner, can still see rows in the Supabase dashboard. To block a person: Authentication > Users.
+- Many lyrics are copyrighted; answer removal requests (Table Editor > songs).
+- The free plan has limited database space, and pauses after a week without use; press **Restore** in the dashboard.

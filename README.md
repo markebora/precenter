@@ -12,7 +12,7 @@ Get the latest Windows installer from the
 ## Sign-in
 
 * **Google (open to everyone):** choose **Continue with Google**. The first sign-in creates your account.
-  It syncs the song database. Songs you save while signed in are shared with all PreCenter users.
+  It backs up and syncs your song library. Only your account can see your songs.
 * **Disciples team (invite only):** email accounts created by the project maintainers, for the team library,
   Harmony lineups and the Disciples phone remote. To request access,
   [open an issue](https://github.com/markebora/precenter/issues) and describe your team.
