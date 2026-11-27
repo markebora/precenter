@@ -7,8 +7,8 @@ const path = require('path');
 
 const DEFAULTS = {
   mode: 'remote',
-  startUrl: 'https://precenter-bay.vercel.app/',
-  update: { enabled: true, url: 'https://precenter-bay.vercel.app/index.html' },
+  startUrl: 'https://disciples-precenter.vercel.app/',
+  update: { enabled: true, url: 'https://disciples-precenter.vercel.app/index.html' },
   siteUrl: 'https://worship-chords-rho.vercel.app',
   window: { width: 1500, height: 900, maximized: true, menuBar: false, customTitleBar: true, backgroundColor: '#0e0f13' },
   permissions: {
@@ -88,6 +88,14 @@ function parseText(text) {
   return { config, warnings, error: '' };
 }
 
+// Older config.json files (already saved on people's computers) may still point at the old address
+// or carry a doubled "https://https://". Fix them in place so the app opens after the domain change.
+function migrateText(text) {
+  return String(text)
+    .replace(/https:\/\/https:\/\//g, 'https://')
+    .replace(/precenter-bay\.vercel\.app/g, 'disciples-precenter.vercel.app');
+}
+
 function loadConfig(dir, defaultFile) {
   const file = path.join(dir, 'config.json');
   let created = false;
@@ -99,10 +107,13 @@ function loadConfig(dir, defaultFile) {
   }
   let text = '';
   try { text = fs.readFileSync(file, 'utf8'); } catch (e) { const r = parseText('{}'); r.warnings.push('Could not read ' + file + ': ' + e.message); r.path = file; r.created = created; return r; }
-  const r = parseText(text.replace(/^\uFEFF/, ''));
+  text = text.replace(/^\uFEFF/, '');
+  const fixed = migrateText(text);
+  if (fixed !== text) { try { fs.writeFileSync(file, fixed); } catch (e) { /* still use the fixed text for this run */ } text = fixed; }
+  const r = parseText(text);
   r.path = file; r.created = created;
   if (r.error) r.warnings.unshift('config.json has a mistake (' + r.error + '). The default settings were used for this run.');
   return r;
 }
 
-module.exports = { DEFAULTS, stripComments, parseText, loadConfig };
+module.exports = { DEFAULTS, stripComments, parseText, loadConfig, migrateText };

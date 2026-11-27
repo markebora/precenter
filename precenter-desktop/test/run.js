@@ -4,7 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { DEFAULTS, stripComments, parseText, loadConfig } = require('../lib/config');
+const { DEFAULTS, stripComments, parseText, loadConfig, migrateText } = require('../lib/config');
 const { createUrlPolicy } = require('../lib/urls');
 const { isPermissionAllowed } = require('../lib/permissions');
 const { mimeFor, resolveAppFile } = require('../lib/files');
@@ -31,7 +31,16 @@ test('the shipped default file parses and equals the built-in defaults', () => {
 test('a fresh install starts in remote mode', () => {
   const r = parseText('{}');
   assert.strictEqual(r.config.mode, 'remote');
-  assert.strictEqual(r.config.startUrl, 'https://precenter-bay.vercel.app/');
+  assert.strictEqual(r.config.startUrl, 'https://disciples-precenter.vercel.app/');
+});
+test('an old saved config.json is moved to the new address', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsc-mig-'));
+  fs.writeFileSync(path.join(dir, 'config.json'), '{ "startUrl": "https://precenter-bay.vercel.app/", "update": { "url": "https://https://precenter-bay.vercel.app/index.html" } }');
+  const r = loadConfig(dir, path.join(root, 'config', 'config.default.json'));
+  assert.strictEqual(r.config.startUrl, 'https://disciples-precenter.vercel.app/');
+  assert.strictEqual(r.config.update.url, 'https://disciples-precenter.vercel.app/index.html');
+  assert.ok(!/precenter-bay|https:\/\/https/.test(fs.readFileSync(path.join(dir, 'config.json'), 'utf8')));
+  assert.strictEqual(migrateText('https://worship-chords-rho.vercel.app'), 'https://worship-chords-rho.vercel.app');
 });
 test('user values override defaults and wrong types are reported', () => {
   const r = parseText('{ "window": { "width": 1200, "height": "tall" }, "devTools": true, "externalLinks": "nope" }');

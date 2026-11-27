@@ -11,9 +11,9 @@ Keep `precenter-desktop/app/index.html` identical. **Never** put a `service_role
 
 ## 3. Allow the sign-in to come back
 **Authentication > URL Configuration**
-- Site URL: `https://precenter-bay.vercel.app`
+- Site URL: `https://disciples-precenter.vercel.app`
 - Redirect URLs (add both):
-  - `https://precenter-bay.vercel.app/**`
+  - `https://disciples-precenter.vercel.app/**`
   - `http://127.0.0.1:53682/**`  (desktop app)
 
 ## 4. Open Google sign-in to the public

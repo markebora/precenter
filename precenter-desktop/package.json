@@ -1,7 +1,7 @@
 {
   "name": "disciples-precenter",
   "productName": "Disciples PreCenter",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "Disciples: PreCenter, the church presentation software, as a Windows desktop app",
   "main": "main.js",
   "author": "Disciples",

@@ -6,14 +6,14 @@
   // "local"  = run the copy of PreCenter that is inside this app (works offline).
   // "remote" = load the address in "startUrl" instead (for example your hosted copy).
   "mode": "remote",
-  "startUrl": "https://https://disciples-precenter.vercel.app/",
+  "startUrl": "https://disciples-precenter.vercel.app/",
  
   // Automatic page updates (only used while "mode" is "local"). On each start the app looks at your hosted
   // copy; if it has a newer version it is downloaded and used from the next start. Offline, or if anything
   // looks wrong, the copy already on this computer is used.
   "update": {
     "enabled": true,
-    "url": "https://https://disciples-precenter.vercel.app/index.html"
+    "url": "https://disciples-precenter.vercel.app/index.html"
   },
  
   // Your Disciples site. PreCenter asks it for the sign-in settings.
