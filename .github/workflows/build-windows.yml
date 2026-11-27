@@ -1,3 +1,4 @@
+
 name: Build Windows installer
 
 on:
@@ -32,6 +33,23 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
+      - name: Create stable download filenames
+        shell: pwsh
+        run: |
+          $setup = @(Get-ChildItem "dist/Disciples-PreCenter-Setup-*.exe")
+          $portable = @(Get-ChildItem "dist/Disciples-PreCenter-Portable-*.exe")
+
+          if ($setup.Count -ne 1) {
+            throw "Expected exactly one Setup installer."
+          }
+
+          if ($portable.Count -ne 1) {
+            throw "Expected exactly one Portable installer."
+          }
+
+          Copy-Item $setup[0].FullName "dist/Disciples-PreCenter-Setup.exe"
+          Copy-Item $portable[0].FullName "dist/Disciples-PreCenter-Portable.exe"
+
       - name: Keep the files
         uses: actions/upload-artifact@v4
         with:
@@ -39,6 +57,8 @@ jobs:
           path: |
             precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe
             precenter-desktop/dist/Disciples-PreCenter-Portable-*.exe
+            precenter-desktop/dist/Disciples-PreCenter-Setup.exe
+            precenter-desktop/dist/Disciples-PreCenter-Portable.exe
             precenter-desktop/dist/latest.yml
             precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe.blockmap
           if-no-files-found: error
@@ -50,5 +70,7 @@ jobs:
           files: |
             precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe
             precenter-desktop/dist/Disciples-PreCenter-Portable-*.exe
+            precenter-desktop/dist/Disciples-PreCenter-Setup.exe
+            precenter-desktop/dist/Disciples-PreCenter-Portable.exe
             precenter-desktop/dist/latest.yml
             precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe.blockmap
