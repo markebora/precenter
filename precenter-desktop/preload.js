@@ -79,6 +79,8 @@ contextBridge.exposeInMainWorld('dscNative', {
     setNdi: on => ipcRenderer.invoke('app:setNdi', !!on),
     openConfig: () => ipcRenderer.invoke('app:openConfig'),
     openData: () => ipcRenderer.invoke('app:openData'),
+    checkUpdate: () => ipcRenderer.invoke('app:checkUpdate'),
+    about: () => ipcRenderer.invoke('app:about'),
     gpu: () => ipcRenderer.invoke('app:gpu:get'),
     setGpu: on => ipcRenderer.invoke('app:gpu:set', !!on)
   }
@@ -148,12 +150,12 @@ if (barArg && !isPopup) {
 
 // ---- "Update ready" notice (main window only). The update installs when the app is closed. ----
 if (!isPopup) {
-  ipcRenderer.on('update:ready', (_e, info) => {
+  const showNote = text => {
     const show = () => {
-      if (document.getElementById('dscUpdateNote')) return;
+      const old = document.getElementById('dscUpdateNote'); if (old) old.remove();
       const n = document.createElement('div');
       n.id = 'dscUpdateNote';
-      n.textContent = 'Update ' + ((info && info.version) || '') + ' is ready. It installs when you close PreCenter.';
+      n.textContent = text;
       n.style.cssText = 'position:fixed;right:16px;bottom:40px;z-index:2147483000;max-width:340px;padding:10px 14px;' +
         'border-radius:8px;background:#1d1f27;color:#f7f7f7;border:1px solid #E8B923;font:13px/1.4 system-ui,Segoe UI,sans-serif;' +
         'box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer';
@@ -162,5 +164,12 @@ if (!isPopup) {
       setTimeout(() => { try { n.remove(); } catch (e) { /* gone */ } }, 15000);
     };
     if (document.body) show(); else window.addEventListener('DOMContentLoaded', show);
+  };
+  // Program update downloaded: shows the release tag, e.g. "Update v1.0.6 is ready."
+  ipcRenderer.on('update:ready', (_e, info) => {
+    const label = (info && (info.tag || info.version)) || '';
+    showNote('Update ' + label + ' is ready. It installs when you close PreCenter.');
   });
+  // Any other short notice from the app (for example "Page updated to 1.0.22").
+  ipcRenderer.on('update:note', (_e, text) => { if (typeof text === 'string' && text.length < 300) showNote(text); });
 }

@@ -10,6 +10,8 @@ const log = require('./lib/log');
 const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 const appUpdate = require('./lib/appupdate');
+const pageUpdate = require('./lib/update');
+const versions = require('./lib/versions');
 const lanPageLib = require('./lib/lanpage');
 const saveBridge = require('./lib/savebridge');
 const lanServer = require('./lib/lanserver');
@@ -28,6 +30,7 @@ const FILE_EXT = /\.(dscservice|dscitems)$/i;
  
 let cfgResult = null;      // { config, warnings, path, created }
 let cfg = null;
+let progUpdater = null;   // program updater (null for portable / not installed / turned off)
 let policy = null;
 let mainWin = null;
 let pendingFiles = [];
@@ -257,6 +260,7 @@ function createMain() {
   mainWin.webContents.on('did-finish-load', () => {
     // give the app a moment to start (and the sign-in gate to appear) before handing it files
     setTimeout(() => { rendererReady = true; flushFiles(); }, 2500);
+    setTimeout(() => { announcePageChange().catch(() => {}); }, 5000);
   });
   mainWin.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
     if (!isMain || code === -3) return;
@@ -320,15 +324,81 @@ function buildMenu() {
     ] },
     { label: '&Help', submenu: [
       { label: 'Open the Disciples site', click: () => shell.openExternal(cfg.siteUrl) },
-      { label: 'About', click: showAbout }
+      { label: 'Check for updates', click: () => { checkUpdates().catch(() => {}); } },
+      { label: 'About', click: () => { showAbout().catch(() => {}); } }
     ] }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tmpl));
 }
  
-function aboutText() {
+// The version of the page (index.html) that is running right now, asked from the page itself. '' if unknown.
+async function runningPageVersion() {
+  try {
+    if (!mainWin || mainWin.isDestroyed()) return '';
+    const v = await mainWin.webContents.executeJavaScript('String(window.DSC_VERSION || "")');
+    return /^\d+\.\d+\.\d+$/.test(v) ? v : '';
+  } catch (e) { return ''; }
+}
+
+// Tells the person once when the page (index.html) is a different version than last time.
+async function announcePageChange() {
+  const v = await runningPageVersion();
+  if (!v) return;
+  const r = versions.recordPageVersion(app.getPath('userData'), v);
+  if (r.changed && mainWin && !mainWin.isDestroyed()) {
+    log.info('Page updated: ' + r.previous + ' -> ' + v);
+    mainWin.webContents.send('update:note', 'Page updated to version ' + v + ' (was ' + r.previous + ').');
+  }
+}
+
+// Checks the program (GitHub release) and the page (index.html online) and shows what it found.
+async function checkUpdates() {
+  const tag = versions.tagFor(app.getVersion());
+  const running = await runningPageVersion();
+  const lines = [];
+
+  // 1) the program
+  if (!progUpdater) {
+    lines.push('Desktop app: ' + tag + '. Automatic updates are off (portable version, not installed, or turned off in config.json).');
+  } else {
+    const r = await progUpdater.checkNow();
+    const s = progUpdater.state();
+    if (!r.ok) lines.push('Desktop app: ' + tag + '. Could not check for a new version (' + r.error + ').');
+    else if (s.downloaded) lines.push('Desktop app: ' + tag + '. Update ' + versions.tagFor(s.downloaded) + ' is downloaded and installs when you close PreCenter.');
+    else if (s.available) lines.push('Desktop app: ' + tag + '. Update ' + versions.tagFor(s.available) + ' was found and is downloading. It installs when you close PreCenter.');
+    else lines.push('Desktop app: ' + tag + '. This is the latest release.');
+  }
+
+  // 2) the page (index.html)
+  const pageUrl = cfg.update.enabled ? cfg.update.url : (cfg.mode === 'remote' ? cfg.startUrl : '');
+  const where = cfg.mode === 'remote' ? 'online copy' : 'built-in copy';
+  if (!pageUrl) {
+    lines.push('Page (index.html): ' + (running ? 'version ' + running : 'version unknown') + ' (' + where + ').');
+  } else {
+    try {
+      const res = await net.fetch(pageUrl, { headers: { 'cache-control': 'no-cache' } });
+      if (!res.ok) throw new Error('the server answered ' + res.status);
+      const latest = pageUpdate.parseVersion(await res.text());
+      if (!latest) throw new Error('no version found in the page');
+      const latestText = latest.join('.');
+      if (!running) lines.push('Page (index.html): the online version is ' + latestText + '.');
+      else if (pageUpdate.cmp(latest, running.split('.').map(Number)) > 0)
+        lines.push('Page (index.html): ' + running + ' is running, and version ' + latestText + ' is online.' + (cfg.mode === 'remote' ? ' Reload (Ctrl+R) to use it.' : ''));
+      else lines.push('Page (index.html): version ' + running + ' (' + where + '). This is the latest.');
+    } catch (e) {
+      lines.push('Page (index.html): ' + (running ? 'version ' + running + '. ' : '') + 'Could not check online (' + (e && e.message) + ').');
+    }
+  }
+
+  const result = { tag, pageVersion: running, lines };
+  if (mainWin && !mainWin.isDestroyed()) await dialog.showMessageBox(mainWin, { type: 'info', title: 'Updates', message: 'Updates', detail: lines.join('\n\n') });
+  return result;
+}
+
+function aboutText(pageVersion) {
   return [
-    'Version ' + app.getVersion(),
+    'Version ' + app.getVersion() + ' (release tag ' + versions.tagFor(app.getVersion()) + ')',
+    'Page (index.html): ' + (pageVersion || 'unknown'),
     'Electron ' + process.versions.electron + ', Chromium ' + process.versions.chrome,
     '',
     'Settings file: ' + cfgResult.path,
@@ -338,8 +408,9 @@ function aboutText() {
   ].join('\n');
 }
  
-function showAbout() {
-  dialog.showMessageBox(mainWin, { type: 'info', title: 'About', message: 'Disciples PreCenter', detail: aboutText() });
+async function showAbout() {
+  const pv = await runningPageVersion();
+  return dialog.showMessageBox(mainWin, { type: 'info', title: 'About', message: 'Disciples PreCenter', detail: aboutText(pv) });
 }
  
 // ---------- IPC from the page ----------
@@ -461,8 +532,10 @@ function setupIpc() {
     dir: app.getPath('userData'),
     documents: app.getPath('documents')
   });
+  ipcMain.handle('app:checkUpdate', e => (isMainWin(e) ? checkUpdates().catch(() => null) : null));
+  ipcMain.handle('app:about', e => { if (isMainWin(e)) showAbout().catch(() => {}); return !!isMainWin(e); });
   ipcMain.handle('app:info', () => ({
-    version: app.getVersion(), configPath: cfgResult.path, dataPath: app.getPath('userData'),
+    version: app.getVersion(), tag: versions.tagFor(app.getVersion()), configPath: cfgResult.path, dataPath: app.getPath('userData'),
     mode: cfg.mode, ndiEnabled: !!cfg.ndi.enabled, ndiAvailable: ndiSender.available()
   }));
   ipcMain.on('win:overlay', (e, o) => {
@@ -547,7 +620,7 @@ if (cfg.singleInstance && !app.requestSingleInstanceLock()) {
     buildMenu();
     pendingFiles = filesFromArgv(process.argv);
     createMain();
-    if (cfg.autoUpdate) appUpdate.start({ app, log, notify: info => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('update:ready', info); } });
+    if (cfg.autoUpdate) progUpdater = appUpdate.start({ app, log, notify: info => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('update:ready', { version: info && info.version, tag: versions.tagFor(info && info.version) }); } });
     if (cfgResult.warnings.length) {
       dialog.showMessageBox(mainWin, {
         type: 'warning', message: 'Some settings were not used',

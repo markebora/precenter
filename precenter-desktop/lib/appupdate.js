@@ -23,6 +23,8 @@ function start(opts) {
   try { autoUpdater = (opts.updater || require('electron-updater')).autoUpdater; }
   catch (e) { log.warn('Program auto-update is unavailable: ' + (e && e.message)); return null; }
 
+  const state = { checking: false, available: null, downloaded: null, lastChecked: null, error: '' };
+
   try {
     autoUpdater.logger = {
       info: m => log.info('updater: ' + m), warn: m => log.warn('updater: ' + m),
@@ -31,12 +33,13 @@ function start(opts) {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.allowPrerelease = false;
-    autoUpdater.on('update-available', i => log.info('Update ' + (i && i.version) + ' found, downloading.'));
+    autoUpdater.on('update-available', i => { state.available = (i && i.version) || null; log.info('Update ' + (i && i.version) + ' found, downloading.'); });
     autoUpdater.on('update-downloaded', i => {
+      state.downloaded = (i && i.version) || null;
       log.info('Update ' + (i && i.version) + ' downloaded. It installs when the app is closed.');
       try { notify({ version: i && i.version }); } catch (e) { /* ignore */ }
     });
-    autoUpdater.on('error', e => log.warn('Update check failed: ' + (e && e.message)));
+    autoUpdater.on('error', e => { state.error = (e && e.message) || 'unknown error'; log.warn('Update check failed: ' + (e && e.message)); });
   } catch (e) { log.warn('Program auto-update could not start: ' + (e && e.message)); return null; }
 
   const check = () => {
@@ -45,9 +48,21 @@ function start(opts) {
       if (p && p.catch) p.catch(e => log.warn('Update check failed: ' + (e && e.message)));
     } catch (e) { log.warn('Update check failed: ' + (e && e.message)); }
   };
+  // For the "Check for updates" menu item: checks right now and says how it went. Never throws.
+  const checkNow = async () => {
+    state.checking = true; state.error = ''; state.available = null;
+    try {
+      await autoUpdater.checkForUpdates();
+      state.lastChecked = new Date().toISOString();
+      return { ok: !state.error, error: state.error };
+    } catch (e) {
+      state.error = (e && e.message) || 'unknown error';
+      return { ok: false, error: state.error };
+    } finally { state.checking = false; }
+  };
   const t1 = setTimeout(check, delayMs); if (t1.unref) t1.unref();
   const t2 = setInterval(check, everyMs); if (t2.unref) t2.unref();
-  return { check };
+  return { check, checkNow, state: () => Object.assign({}, state) };
 }
 
 module.exports = { start, isInstalledBuild };

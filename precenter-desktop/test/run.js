@@ -9,6 +9,7 @@ const { createUrlPolicy } = require('../lib/urls');
 const { isPermissionAllowed } = require('../lib/permissions');
 const { mimeFor, resolveAppFile } = require('../lib/files');
 const appUpdate = require('../lib/appupdate');
+const versionsLib = require('../lib/versions');
  
 const root = path.join(__dirname, '..');
 let pass = 0, fail = 0;
@@ -239,6 +240,34 @@ test('program auto-update downloads quietly, installs on close, and reports when
   handlers['update-downloaded']({ version: '9.9.9' });
   assert.deepStrictEqual(told, { version: '9.9.9' });
   handlers.error(new Error('offline')); // must not throw
+});
+test('the program updater keeps a status the Updates dialog can show', async () => {
+  const handlers = {};
+  const fake = { autoUpdater: { on: (n, f) => { handlers[n] = f; }, checkForUpdates: () => { handlers['update-available']({ version: '1.0.6' }); return Promise.resolve(); } } };
+  const u = appUpdate.start({ app: { isPackaged: true }, env: {}, updater: fake, delayMs: 1e9, everyMs: 1e9 });
+  const r = await u.checkNow();
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(u.state().available, '1.0.6');
+  handlers['update-downloaded']({ version: '1.0.6' });
+  assert.strictEqual(u.state().downloaded, '1.0.6');
+  fake.autoUpdater.checkForUpdates = () => Promise.reject(new Error('offline'));
+  const bad = await u.checkNow();
+  assert.strictEqual(bad.ok, false);
+  assert.strictEqual(bad.error, 'offline');
+});
+test('release tag is v + version, and a changed page version is announced once', () => {
+  assert.strictEqual(versionsLib.tagFor('1.0.5'), 'v1.0.5');
+  assert.strictEqual(versionsLib.tagFor('v1.0.5'), 'v1.0.5');
+  assert.strictEqual(versionsLib.tagFor(''), '');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsc-ver-'));
+  assert.deepStrictEqual(versionsLib.recordPageVersion(dir, '1.0.21'), { previous: '', changed: false });
+  assert.deepStrictEqual(versionsLib.recordPageVersion(dir, '1.0.21'), { previous: '1.0.21', changed: false });
+  assert.deepStrictEqual(versionsLib.recordPageVersion(dir, '1.0.22'), { previous: '1.0.21', changed: true });
+  assert.deepStrictEqual(versionsLib.recordPageVersion(dir, '1.0.22'), { previous: '1.0.22', changed: false });
+});
+test('the preload offers Check for updates and About to the page', () => {
+  const pre = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
+  assert.ok(/checkUpdate:/.test(pre) && /about:/.test(pre));
 });
 test('auto-update is on by default and publishes to GitHub Releases', () => {
   assert.strictEqual(DEFAULTS.autoUpdate, true);
