@@ -4,6 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Disciples: PreCenter</title>
+<script>
+/* ===== SONG DATABASE + GOOGLE SIGN-IN: paste your Supabase values here ONCE. Everyone who uses PreCenter gets them. =====
+   url = Project Settings > API > Project URL.   key = the "anon" or "publishable" key (safe to ship).
+   NEVER put the "service_role" or "sb_secret_" key here: it gives anyone full control of the database. */
+window.DSC_SUPABASE={
+  url:'https://nokyyoncdmpthlqsewrk.supabase.co',
+  key:'sb_publishable_XmbJC6cV3fYTjd7K9cr5yA_f1-hz-QL'
+};
+/* The Google account signed in on this device (null if none). */
+window.dscGoogleUser=function(){try{const s=JSON.parse(localStorage.getItem('lp-sb-sess')||'null');return s&&s.r?s:null}catch(e){return null}};
+</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap">
 <style>
 :root{--bg:#f5f3ee;--panel:#fff;--ink:#1a1a1d;--mute:#6f6f76;--line:#e3dfd3;--acc:#E8B923;--accink:#171200;--accT:#8a6700;--chip:#efece3;--glow:rgba(232,185,35,.35);--hi:rgba(255,255,255,.7);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -7966,7 +7977,7 @@ function dscIsGuest(){try{return localStorage.getItem(DSC_GUEST_KEY)==='1'&&!loc
 function dscSignInNow(){try{localStorage.removeItem(DSC_GUEST_KEY)}catch(e){}if(window.dscShowGate)dscShowGate();else location.reload()}
 function dscGuestNeed(what){
   const w=document.createElement('div');w.className='qe';
-  w.innerHTML='<div class="qb" style="width:min(440px,92vw);display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;align-items:center"><b>Sign in to use this</b><button class="x" title="Close">\u2715</button></div><div class="hint" style="margin:0">'+dscEsc(what)+' comes from your Disciples account. You are using PreCenter as a guest, so it is switched off. Everything else works as normal.</div><div class="row" style="gap:8px;justify-content:flex-end"><button class="x2">Not now</button><button class="pri" id="gsGo">Sign in</button></div></div>';
+  w.innerHTML='<div class="qb" style="width:min(440px,92vw);display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;align-items:center"><b>Sign in to use this</b><button class="x" title="Close">\u2715</button></div><div class="hint" style="margin:0">'+dscEsc(what)+' comes from a Disciples team account. '+(dscGoogleUser()?'Your Google account syncs songs, but this needs a team sign-in.':'You are not signed in to a team, so it is switched off.')+' Everything else works as normal.</div><div class="row" style="gap:8px;justify-content:flex-end"><button class="x2">Not now</button><button class="pri" id="gsGo">Sign in</button></div></div>';
   const done=()=>w.remove();w.querySelector('.x').onclick=done;w.querySelector('.x2').onclick=done;w.onmousedown=e=>{if(e.target===w)done()};
   w.querySelector('#gsGo').onclick=()=>{done();dscSignInNow()};document.body.appendChild(w)}
 /* Sign-in gate: the app needs a Disciples account. The sign-in is kept on
@@ -7977,17 +7988,28 @@ function dscGuestNeed(what){
   function shell(){
     if(g)return g.querySelector('.gb');
     g=document.createElement('div');g.id='dscGate';
-    g.innerHTML='<div class="gc"><div class="gk">DISCIPLES</div><h1>PreCenter</h1><div class="gs">Sign in with your Disciples email to start.</div><div class="gb"></div></div>';
+    g.innerHTML='<div class="gc"><div class="gk">DISCIPLES</div><h1>PreCenter</h1><div class="gs">Sign in to start.</div><div class="gb"></div></div>';
     document.body.appendChild(g);return g.querySelector('.gb');
   }
   const close=()=>{if(g){g.remove();g=null}};
-  function guest(){try{localStorage.setItem(DSC_GUEST_KEY,'1')}catch(_){}close();toast('Guest mode. Sign in any time from Profile \u203a Account.');try{window.dscHomeOpen&&dscHomeOpen()}catch(_){}}
+  function guest(){const had=dscGoogleUser();try{localStorage.setItem(DSC_GUEST_KEY,'1')}catch(_){}close();if(!had)toast('Guest mode. Sign in any time from Profile \u203a Account.');try{window.dscHomeOpen&&dscHomeOpen()}catch(_){}}
   function form(note,retry){
-    const b=shell();
-    b.innerHTML=retry?`<div class="hint" id="gEr" style="margin:0;color:#c0392b">${dscEsc(note||'')}</div><button id="gGo" class="pri">Try again</button><button id="gGu" type="button">Continue as guest</button>`
-      :`<label>Email<input id="gEm" type="email" autocomplete="username"></label><label>Password<input id="gPw" type="password" autocomplete="current-password"></label><button id="gGo" class="pri">Sign in</button><div class="hint" id="gEr" style="margin:0;color:#c0392b">${dscEsc(note||'')}</div><button id="gGu" type="button">Continue as guest</button><div class="hint" style="margin:0">Guest mode works without an account. The team library, Harmony lineups and the Disciples phone remote stay off.</div>`;
+    const b=shell(),gu=dscGoogleUser();
+    const gBtn=gu?'':'<button id="gGoo" class="pri" type="button">Continue with Google</button><div class="hint" style="margin:0">New here? This creates your free account. Songs you save while signed in are shared with all PreCenter users.</div><div class="hint" id="gGe" role="status" style="margin:0"></div>';
+    const guBtn='<button id="gGu" type="button">'+(gu?'Back':'Continue as guest')+'</button>';
+    b.innerHTML=retry?`${gBtn}<div class="hint" id="gEr" style="margin:0;color:#c0392b">${dscEsc(note||'')}</div><button id="gGo">Try again</button>${guBtn}`
+      :`${gBtn}<details id="gTm"${gu||note?' open':''}><summary class="hint" style="margin:0;cursor:pointer">Disciples team member? Sign in with email</summary><div style="display:flex;flex-direction:column;gap:10px;margin-top:10px"><label>Email<input id="gEm" type="email" autocomplete="username"></label><label>Password<input id="gPw" type="password" autocomplete="current-password"></label><button id="gGo">Sign in</button></div></details><div class="hint" id="gEr" style="margin:0;color:#c0392b">${dscEsc(note||'')}</div>${guBtn}`;
     const er=b.querySelector('#gEr');b.querySelector('#gGu').onclick=guest;
-    if(retry){b.querySelector('#gGo').onclick=start;return}
+    const goo=b.querySelector('#gGoo');
+    if(goo){goo.onclick=async()=>{
+      const m=b.querySelector('#gGe');er.textContent='';
+      try{
+        if(!window.sbAuth)throw new Error('Still loading. Try again in a moment.');
+        m.textContent=window.dscNative?'Finish signing in in your web browser, then come back here.':'Opening Google\u2026';
+        await sbAuth.signIn();
+      }catch(e){m.textContent='';er.textContent=e&&e.message||String(e)}
+    };goo.focus()}
+    if(retry){b.querySelector('#gGo').onclick=()=>start(true);return}
     const go=async()=>{
       const em=b.querySelector('#gEm').value.trim(),pw=b.querySelector('#gPw').value;
       if(!em||!pw){er.textContent='Enter your email and password.';return}
@@ -7998,11 +8020,21 @@ function dscGuestNeed(what){
     b.querySelector('#gGo').onclick=go;
     b.querySelector('#gPw').onkeydown=e=>{if(e.key==='Enter')go()};
     b.querySelector('#gEm').onkeydown=e=>{if(e.key==='Enter')b.querySelector('#gPw').focus()};
-    b.querySelector('#gEm').focus();
   }
+  /* Google sign-in finished or signed out */
+  addEventListener('dsc-google',e=>{
+    let team='';try{team=localStorage.getItem(FLAG)||''}catch(_){}
+    if(e.detail==='in'){if(!team){try{localStorage.setItem(DSC_GUEST_KEY,'1')}catch(_){}}if(g){close();try{window.dscHomeOpen&&dscHomeOpen()}catch(_){}}}
+    else if(e.detail==='out'&&!team){try{localStorage.removeItem(DSC_GUEST_KEY)}catch(_){}window.dscShowGate()}
+    else if(e.detail==='error'){if(g){form('');const x=g.querySelector('#gEr');if(x)x.textContent='Google sign-in did not finish. Please try again.'}}
+  });
   let watching=false;
-  async function start(){
-    if(dscIsGuest()){close();return}
+  async function start(force){
+    if(!force){
+      let team='';try{team=localStorage.getItem(FLAG)||''}catch(_){}
+      if(dscGoogleUser()&&!team){try{localStorage.setItem(DSC_GUEST_KEY,'1')}catch(_){}}
+      if(dscIsGuest()){close();return}
+    }
     shell().innerHTML='<div class="hint" style="margin:0">Checking your sign-in\u2026</div>';
     try{await dscInit()}
     catch(e){
@@ -8016,7 +8048,7 @@ function dscGuestNeed(what){
       else{try{localStorage.removeItem(FLAG)}catch(_){}if(dscIsGuest()){close();return}form('')}
     });
   }
-  window.dscShowGate=function(){if(watching)form('');else start()};
+  window.dscShowGate=function(){if(watching){shell();form('')}else start(true)};
   start();
 })();
 
@@ -8261,6 +8293,7 @@ function dscGuestNeed(what){
   function open(){
     close();
     let nm='',cn='',em='';try{const u=dscAuth&&dscAuth.currentUser;nm=u?(u.displayName||(u.email||'').split('@')[0]):'';em=u?(u.email||''):''}catch(e){}
+    const gu=!em&&dscGoogleUser();if(gu){nm=gu.name||String(gu.email||'').split('@')[0];em=gu.email||''}
     try{const own=(localStorage.getItem('lp-home-name')||'').trim();if(own)nm=own}catch(e){}
     try{cn=window.plName?plName():''}catch(e){}
     const hr=new Date().getHours(),gr=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
@@ -8312,13 +8345,14 @@ function dscGuestNeed(what){
     w.querySelector('#hmProf').onclick=e=>{
       e.stopPropagation();const old=w.querySelector('.hpm');if(old){old.remove();return}
       const m=document.createElement('div');m.className='hpm';m.setAttribute('role','menu');
-      m.innerHTML='<div class="hpi"><b>'+esc(nm||(dscIsGuest()?'Guest':'Your profile'))+'</b><small>'+esc(em||(dscIsGuest()?'Guest (no account)':'Not signed in'))+'</small><small id="hmTm"></small></div><button data-a="name">Change the name shown here</button><button data-a="acc">Account and preferences\u2026</button>'+(dscIsGuest()?'<button data-a="in">Sign in</button>':'<button data-a="team">Switch team</button><button data-a="out">Sign out</button>');
+      m.innerHTML='<div class="hpi"><b>'+esc(nm||(dscIsGuest()?'Guest':'Your profile'))+'</b><small>'+esc(em||(dscIsGuest()?'Guest (no account)':'Not signed in'))+'</small><small id="hmTm"></small></div><button data-a="name">Change the name shown here</button><button data-a="acc">Account and preferences\u2026</button>'+(dscIsGuest()?(dscGoogleUser()?'<button data-a="in">Team sign-in</button><button data-a="gout">Sign out of Google</button>':'<button data-a="in">Sign in</button>'):'<button data-a="team">Switch team</button><button data-a="out">Sign out</button>');
       w.querySelector('#hmProf').parentNode.appendChild(m);
       try{if(LN&&LN.name)m.querySelector('#hmTm').textContent='Team: '+LN.name}catch(_){}
       m.onclick=async ev=>{const a=ev.target.dataset&&ev.target.dataset.a;if(!a)return;m.remove();
         if(a==='name'){const v=prompt('Name to show on Home',nm||'');if(v!==null){try{localStorage.setItem('lp-home-name',v.trim())}catch(_){}open()}}
         else if(a==='acc'){const b=document.getElementById('tProf');if(b)b.click()}
         else if(a==='in')dscSignInNow();
+        else if(a==='gout'){if(!confirm('Sign out of Google on this computer?'))return;close();sbAuth.signOut()}
         else if(a==='team'){try{localStorage.removeItem('lp-dsc-team')}catch(_){}LN=null;loadLineup(w.querySelector('#hmLn'),true)}
         else if(a==='out'){if(!confirm('Sign out of Disciples on this computer?'))return;try{await dscAuth.signOut()}catch(_){}try{localStorage.removeItem('lp-dsc-user')}catch(_){}location.reload()}};
     };
@@ -8360,6 +8394,8 @@ window.DSC_VERSION=DSC_VERSION;
   const ini=u=>String((u&&(u.displayName||u.email))||'?').trim().charAt(0).toUpperCase();
   const setAv=u=>{const b=document.getElementById('tpA');if(b)b.innerHTML=u?dscEsc(ini(u)):'&#9786;'};
   if(!dscIsGuest())dscInit().then(()=>dscAuth.onAuthStateChanged(setAv)).catch(()=>{});
+  else if(dscGoogleUser())setTimeout(()=>{const u=dscGoogleUser();if(u)setAv({displayName:u.name,email:u.email})},800);
+  addEventListener('dsc-google',()=>{if(dscAuth&&dscAuth.currentUser)return;const u=dscGoogleUser();setAv(u?{displayName:u.name,email:u.email}:null)});
   const TABS=[['acc','Account'],['set','General'],['scr','Screens'],['imp','Import'],['grp','Groups'],['inp','Input'],['net','Network'],['syn','Sync and backup'],['svc','Services'],['aud','Audio'],['adv','Advanced'],['dev','Devices'],['upd','Updates'],['key','Shortcuts'],['abt','About & credits']];
   function open(start){
     const w=document.createElement('div');w.className='qe';
@@ -8372,6 +8408,8 @@ window.DSC_VERSION=DSC_VERSION;
     const sel=(id,label,opts,val)=>'<label>'+label+'<select id="'+id+'">'+opts.map(x=>'<option value="'+dscEsc(x[0])+'"'+(String(x[0])===String(val)?' selected':'')+'>'+dscEsc(x[1])+'</option>').join('')+'</select></label>';
 
     function acc(){
+      const gu=dscGoogleUser();
+      if(gu&&dscIsGuest()){body.innerHTML='<h3>Account</h3><div class="pfAcc"><div class="pfAv">'+dscEsc(ini({displayName:gu.name,email:gu.email}))+'</div><div><b style="font-size:17px">'+dscEsc(gu.name||gu.email||'Signed in')+'</b><div class="hint" style="margin:0">'+dscEsc(gu.email||'')+'</div><div class="hint" style="margin:0">Signs in with Google</div></div></div><div class="pfCard"><b>Song database</b><div class="hint" style="margin:0">Songs you save are synced and shared with all PreCenter users. The Disciples team library, Harmony lineup and Disciples phone remote need a team sign-in.</div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button id="pfSync" class="pri">Song database</button><button id="pfIn">Team sign-in</button><button id="pfGo">Sign out</button></div>';g('pfSync').onclick=()=>{done();connDlg('songs')};g('pfIn').onclick=()=>{done();dscSignInNow()};g('pfGo').onclick=()=>{done();sbAuth.signOut()};return}
       if(dscIsGuest()){body.innerHTML='<h3>Account</h3><div class="pfAcc"><div class="pfAv">G</div><div><b style="font-size:17px">Guest</b><div class="hint" style="margin:0">Using PreCenter without an account</div></div></div><div class="pfCard"><b>Switched off in guest mode</b><div class="hint" style="margin:0">The Disciples team library, the Harmony lineup on Home, and the Disciples phone remote. Everything else works as normal.</div></div><div class="row"><button id="pfIn" class="pri">Sign in</button></div>';g('pfIn').onclick=()=>{done();dscSignInNow()};return}
       const u=dscAuth&&dscAuth.currentUser;let saved='';try{saved=localStorage.getItem('lp-dsc-user')||''}catch(e){}
       const email=u?(u.email||''):(saved&&saved!=='1'?saved:'');
@@ -18723,9 +18761,10 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
 /* ---- Song database: a copy of every library song in a folder on this computer (desktop app) and a free Supabase table ----
    Local first: the app always works from its own copy. It asks Supabase for songs changed since the last check (a tiny answer when nothing
    changed), merges those in, and uploads songs you added or edited while signed in with Google. Anyone can read; only the owner can edit.
-   Settings: localStorage lp-sb {url,key,auto,since}. Session: lp-sb-sess. Per-song marks: lp-sb-h {gid:{m:folder hash,p:uploaded hash,t:remote time}}. */
+   The project address and key are built in: window.DSC_SUPABASE at the top of this file.
+   Settings: localStorage lp-sb {url,key,auto,since,proj}. Session: lp-sb-sess. Per-song marks: lp-sb-h {gid:{m:folder hash,p:uploaded hash,t:remote time}}. */
 (function(){
-  const K='lp-sb',KS='lp-sb-sess',KH='lp-sb-h',SITE='https://precenter-bay.vercel.app/';
+  const K='lp-sb',KS='lp-sb-sess',KH='lp-sb-h';
   let C={url:'',key:'',auto:true,since:''};try{C=Object.assign(C,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
   let sess=null;try{sess=JSON.parse(localStorage.getItem(KS)||'null')}catch(e){}
   let H={};try{H=JSON.parse(localStorage.getItem(KH)||'{}')||{}}catch(e){}
@@ -18735,8 +18774,13 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
   const saveH=()=>{try{localStorage.setItem(KH,JSON.stringify(H))}catch(e){}};
   const setSt=m=>{st=m;listeners.forEach(f=>{try{f()}catch(e){}})};
   const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return(h>>>0).toString(36)+s.length};
-  const base=()=>String(C.url||'').trim().replace(/\/+$/,'');
-  const ready=()=>/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(base())&&String(C.key||'').trim().length>20;
+  const B=window.DSC_SUPABASE||{};
+  const base=()=>String(B.url||C.url||'').trim().replace(/\/+$/,'');
+  const apiKey=()=>String(B.url?B.key:C.key||'').trim();
+  /* a secret key would give every user full control of the database: refuse to run with one */
+  const secret=k=>{if(/^sb_secret_/.test(k))return true;try{return JSON.parse(atob(k.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).role==='service_role'}catch(e){return false}};
+  const ready=()=>/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(base())&&apiKey().length>20&&!secret(apiKey());
+  if(ready()&&C.proj!==base()){C.proj=base();C.since='';H={};save();saveH()}
   const uuid=()=>(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}));
   const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const DROP=['id','title','lyrics','sec','libId','src','lb','fo','gid','type'];
@@ -18750,19 +18794,21 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
   const jwt=t=>{try{return JSON.parse(atob(String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))}catch(e){return null}};
   function setSession(a,r){
     const p=jwt(a)||{};
-    sess={a,r,exp:(p.exp||0)*1000,uid:p.sub||'',email:p.email||(p.user_metadata&&p.user_metadata.email)||''};saveS();
+    const um=p.user_metadata||{};
+    sess={a,r,exp:(p.exp||0)*1000,uid:p.sub||'',email:p.email||um.email||'',name:String(um.full_name||um.name||''),iss:base()};saveS();
   }
   async function token(){
     if(!sess)return '';
+    if(sess.iss&&ready()&&sess.iss!==base())return '';
     if(sess.exp-Date.now()>60000)return sess.a;
     if(!sess.r||!ready())return sess.exp>Date.now()?sess.a:'';
     try{
-      const r=await fetch(base()+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:C.key,'content-type':'application/json'},body:JSON.stringify({refresh_token:sess.r})});
+      const r=await fetch(base()+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:apiKey(),'content-type':'application/json'},body:JSON.stringify({refresh_token:sess.r})});
       if(!r.ok){if(r.status===400||r.status===401){sess=null;saveS();setSt('Signed out: sign in with Google again.')}return ''}
       const j=await r.json();setSession(j.access_token,j.refresh_token);return sess.a;
     }catch(e){return sess.a||''}
   }
-  const hdr=async(w)=>{const h={apikey:C.key,'content-type':'application/json'};if(w){const t=await token();if(t)h.authorization='Bearer '+t}return h};
+  const hdr=async(w)=>{const h={apikey:apiKey(),'content-type':'application/json'};if(w){const t=await token();if(t)h.authorization='Bearer '+t}return h};
   /* ---------- local folder (desktop app) ---------- */
   const N=()=>window.dscNative&&window.dscNative.songs;
   async function mirror(){
@@ -18807,6 +18853,13 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
     saveH();return sent;
   }
   /* ---------- download ---------- */
+  /* Anyone can sign up, so treat downloaded songs as untrusted: no markup may come in with them. */
+  function clean(v,depth){
+    if(typeof v==='string')return v.replace(/[<>"]/g,'');
+    if(depth>12||!v||typeof v!=='object')return typeof v==='object'?null:v;
+    if(Array.isArray(v))return v.map(x=>clean(x,depth+1));
+    const o={};Object.keys(v).forEach(k=>{if(k!=='__proto__'&&!/[<>"'&]/.test(k))o[k]=clean(v[k],depth+1)});return o;
+  }
   async function pull(){
     if(!ready())return 0;
     let got=0,since=C.since?new Date(Date.parse(C.since)-120000).toISOString():'',changed=false;
@@ -18832,9 +18885,10 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
           if(it){it.gid=row.gid}
           else{it={id:Date.now()*1000+(Math.random()*999|0),gid:row.gid,type:'song'};all.push(it)}
         }
-        const d=row.data&&typeof row.data==='object'?row.data:{};
+        const d=row.data&&typeof row.data==='object'&&!Array.isArray(row.data)?clean(row.data,0):{};
+        DROP.forEach(k=>delete d[k]);
         Object.keys(it).forEach(k=>{if(!DROP.includes(k))delete it[k]});
-        Object.assign(it,d);it.title=String(row.title||'Untitled');it.lyrics=String(row.lyrics||'');
+        Object.assign(it,d);it.title=String(row.title||'Untitled').replace(/[<>]/g,'');it.lyrics=String(row.lyrics||'').replace(/<(?=[a-z\/!?])/gi,'‹');
         if(!it.d&&typeof dd==='function')it.d=dd();
         m.t=row.updated_at;m.p=hash(JSON.stringify(body(it)));delete m.m;changed=true;got++;
       }
@@ -18858,63 +18912,76 @@ window.dscStudio={enter,leave:()=>leave('show'),isOpen:()=>open};
     busy=false;
   }
   window.sbSoon=function(){clearTimeout(tm);tm=setTimeout(()=>{if(busy)return window.sbSoon();sync(false)},3500)};
-  /* ---------- Google sign-in ---------- */
-  function signIn(){
-    if(!ready()){try{toast('Enter the Supabase address and key first.')}catch(e){}return}
-    const back=/^https?:$/.test(location.protocol)?location.origin+location.pathname:SITE;
-    const u=base()+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(back);
-    if(window.dscNative){window.open(u,'_blank','noopener');try{toast('Finish in the browser, then paste the code here.')}catch(e){}}
-    else location.href=u;
+  /* ---------- Google sign-in (PKCE: Google sends back a one-time code that only this device can use) ---------- */
+  const KV='lp-sb-pkce';
+  const tell=d=>{setSt(st);try{dispatchEvent(new CustomEvent('dsc-google',{detail:d}))}catch(e){}};
+  const b64=u=>btoa(String.fromCharCode.apply(null,u)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  async function pkce(){
+    const v=b64(crypto.getRandomValues(new Uint8Array(48)));
+    const c=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v))));
+    return{v,c};
   }
-  function usePasted(code){
-    let j;try{j=JSON.parse(atob(String(code||'').trim()))}catch(e){throw new Error('That code is not valid.')}
-    if(!j||typeof j.r!=='string'||!j.r)throw new Error('That code is not valid.');
-    if(j.u&&!ready()){C.url=String(j.u);save()}
-    sess={a:'',r:j.r,exp:0,uid:'',email:j.e||''};saveS();
-    return token().then(t=>{if(!t)throw new Error('The code did not work. Sign in again.');});
+  async function exchange(code,verifier){
+    let r;try{r=await fetch(base()+'/auth/v1/token?grant_type=pkce',{method:'POST',headers:{apikey:apiKey(),'content-type':'application/json'},body:JSON.stringify({auth_code:code,code_verifier:verifier})})}catch(e){throw new Error('No internet connection.')}
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.access_token)throw new Error(j.error_description||j.msg||'Google sign-in did not finish. Try again.');
+    setSession(j.access_token,j.refresh_token);
+    setSt('Signed in as '+(sess.email||'your account')+'.');
+    try{toast('Signed in as '+(sess.email||'your account')+'.')}catch(e){}
+    tell('in');window.sbSoon();
   }
-  /* back from Google: the address holds #access_token=... */
+  async function signIn(){
+    if(!ready())throw new Error('Online sign-in is not set up in this copy of PreCenter.');
+    const p=await pkce();
+    const u=base()+'/auth/v1/authorize?provider=google&prompt=select_account&code_challenge='+p.c+'&code_challenge_method=s256';
+    if(window.dscNative){
+      if(!window.dscNative.googleSignIn)throw new Error('Update the PreCenter desktop app to sign in with Google.');
+      const res=await window.dscNative.googleSignIn(u);
+      if(!res||!res.code)throw new Error(res&&res.error||'Google sign-in was cancelled.');
+      await exchange(res.code,p.v);
+    }else{
+      if(!/^https?:$/.test(location.protocol))throw new Error('Open PreCenter from its web address or the desktop app to sign in.');
+      localStorage.setItem(KV,p.v);
+      location.href=u+'&redirect_to='+encodeURIComponent(location.origin+location.pathname);
+    }
+  }
+  function signOut(){
+    const old=sess;sess=null;saveS();setSt('Signed out.');
+    if(old&&old.a&&ready())fetch(base()+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:apiKey(),authorization:'Bearer '+old.a}}).catch(()=>{});
+    tell('out');
+  }
+  window.sbAuth={signIn,signOut,ready,user:()=>sess};
+  /* back from Google in a web browser: the address holds ?code=... */
   (function back(){
-    const h=location.hash||'';if(!/access_token=/.test(h))return;
-    const p=new URLSearchParams(h.replace(/^#/,''));const a=p.get('access_token'),r=p.get('refresh_token');
-    if(!a)return;
-    try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
-    const pl=jwt(a)||{};
-    if(!C.url&&pl.iss){C.url=String(pl.iss).replace(/\/auth\/v1\/?$/,'');save()}
-    setSession(a,r||'');
-    const code=btoa(JSON.stringify({u:base(),r:r||'',e:sess.email}));
-    const show=()=>{
-      try{
-        const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Signed in with Google</b><button class="x">Close</button></div><p class="hint">Signed in as <b></b>. To sign in the PreCenter desktop app too, copy this code and paste it in Connection › Song database.</p><textarea readonly style="width:100%;height:90px;font-size:11px"></textarea><div class="row" style="gap:6px"><button class="pri" id="sbCp">Copy code</button></div>');
-        m.q('b').textContent=sess.email||'your account';m.q('textarea').value=code;
-        m.q('.x').onclick=m.done;m.q('#sbCp').onclick=()=>{try{navigator.clipboard.writeText(code);toast('Code copied.')}catch(e){m.q('textarea').select()}};
-      }catch(e){}
-      window.sbSoon();
-    };
-    if(document.readyState==='complete')setTimeout(show,800);else addEventListener('load',()=>setTimeout(show,800));
+    let v='';try{v=localStorage.getItem(KV)||''}catch(e){}
+    if(!v||window.dscNative)return;
+    const q=new URLSearchParams(location.search),h=new URLSearchParams(String(location.hash||'').replace(/^#/,''));
+    const code=q.get('code'),err=q.get('error_description')||h.get('error_description')||q.get('error');
+    if(!code&&!err)return;
+    try{localStorage.removeItem(KV)}catch(e){}
+    ['code','error','error_code','error_description'].forEach(k=>q.delete(k));
+    try{history.replaceState(null,'',location.pathname+(String(q)?'?'+q:''))}catch(e){}
+    const fail=m=>{setSt(m);setTimeout(()=>{tell('error');try{toast(m)}catch(e){}},800)};
+    if(!code){fail('Google sign-in did not finish: '+err);return}
+    const run=()=>exchange(code,v).catch(e=>fail(e.message));
+    if(document.readyState==='complete')setTimeout(run,300);else addEventListener('load',()=>setTimeout(run,300));
   })();
   /* ---------- panel (Connection > Song database) ---------- */
   window.sbPanel=function(h){
-    h.innerHTML='<p class="hint">Every library song is copied to a folder on this computer (desktop app) and to a free Supabase database. The app always works from its own copy: it only checks Supabase for songs that changed, and downloads just those. Anyone can read the songs; you sign in with Google to add or edit.</p>'+
-    '<label>Supabase project address<input id="sbU" placeholder="https://abcdxyz.supabase.co" autocomplete="off" spellcheck="false"></label>'+
-    '<label>Supabase anon (public) key<input id="sbK" placeholder="eyJ... or sb_publishable_..." autocomplete="off" spellcheck="false"></label>'+
-    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="pri" id="sbSave">Save and sync</button><button id="sbNow">Sync now</button><button id="sbBak">Download backup</button><button id="sbOpen" hidden>Open songs folder</button></div>'+
-    '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div class="hint" style="margin:0">Account: <b id="sbWho"></b></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button id="sbG">Sign in with Google</button><button id="sbOut" hidden>Sign out</button></div>'+
-    '<div class="row" style="gap:6px;margin-top:6px"><input id="sbCode" placeholder="Paste the sign-in code from the browser" style="flex:1" autocomplete="off"><button id="sbUse">Use code</button></div></div>'+
-    '<label class="row" style="gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="sbAuto" style="width:auto"> Check for new songs automatically</label>'+
-    '<div class="hint" style="margin-top:8px">Status: <b id="sbSt"></b></div>';
+    h.innerHTML='<p class="hint">Your library songs are saved on this computer and in the PreCenter song database. Anyone can read the songs there. Sign in with Google to add your own: songs you save while signed in are shared with all PreCenter users, and only you can change yours.</p>'+
+    '<div class="hint" style="margin:0">Account: <b id="sbWho"></b></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="pri" id="sbG">Sign in with Google</button><button id="sbOut" hidden>Sign out</button></div>'+
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><button id="sbNow">Sync now</button><button id="sbBak">Download backup</button><button id="sbOpen" hidden>Open songs folder</button></div>'+
+    '<label class="row" style="flex-direction:row;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="sbAuto" style="width:auto"> Check for new songs automatically</label>'+
+    '<div class="hint" style="margin-top:8px">Status: <b id="sbSt" role="status"></b></div>';
     const $=s=>h.querySelector(s);
-    $('#sbU').value=C.url;$('#sbK').value=C.key;$('#sbAuto').checked=C.auto!==false;
+    $('#sbAuto').checked=C.auto!==false;
     if(N())$('#sbOpen').hidden=false;
-    const paint=()=>{if(!h.isConnected)return;$('#sbSt').textContent=st||(ready()?'Not synced yet.':'Add the Supabase address and key to turn on online sync. The local copy works without them.');$('#sbWho').textContent=sess?(sess.email||'signed in'):'not signed in (reading is open to everyone)';$('#sbOut').hidden=!sess;$('#sbG').hidden=!!sess};
+    const paint=()=>{if(!h.isConnected)return;$('#sbSt').textContent=st||(ready()?'Not synced yet.':'Online sync is not set up in this copy. Songs are saved on this computer.');$('#sbWho').textContent=sess?(sess.email||'signed in'):'not signed in';$('#sbOut').hidden=!sess;$('#sbG').hidden=!!sess||!ready()};
     listeners.push(paint);paint();
-    const grab=()=>{C.url=$('#sbU').value.trim();C.key=$('#sbK').value.trim();C.auto=$('#sbAuto').checked;save()};
-    $('#sbSave').onclick=()=>{grab();if(C.url&&!ready()){setSt('That address should look like https://xxxx.supabase.co');return}C.since='';save();sync(true)};
-    $('#sbNow').onclick=()=>{grab();sync(true)};
-    $('#sbAuto').onchange=grab;
-    $('#sbG').onclick=()=>{grab();signIn()};
-    $('#sbOut').onclick=()=>{sess=null;saveS();setSt('Signed out.')};
-    $('#sbUse').onclick=async()=>{grab();try{await usePasted($('#sbCode').value);$('#sbCode').value='';setSt('Signed in as '+(sess.email||'your account')+'.');sync(true)}catch(e){setSt(e.message)}};
+    $('#sbNow').onclick=()=>sync(true);
+    $('#sbAuto').onchange=()=>{C.auto=$('#sbAuto').checked;save()};
+    $('#sbG').onclick=async()=>{setSt(window.dscNative?'Finish signing in in your web browser, then come back here.':'Opening Google…');try{await signIn()}catch(e){setSt(e.message)}};
+    $('#sbOut').onclick=signOut;
     $('#sbBak').onclick=()=>{
       const list=songs().map(it=>Object.assign({gid:it.gid||'',},body(it)));
       const b=new Blob([JSON.stringify({app:'Disciples PreCenter',at:new Date().toISOString(),songs:list},null,1)],{type:'application/json'});

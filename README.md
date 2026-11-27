@@ -9,15 +9,14 @@ can run a service smoothly.
 Get the latest Windows installer from the
 [Releases page](https://github.com/markebora/precenter/releases/latest).
 
-## Sign-in (invite only)
+## Sign-in
 
-Disciples PreCenter uses an online account to sign in, and to share the song library and settings
-between the members of a team. Sign-in is by invitation only:
-
-- Accounts are created by the project maintainers. There is no public sign-up.
-- The sign-in and sync service runs on a free-tier Firebase project, which has limited capacity.
-  Keeping accounts invite-only keeps the service reliable for the churches and teams already using it.
-- To request access, [open an issue](https://github.com/markebora/precenter/issues) and describe your team.
+* **Google (open to everyone):** choose **Continue with Google**. The first sign-in creates your account.
+  It syncs the song database. Songs you save while signed in are shared with all PreCenter users.
+* **Disciples team (invite only):** email accounts created by the project maintainers, for the team library,
+  Harmony lineups and the Disciples phone remote. To request access,
+  [open an issue](https://github.com/markebora/precenter/issues) and describe your team.
+* **Guest:** works without an account.
 
 ### Running your own copy
 

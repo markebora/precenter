@@ -28,22 +28,14 @@ function deliverFile(doc, f) {
   return true;
 }
 
-// Stream link: the page asks the app to open the connection (an https page may not open ws:// to another computer).
-const linkListeners = new Map();
-ipcRenderer.on('link:ev', (_e, m) => { const f = m && linkListeners.get(m.id); if (f) f(m); });
-
 contextBridge.exposeInMainWorld('dscNative', {
   isDesktop: true,
-  link: {
-    open: (id, url, cb) => {
-      linkListeners.set(String(id), cb);
-      return ipcRenderer.invoke('link:open', String(id), String(url)).then(r => {
-        if (!r || !r.ok) { linkListeners.delete(String(id)); throw new Error((r && r.error) || 'That address does not work'); }
-        return true;
-      });
-    },
-    send: (id, text) => ipcRenderer.send('link:send', String(id), String(text)),
-    close: id => { linkListeners.delete(String(id)); ipcRenderer.send('link:close', String(id)); }
+  // Google sign-in in the system browser. Resolves with { code } or { error }.
+  googleSignIn: url => ipcRenderer.invoke('auth:google', String(url)),
+  // Song folder: a readable copy of every library song on this computer.
+  songs: {
+    save: (gid, title, json, text) => ipcRenderer.invoke('songs:save', String(gid), String(title), String(json), String(text)),
+    open: () => ipcRenderer.invoke('songs:open')
   },
   // Save a file in pieces through the system Save window (the page never gets a path of its own).
   save: {

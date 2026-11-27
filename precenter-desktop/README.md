@@ -62,6 +62,8 @@ Logs are in `%APPDATA%\Disciples PreCenter\logs\main.log`.
 * The Audience, Stage, Identify and Remote windows are allowed to open. Web links (for example SongSelect)
   open in your browser. Anything else (`file:`, `javascript:` and so on) is refused.
 * The main window cannot be navigated away from the app.
+* "Continue with Google" opens your normal browser and the answer comes back to `http://127.0.0.1:53682/callback`
+  on the same computer (`lib/oauth.js`). Add `http://127.0.0.1:53682/**` to Supabase's Redirect URLs. See `SUPABASE-SETUP.md`.
 * Sign-in asks your Disciples site for its settings. The app adds the permission headers for the hosts in
   `corsRelaxHosts` so that works from `dsc://app`. **Risk:** if your Firebase key is restricted to certain
   website addresses, sign-in from `dsc://app` may be refused. If that happens, either allow it in the Firebase

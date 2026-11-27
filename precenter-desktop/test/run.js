@@ -249,50 +249,10 @@ test('every file the installer needs is present', () => {
   assert.strictEqual(pkg.build.npmRebuild, false);
 });
  
-// ---- stream link bridge ----
-const linkBridge = require('../lib/linkbridge');
 function fakeIpc() {
   const h = {}, o = {};
   return { handle: (c, f) => { h[c] = f; }, on: (c, f) => { o[c] = f; }, call: (c, ...a) => h[c](...a), emit: (c, ...a) => o[c](...a) };
 }
-class FakeWS {
-  constructor(u) { this.url = u; this.readyState = 0; this.sent = []; this.l = {}; FakeWS.last = this; }
-  addEventListener(t, f) { this.l[t] = f; }
-  send(x) { this.sent.push(x); }
-  close() { this.readyState = 3; }
-  fire(t, ev) { if (t === 'open') this.readyState = 1; this.l[t] && this.l[t](ev || {}); }
-}
-test('the link bridge only opens ws://host/link addresses', () => {
-  assert.ok(linkBridge.validUrl('ws://192.168.1.105:3000/link?role=remote&code=ABC'));
-  assert.ok(linkBridge.validUrl('wss://stream.example.com/link?code=1'));
-  assert.strictEqual(linkBridge.validUrl('http://192.168.1.105:3000/link'), null);
-  assert.strictEqual(linkBridge.validUrl('ws://192.168.1.105:3000/other'), null);
-  assert.strictEqual(linkBridge.validUrl('file:///etc/passwd'), null);
-  assert.strictEqual(linkBridge.validUrl('nonsense'), null);
-});
-test('the link bridge opens, relays text both ways and closes', async () => {
-  const ipc = fakeIpc(), got = [], sender = { id: 7, send: (c, m) => got.push(m), once() {}, isDestroyed: () => false };
-  const b = linkBridge.create(ipc, FakeWS), e = { sender };
-  assert.deepStrictEqual(await ipc.call('link:open', e, 'a', 'ws://192.168.1.105:3000/link?code=X'), { ok: true });
-  FakeWS.last.fire('open');
-  ipc.emit('link:send', e, 'a', '{"t":"slide"}');
-  assert.deepStrictEqual(FakeWS.last.sent, ['{"t":"slide"}']);
-  ipc.emit('link:send', e, 'a', { not: 'text' });
-  assert.strictEqual(FakeWS.last.sent.length, 1);
-  FakeWS.last.fire('close', { code: 4001 });
-  assert.deepStrictEqual(got.map(m => m.type + (m.code || '')), ['open', 'close4001']);
-  assert.strictEqual(b.count(), 0);
-});
-test('the link bridge refuses a bad address and a missing WebSocket', async () => {
-  const ipc = fakeIpc(), e = { sender: { id: 1, send() {}, once() {} } };
-  linkBridge.create(ipc, FakeWS);
-  assert.strictEqual((await ipc.call('link:open', e, 'a', 'http://x/link')).ok, false);
-  const ipc2 = fakeIpc(); linkBridge.create(ipc2, null);
-  const saved = globalThis.WebSocket; globalThis.WebSocket = undefined;
-  try { const ipc3 = fakeIpc(); linkBridge.create(ipc3); assert.strictEqual((await ipc3.call('link:open', e, 'a', 'ws://h:1/link')).ok, false); }
-  finally { globalThis.WebSocket = saved; }
-});
-
 // ---- saving a service through the system Save window ----
 const saveBridge = require('../lib/savebridge');
 const bytes = (...a) => Uint8Array.from(a);
@@ -650,6 +610,22 @@ test('Broadcast links: OBS sources get the slide messages and the overlay text, 
     assert.ok(pg.body.indexOf('/bcast.js?k=' + srv.info().bcast.key + '&n=1&p=1&lite=1') >= 0, 'the phone options reach the shim');
   } finally { srv.stop(); }
 });
+
+queue.push(['Google sign-in: the code comes back on this computer, and only Supabase addresses are opened', async () => {
+  const oauth = require('../lib/oauth');
+  const http = require('http');
+  const get = u => new Promise((res, rej) => http.get(u, r => { r.resume(); r.on('end', () => res(r.statusCode)); }).on('error', rej));
+  let opened = '';
+  const g = oauth.create({ port: 0, openExternal: u => { opened = u; const back = new URL(u).searchParams.get('redirect_to'); setTimeout(async () => { assert.strictEqual(await get(back), 404); await get(back + '?code=abc123'); }, 20); } });
+  assert.ok((await g.signIn('https://evil.example/auth/v1/authorize?x=1')).error);
+  assert.strictEqual(opened, '');
+  assert.deepStrictEqual(await g.signIn('https://abc.supabase.co/auth/v1/authorize?provider=google'), { code: 'abc123' });
+  assert.ok(/redirect_to=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fcallback/.test(opened));
+  const slow = oauth.create({ port: 0, timeoutMs: 60, openExternal: () => {} });
+  assert.ok(/timed out/.test((await slow.signIn('https://abc.supabase.co/auth/v1/authorize?provider=google')).error));
+  const main = require('fs').readFileSync(require('path').join(__dirname, '..', 'main.js'), 'utf8');
+  assert.ok(main.includes("ipcMain.handle('auth:google'"));
+}]);
 
 (async () => {
   for (const [name, fn] of queue) {

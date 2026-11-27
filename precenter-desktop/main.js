@@ -11,10 +11,10 @@ const ndi = require('./ndi/manager');
 const ndiSender = require('./ndi/sender');
 const appUpdate = require('./lib/appupdate');
 const lanPageLib = require('./lib/lanpage');
-const linkBridge = require('./lib/linkbridge');
 const saveBridge = require('./lib/savebridge');
 const lanServer = require('./lib/lanserver');
 const snapperLib = require('./lib/snapper');
+const oauth = require('./lib/oauth');
  
 // The bundled app is served from its own address (dsc://app/) instead of file://, so storage,
 // BroadcastChannel between windows, file pickers and sign-in behave as they do on the web.
@@ -428,7 +428,30 @@ function setupLan() {
 }
 
 function setupIpc() {
-  linkBridge.create(ipcMain);
+  // Song folder: every library song is copied here as a readable .txt and a .json (see the Song database panel). Only the main window may use it.
+  const songsDir = () => path.join(app.getPath('documents'), 'Disciples PreCenter Songs');
+  const isMainWin = e => !!mainWin && e.sender === mainWin.webContents;
+  ipcMain.handle('songs:save', async (e, gid, title, json, text) => {
+    if (!isMainWin(e) || !/^[0-9a-f-]{36}$/i.test(String(gid)) || typeof json !== 'string' || typeof text !== 'string' || json.length > 3 * 1024 * 1024) return false;
+    try {
+      const dir = songsDir(), tag = '[' + String(gid).slice(0, 8) + ']';
+      await fs.promises.mkdir(dir, { recursive: true });
+      const name = (String(title || 'Untitled').replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled') + ' ' + tag;
+      for (const f of await fs.promises.readdir(dir)) { if (f.includes(tag) && !f.startsWith(name + '.')) await fs.promises.unlink(path.join(dir, f)).catch(() => {}); }   // the song was renamed
+      await fs.promises.writeFile(path.join(dir, name + '.txt'), String(title || 'Untitled') + '\n\n' + text, 'utf8');
+      await fs.promises.writeFile(path.join(dir, name + '.json'), json, 'utf8');
+      return true;
+    } catch (err) { log.warn('Songs folder: ' + err.message); return false; }
+  });
+  // Google sign-in: the person's own browser does it (Google refuses embedded windows) and answers on this computer.
+  const google = oauth.create({ openExternal: u => shell.openExternal(u), log });
+  ipcMain.handle('auth:google', async (e, url) => {
+    if (!isMainWin(e)) return { error: 'Not allowed.' };
+    const res = await google.signIn(String(url));
+    if (mainWin && res.code) { if (mainWin.isMinimized()) mainWin.restore(); mainWin.focus(); }
+    return res;
+  });
+  ipcMain.handle('songs:open', e => { if (!isMainWin(e)) return false; const d = songsDir(); return fs.promises.mkdir(d, { recursive: true }).then(() => shell.openPath(d)).then(r => !r, () => false); });
   setupLan();
   // Saving a service: the page streams the file to us and the person picks where in the system Save window.
   const winOf = sender => BrowserWindow.fromWebContents(sender) || mainWin;
