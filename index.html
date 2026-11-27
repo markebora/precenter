@@ -7414,6 +7414,7 @@ function remoteState(noSnap){
   return{
     on:true,v:1,hb:Date.now(),mn:prevN(),
     sid:s.id,title:s.title||'Untitled',type:s.type||'song',
+    hid:(s.src&&s.src.app==='harmony')?String(s.src.id):'',
     idx,n:sl.length,label:lab,
     text:rtStrip(String(p.text||'')).slice(0,700),next:rtStrip(String(p.next||'')).slice(0,300),
     ch:p.ch?JSON.stringify(p.ch).slice(0,4000):'',chn:p.chn?JSON.stringify(p.chn).slice(0,2000):'',
