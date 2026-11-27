@@ -7606,12 +7606,13 @@ window.connDlg=function(tab){
   const m=modal('<div class="row" style="justify-content:space-between;align-items:center"><b>Connection</b><button class="x">Close</button></div><div class="row" id="cnTabs" style="gap:6px;flex-wrap:wrap;margin-top:6px"></div><div id="cnBody" style="margin-top:10px"></div>','');
   m.w.firstChild.style.width='min(580px,94vw)';m.w.firstChild.style.maxHeight='90vh';m.w.firstChild.style.overflow='auto';
   m.q('.x').onclick=m.done;
-  const TABS=[['all','Overview'],['wifi','Wi-Fi'],['bfull','Broadcast full screen'],['bov','Broadcast overlay'],['cloud','Cloud remote'],['stream','Stream server']];
+  const TABS=[['all','Overview'],['wifi','Wi-Fi'],['browser','Phone browser (no app)'],['bfull','Broadcast full screen'],['bov','Broadcast overlay'],['cloud','Cloud remote'],['stream','Stream server']];
   const bar=m.q('#cnTabs'),body=m.q('#cnBody');let cur='';
   const show=t=>{
     cur=t;bar.querySelectorAll('button').forEach(b=>b.classList.toggle('pri',b.dataset.t===t));
     const h=document.createElement('div');body.replaceChildren(h);
     if(t==='wifi')lanDlg(h);
+    else if(t==='browser')bwDlg(h);
     else if(t==='bfull')bcPanel(h,'full');
     else if(t==='bov')bcPanel(h,'overlay');
     else if(t==='cloud')cloudPanel(h);
@@ -7627,6 +7628,7 @@ window.connDlg=function(tab){
       const n=LANH?LANH.clients|0:0;
       const rows=[
         row('wifi','Wi-Fi (same network)',lan?(lan.running?(n?n+' phone'+(n>1?'s':'')+' connected':'ready, no phone yet'):'not running'):'desktop app only',lan&&lan.running?'Fastest. Nothing goes through the internet. Phone scans the QR.':'Needs the desktop app.',lan&&lan.running?'ok':'warn'),
+        row('browser','Phone browser (no app)',lan?(lan.running?(n?n+' phone'+(n>1?'s':'')+' connected':'ready, no phone yet'):'not running'):'desktop app only','Scan the QR with the phone camera. Nothing to install, same buttons as the app.',lan&&lan.running?'ok':'warn'),
         row('bfull','Broadcast full screen (OBS)',lan&&lan.bcast?(lan.bcast.full?lan.bcast.full+' source'+(lan.bcast.full>1?'s':'')+' connected':'ready, no OBS yet'):'desktop app only','A link for an OBS browser source with the whole audience screen.',lan&&lan.running?'ok':'warn'),
         row('bov','Broadcast overlay (OBS)',lan&&lan.bcast?(lan.bcast.overlay?lan.bcast.overlay+' source'+(lan.bcast.overlay>1?'s':'')+' connected':'ready, no OBS yet'):'desktop app only','Only the lyrics and Bible text on a see-through page. Edit the look with Overlay Edit.',lan&&lan.running?'ok':'warn'),
         row('cloud','Cloud remote (Firestore)',RM?'on · '+(RM.name||'team'):'off','Works anywhere through the internet. Text and buttons only.',RM?'ok':'warn'),
@@ -7861,6 +7863,36 @@ function ovEdit(kind){
   new ResizeObserver(()=>ov.resize()).observe(P);
 }
 
+/* Phone browser (no app): the same remote, opened by scanning a QR code with the phone camera */
+async function bwDlg(host){
+  const N=window.dscNative&&window.dscNative.lan;
+  if(!N){if(host)host.innerHTML='<p class="hint">This is part of the desktop app: it serves the remote to browsers on the same Wi-Fi. The web version cannot.</p>';else toast('This is part of the desktop app.');return}
+  let inf=null;try{inf=await N.info()}catch(e){}
+  const m=connHost(host,'<div class="row" style="justify-content:space-between;align-items:center"><b>Phone browser (no app needed)</b><button class="x">Close</button></div><div id="bwBody"></div>','');
+  {const x=m.q('.x');if(x)x.onclick=m.done}
+  const body=m.q('#bwBody');
+  if(!inf||!inf.running){body.innerHTML='<p class="hint">The Wi-Fi server is not running, so there is no link yet. It is on by default; check that <code>lan.enabled</code> is true in config.json, then restart PreCenter.</p>';return}
+  if(!inf.urls.length){body.innerHTML='<p class="hint">This computer is not connected to a Wi-Fi or wired network, so a phone cannot reach it.</p>';return}
+  let cur=0,iv=0;
+  const draw=()=>{
+    const u=inf.urls[cur],q=window.dscQR?window.dscQR(u.url):null;
+    body.innerHTML='<p class="hint">Nothing to install. Any phone, tablet or computer on the same Wi-Fi can run the remote in its web browser, with the same buttons as the app: Flow, Slide, Bible, Stage, Back / Next, Black, Clear and the live picture of the audience screen.</p>'
+      +'<ol class="hint" style="margin:6px 0 8px 18px;padding:0"><li>Join the same Wi-Fi as this computer.</li><li>Open the phone camera, point it at the code and tap the link that appears.</li><li>The remote opens in the browser. No sign-in.</li></ol>'
+      +'<div style="display:flex;justify-content:center;padding:6px"><div style="width:min(280px,70vw);height:min(280px,70vw);background:#fff;border-radius:10px;padding:2px">'+(q?q.svg.replace('<svg','<svg width="100%" height="100%"'):'')+'</div></div>'
+      +'<div style="text-align:center;margin:6px 0"><div><b>'+dscEsc(u.address)+':'+inf.port+'</b></div><div class="hint" style="margin:0">PIN <b style="letter-spacing:.2em">'+dscEsc(inf.pin)+'</b> \u00b7 <span id="bwCl"></span></div></div>'
+      +(inf.urls.length>1?'<label>If the phone cannot connect, try another address<select id="bwSel">'+inf.urls.map((x,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+dscEsc(x.address+'  ('+x.name+')')+'</option>').join('')+'</select></label>':'')
+      +'<div class="row"><button id="bwCp" class="pri">Copy link</button><button id="bwNp" title="Phones already connected will have to scan again">New PIN</button></div>'
+      +'<p class="hint">Tip: in the browser menu choose <b>Add to Home screen</b> to open it full screen like an app (iPhone: Share \u203a Add to Home Screen).</p>'
+      +'<p class="hint">Anyone with this code or link can control PreCenter while they are on your Wi-Fi. Press <b>New PIN</b> to stop old links.</p>'
+      +'<p class="hint">First time on Windows: if the phone cannot connect, allow PreCenter on <b>private networks</b> when Windows asks.</p>';
+    const cl=()=>{const e=m.q('#bwCl');if(e){const n=LANH?LANH.clients|0:0;e.textContent=n?n+' phone'+(n>1?'s':'')+' connected':'no phone connected yet'}};
+    cl();clearInterval(iv);iv=setInterval(()=>{if(!m.w.isConnected){clearInterval(iv);return}cl()},1000);
+    const sel=m.q('#bwSel');if(sel)sel.onchange=()=>{cur=+sel.value;draw()};
+    m.q('#bwCp').onclick=async()=>{try{await navigator.clipboard.writeText(u.url);toast('Link copied')}catch(e){window.prompt('Copy this link:',u.url)}};
+    m.q('#bwNp').onclick=async()=>{try{const n=await N.newPin();if(n){inf=n;draw();toast('New PIN. Phones must scan the new code.')}}catch(e){toast('Could not change the PIN')}};
+  };
+  draw();
+}
 async function lanDlg(host){
   const N=window.dscNative&&window.dscNative.lan;
   if(!N){if(host)host.innerHTML='<p class="hint">The Wi-Fi remote is part of the desktop app. In the web version phones use the cloud remote.</p>';else toast('The Wi-Fi remote is part of the desktop app.');return}
@@ -7873,7 +7905,7 @@ async function lanDlg(host){
   let cur=0;
   const draw=()=>{
     const u=inf.urls[cur],q=window.dscQR?window.dscQR(u.url):null;
-    body.innerHTML='<p class="hint">Open Disciples: Harmony on the phone, go to Remote and tap <b>Scan QR</b> (or point the phone camera at the code). The phone must be on the same Wi-Fi as this computer. Nothing goes through the internet.</p>'
+    body.innerHTML='<p class="hint">Open Disciples: Harmony on the phone, go to Remote and tap <b>Scan QR</b>. No app? Point the phone camera at the code and open the link (see the <b>Phone browser</b> tab). The phone must be on the same Wi-Fi as this computer. Nothing goes through the internet.</p>'
       +'<div style="display:flex;justify-content:center;padding:6px"><div id="lnQr" style="width:min(300px,70vw);height:min(300px,70vw);background:#fff;border-radius:10px;padding:2px">'+(q?q.svg.replace('<svg','<svg width="100%" height="100%"'):'')+'</div></div>'
       +'<div style="text-align:center;margin:6px 0"><div><b>'+dscEsc(u.address)+':'+inf.port+'</b></div><div class="hint" style="margin:0">PIN <b style="letter-spacing:.2em">'+dscEsc(inf.pin)+'</b> \u00b7 <span id="lnCl"></span></div></div>'
       +(inf.urls.length>1?'<label>If the phone cannot connect, try another address<select id="lnSel">'+inf.urls.map((x,i)=>'<option value="'+i+'"'+(i===cur?' selected':'')+'>'+dscEsc(x.address+'  ('+x.name+')')+'</option>').join('')+'</select></label>':'')
@@ -9102,7 +9134,7 @@ const MENUS=window.dscMENUS={
  Edit:()=>[{t:'Show mode',fn:click('mShow')},{t:'Edit mode',fn:click('mEdit')},{sep:1},{t:'Search\u2026',fn:click('tSearch')},{t:'Bible\u2026',fn:click('tBible')}],
  View:()=>[{t:'Slides as grid',fn:setView('grid')},{t:'Slides as outline',fn:setView('outline')},{t:'Slides as live page (whole service)',fn:setView('live')},{sep:1},{t:'Preview before live (on / off)',fn:()=>dscHold()},{sep:1},{t:'Collapse all sections',fn:()=>dscCollapse(true)},{t:'Expand all sections',fn:()=>dscCollapse(false)},{sep:1},{t:'Switch dark / light theme',fn:click('theme')},{t:'Media bin',fn:click('tMedia')}],
  Screens:()=>[{t:'Audience on / off',fn:click('openOut')},{t:'Stage on / off',fn:click('stgB')},{sep:1},{t:'Screen configuration\u2026',fn:click('scrB')},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{t:'Identify screens',fn:()=>window.dscIdentify&&dscIdentify()},{t:'Screen layouts (several outputs on one display)\u2026',fn:()=>window.dscLayouts&&dscLayouts()},{t:'Stage layouts\u2026',fn:()=>window.dscStageEdit&&dscStageEdit()},{t:'Looks\u2026',fn:click('tLooks')},{sep:1},{t:'Black screen on / off',fn:()=>{black=!black;push()}},{sep:1},{t:'Test pattern',sub:[{t:'Color bars',fn:()=>dscTP('bars')},{t:'Grid and center',fn:()=>dscTP('grid')},{t:'Identify screens',fn:()=>dscTP('id')},{t:'White',fn:()=>dscTP('white')},{t:'Off',fn:()=>dscTP(null)}]}],
- Connection:()=>[{t:'Connection overview\u2026',fn:()=>connDlg('all')},{sep:1},{t:'Wi-Fi: phone remote QR\u2026',fn:()=>connDlg('wifi')},{t:'Cloud remote (Firestore)\u2026',fn:()=>connDlg('cloud')},{t:'Stream server link\u2026',fn:()=>connDlg('stream')}],
+ Connection:()=>[{t:'Connection overview\u2026',fn:()=>connDlg('all')},{sep:1},{t:'Wi-Fi: phone remote QR\u2026',fn:()=>connDlg('wifi')},{t:'Phone browser, no app\u2026',fn:()=>connDlg('browser')},{t:'Broadcast full screen (OBS)\u2026',fn:()=>connDlg('bfull')},{t:'Broadcast overlay (OBS)\u2026',fn:()=>connDlg('bov')},{t:'Cloud remote (Firestore)\u2026',fn:()=>connDlg('cloud')},{t:'Stream server link\u2026',fn:()=>connDlg('stream')}],
  Services:()=>{const k=Object.keys(S.services||{});return[{t:'New service\u2026',fn:()=>window.plNew&&plNew()},{sep:1},{t:'Save service to computer\u2026',fn:()=>dscSaveFlow(true)},{t:'Save full copy with all backgrounds\u2026',fn:()=>dscSaveFlow(true,'full')},{t:'How services are saved\u2026',fn:()=>dscSvcOptions()},{t:'Choose service save folder\u2026',fn:()=>dscSetSvcFolder()},{t:'Open service from computer\u2026',fn:()=>document.getElementById('svFile').click()},{sep:1},{t:'Save a copy as a new playlist\u2026',fn:click('svS')},{t:'Playlists',sub:window.plMenuItems?plMenuItems():[]}]},
  Window:()=>[{t:'Timeline',fn:()=>dscTL.toggle()},{t:'Calendar\u2026',fn:()=>window.dscCalDlg&&dscCalDlg()},{t:'Communications\u2026',fn:()=>window.dscCommDlg&&dscCommDlg()},{t:'Key mappings\u2026',fn:()=>window.dscKeysDlg&&dscKeysDlg()},{t:'Timecode\u2026',fn:()=>window.dscTcDlg&&dscTcDlg()},{t:'Audio routing\u2026',fn:()=>window.dscAudioDlg&&dscAudioDlg()},{t:'Record output\u2026',fn:()=>window.dscRecDlg&&dscRecDlg()},{t:'Control API and remote\u2026',fn:()=>window.dscApiDlg&&dscApiDlg()},{t:'Announcements',fn:()=>dscAnn.open()},{t:'Text sources (files, RSS)\u2026',fn:()=>dscSources()},{sep:1},{t:'Timers',fn:click('tTimers')},{t:'Messages',fn:click('tMsgs')},{t:'Remote',fn:click('tRemote')},{t:'Looks',fn:click('tLooks')},{t:'Media',fn:click('tMedia')},{t:'Profile',fn:click('tProf')}],
  Help:()=>[{t:'Search help and find a button\u2026 (Ctrl+K)',fn:()=>window.dscHelpFocus&&dscHelpFocus()},{t:'User manual\u2026',fn:()=>window.dscManual&&dscManual()},{t:'NDI setup guide\u2026',fn:()=>window.dscNdiGuide&&dscNdiGuide()},{sep:1},{t:'Create a token test item',fn:()=>dscTokenTest()},{t:'Keyboard shortcuts\u2026',fn:()=>info('Keyboard shortcuts',['Show mode:','Right arrow, Space, Page Down: next slide','Left arrow, Page Up: previous slide','Home / End: first / last slide','/ : go to a slide number','1 to 9: jump to a section','] and [ : next / previous item','B: black screen   C: clear text   G: clear group','F1 All  F2 Text  F3 Media  F4 Props  F5 Messages  F6 Audio  F7 Announcement','Enter: send the previewed slide (Preview first)','Ctrl+S: save the service to your computer','Slide editor:','Ctrl+M: new slide   Page Up / Down: previous / next slide','Ctrl+C / Ctrl+V: copy and paste objects or images','Ctrl+Z / Ctrl+Y: undo / redo','Arrow keys: nudge (Shift = 10x)   Esc: deselect, then close'])},{t:'About Disciples PreCenter',fn:()=>info('Disciples: PreCenter',['Lyrics and service presenter for church.','NDI output needs the desktop app.'])}].concat(window.dscDesk?window.dscDesk():[])
