@@ -430,7 +430,7 @@ button{font:inherit;cursor:pointer}
   }
 
   /* ---- Bible tab: the search runs on the computer (it has the Bible files); the answer comes back in state.bq ---- */
-  const BV_DEF=[{i:'kjv',n:'KJV'},{i:'asv',n:'ASV'},{i:'bbe',n:'BBE'},{i:'abtag',n:'AB1905'}];
+  const BV_DEF=[{i:'kjv',n:'KJV'},{i:'asv',n:'ASV'},{i:'bbe',n:'BBE'},{i:'abtag',n:'AB1905'},{i:'mbb',n:'MBB'},{i:'asnd',n:'ASND'},{i:'niv',n:'NIV'},{i:'nkrv',n:'NKRV'}];
   let bqPend=null,sentKey='',plMine=null,plSid='';
   const bibleVer=()=>{try{return localStorage.getItem('rmtBibleVer')||'kjv'}catch(e){return'kjv'}};
   function bqSearch(){
