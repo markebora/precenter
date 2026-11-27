@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Disciples PreCenter: free church presentation software</title>
 <meta name="description" content="Free, open-source presentation software for worship services: songs, Bible passages, announcements, timers and media, with separate audience and stage screens.">
-<link rel="icon" href="home-assets/logo.png">
+<link rel="icon" href="/home-assets/logo.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap">
 <style>
 :root{--bg:#000;--panel:#151518;--line:#2a2a30;--ink:#f4f4f6;--mute:#a6a6b0;--gold:#e8b923;--live:#e5484d;--v:#1b7fa8;--c:#b4730c;--pre:#3c5b2b;--mus:#27506b;--pres:#6b4f27;color-scheme:dark}
@@ -185,7 +185,7 @@ html:not([data-view=harmony]) .sw a[data-v=pre],html[data-view=harmony] .sw a[da
   <div class="sw" role="group" aria-label="Choose a product"><a href="#top" data-v="pre">PreCenter</a><a href="#h-top" data-v="har">Harmony</a></div>
   <nav class="nav-pre" aria-label="PreCenter sections"><a href="#highlights">Highlights</a><a href="#features">Features</a><a href="#outputs">Screens and streaming</a><a href="#workflow">Service workflow</a><a href="#why">Why PreCenter</a><a href="#about">About</a><a href="#faq">FAQs</a><a href="#download">Download</a></nav>
   <nav class="nav-har" aria-label="Harmony sections"><a href="#h-features">Features</a><a href="#h-keybridge">Key Bridge</a><a href="#h-connect">With PreCenter</a><a href="#h-screens">In PreCenter</a><a href="#h-week">A week together</a><a href="#h-team">Team and church</a><a href="#h-faq">FAQs</a></nav>
-  <a class="btn gold cp" href="/app/">Open PreCenter</a><a class="btn gold ch" href="#h-funds">Help Harmony</a>
+  <a class="btn gold cp" href="/">Open PreCenter</a><a class="btn gold ch" href="#h-funds">Help Harmony</a>
 </div></header>
 
 <div id="v-pre"><main id="top">
@@ -194,7 +194,7 @@ html:not([data-view=harmony]) .sw a[data-v=pre],html[data-view=harmony] .sw a[da
     <h1>Every word on screen, right on cue.</h1>
     <div>
       <p>Disciples PreCenter is free presentation software for worship services. Songs, Bible passages, announcements, timers and media live in one place, with separate screens for your congregation and your stage.</p>
-      <div class="row"><a class="btn gold" id="dlWinTop" href="#download">Download for Windows</a><a class="btn" href="/app/">Use it in your browser</a></div>
+      <div class="row"><a class="btn gold" id="dlWinTop" href="#download">Download for Windows</a><a class="btn" href="/">Use it in your browser</a></div>
     </div>
   </div>
   <div class="demo" aria-label="Try it: choose a slide">
@@ -301,7 +301,7 @@ That saved a wretch like me</span><small id="nxt">Next: I once was lost, but now
   <details><summary>Does PreCenter work with OBS and NDI?</summary><p>Yes. In the Windows app, add PreCenter to OBS with a browser source link, or set a screen to NDI output. NDI needs NDI software on your network, and OBS needs an NDI plugin to receive it.</p></details>
   <details><summary>Do I need an account?</summary><p>No. Guest mode works without one. Google sign-in adds private song backup and sync. Some team features need an invited Disciples team account.</p></details>
   <details><summary>Does it work without internet?</summary><p>Your work is saved on your device, and the Windows app carries a built-in copy for when the online page can't be reached. Sync and online services need a connection. Test your setup offline before relying on it.</p></details>
-  <details><summary>Who can see my songs?</summary><p>If you are signed in, your songs are backed up online and other users cannot see them. The people running the service have technical access, as explained in the <a href="privacy.html">Privacy Policy</a>.</p></details>
+  <details><summary>Who can see my songs?</summary><p>If you are signed in, your songs are backed up online and other users cannot see them. The people running the service have technical access, as explained in the <a href="/privacy.html">Privacy Policy</a>.</p></details>
   <details><summary>Can I show any song's lyrics?</summary><p>Many lyrics are protected by copyright. Use songs that are public domain or that your church has permission or a licence to use.</p></details>
   <details><summary>Windows warns about an unknown publisher. Why?</summary><p>An installer that isn't code-signed triggers this warning. Download only from the official releases page, then choose More info and Run anyway.</p></details>
 </div></section>
@@ -310,7 +310,7 @@ That saved a wretch like me</span><small id="nxt">Next: I once was lost, but now
   <h2>Ready for your next service?</h2>
   <div class="dl">
     <div><h3>Windows app</h3><p>Includes the Wi-Fi phone remote, OBS broadcast links and a folder copy of your songs.</p><a class="btn gold" id="dlWin" href="https://github.com/markebora/precenter/releases/latest">Download for Windows</a></div>
-    <div><h3>Web browser</h3><p>Nothing to install. Open PreCenter and start building your service.</p><a class="btn" href="/app/">Open PreCenter</a></div>
+    <div><h3>Web browser</h3><p>Nothing to install. Open PreCenter and start building your service.</p><a class="btn" href="/">Open PreCenter</a></div>
   </div>
 </div></section>
 </main></div>
@@ -502,7 +502,7 @@ That saved a wretch like me</span><small id="nxt">Next: I once was lost, but now
 
 <footer><div class="wrap">
   <div>Disciples PreCenter. Free software under GPL-3.0.</div>
-  <div class="row"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="https://github.com/markebora/precenter">GitHub</a><a href="https://github.com/markebora/precenter/issues">Contact</a></div>
+  <div class="row"><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms of Service</a><a href="https://github.com/markebora/precenter">GitHub</a><a href="https://github.com/markebora/precenter/issues">Contact</a></div>
 </div></footer>
 <div class="helpbar"><div class="wrap">Want to help Harmony? <a class="btn gold" href="https://github.com/markebora/precenter/issues/new?title=I+want+to+help+Harmony" target="_blank" rel="noopener">Click here</a></div></div>
 
