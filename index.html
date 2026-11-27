@@ -4469,17 +4469,12 @@ function importDeck(sec){
 /* ---------- Bible passages: local Bible files in the bible folder (same files as the Disciples app), made into slides ---------- */
 const SUPD='⁰¹²³⁴⁵⁶⁷⁸⁹';
 const supN=n=>String(n).replace(/\d/g,d=>SUPD[d]);
-const NIV_NOTICE='The Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide.';
-// [file id, name, short tag, copyright notice added as the last slide ('' = public domain)]
+// [file id, name, short tag, credit added as the last slide ('' = none)]. People add their own files below; those stay on their device.
 const BIBLES=[
  ['kjv','King James Version (KJV)','KJV',''],
  ['asv','American Standard Version (ASV)','ASV',''],
  ['bbe','Bible in Basic English (BBE)','BBE',''],
- ['abtag','Ang Biblia 1905 (Tagalog)','AB1905',''],
- ['mbb','Magandang Balita Biblia 2005 (Tagalog)','MBB','Scripture texts are from the Magandang Balita Biblia (Revised) © 2005 Philippine Bible Society, used with permission.'],
- ['asnd','Ang Salita ng Dios (Tagalog)','ASND','Ang Salita ng Dios (Tagalog Contemporary Bible) Copyright © 2009, 2011, 2014, 2015 by Biblica, Inc.® Used by permission of Biblica, Inc.® All rights reserved worldwide.'],
- ['niv','New International Version (NIV)','NIV',NIV_NOTICE],
- ['nkrv','개역개정 Korean (NKRV)','NKRV','개역개정 (NKRV) © 대한성서공회 (Korean Bible Society).']
+ ['abtag','Ang Biblia 1905 (Tagalog)','AB1905','']
 ];
 const BB_EN = ['Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
 const BB_KO = ['창세기', '출애굽기', '레위기', '민수기', '신명기', '여호수아', '사사기', '룻기', '사무엘상', '사무엘하', '열왕기상', '열왕기하', '역대상', '역대하', '에스라', '느헤미야', '에스더', '욥기', '시편', '잠언', '전도서', '아가', '이사야', '예레미야', '예레미야애가', '에스겔', '다니엘', '호세아', '요엘', '아모스', '오바댜', '요나', '미가', '나훔', '하박국', '스바냐', '학개', '스가랴', '말라기', '마태복음', '마가복음', '누가복음', '요한복음', '사도행전', '로마서', '고린도전서', '고린도후서', '갈라디아서', '에베소서', '빌립보서', '골로새서', '데살로니가전서', '데살로니가후서', '디모데전서', '디모데후서', '디도서', '빌레몬서', '히브리서', '야고보서', '베드로전서', '베드로후서', '요한일서', '요한이서', '요한삼서', '유다서', '요한계시록'];
@@ -4488,8 +4483,99 @@ const BBC={};
 const bbKey=t=>String(t).toLowerCase().replace(/[^a-z0-9ñ가-힣]/g,'');
 async function bbLoad(id){
   if(BBC[id])return BBC[id];
-  const r=await fetch('bible/'+id+'.json');if(!r.ok)throw new Error('Bible file missing');
-  const d=await r.json();d.keys=d.books.map(b=>bbKey(b.n));BBC[id]=d;return d;
+  let d;
+  if(bbMine(id)){const x=await bbDb('readonly',st=>st.get(id));if(!x)throw new Error('Bible file missing');d={id,name:x.name,books:x.books}}
+  else{const r=await fetch('bible/'+id+'.json');if(!r.ok)throw new Error('Bible file missing');d=await r.json()}
+  d.keys=d.books.map(b=>bbKey(b.n));BBC[id]=d;return d;
+}
+/* ---------- your own Bible files: read on this device and kept in its storage (IndexedDB), never uploaded ---------- */
+const bbMine=id=>/^my-/.test(id);
+function bbDb(mode,fn){
+  return new Promise((res,rej)=>{
+    const o=indexedDB.open('pc-bibles',1);
+    o.onupgradeneeded=()=>o.result.createObjectStore('b',{keyPath:'id'});
+    o.onerror=()=>rej(o.error);
+    o.onsuccess=()=>{const db=o.result,t=db.transaction('b',mode),r=fn(t.objectStore('b'));
+      t.oncomplete=()=>{db.close();res(r.result)};t.onerror=t.onabort=()=>{db.close();rej(t.error)}};
+  });
+}
+const bbReady=bbDb('readonly',st=>st.getAll()).then(l=>(l||[]).forEach(x=>{if(!BIBLES.some(b=>b[0]===x.id))BIBLES.push([x.id,x.name,x.tag,x.note||''])})).catch(()=>{});
+/* Reads PreCenter JSON, simple book/chapter JSON, Zefania XML, or CSV (book,chapter,verse,text) into 66 books in the usual order */
+function bbImportText(text,file){
+  text=String(text).replace(/^\uFEFF/,'');
+  const books=BB_EN.map(n=>({n,c:[]}));let name='',count=0;
+  const norm=x=>String(x).toLowerCase().replace(/[^a-z0-9ñ가-힣]/g,'');
+  const find=x=>{const k=norm(x);if(!k)return -1;if(/^\d+$/.test(k))return +k>=1&&+k<=66?+k-1:-1;
+    let i=BB_EN.findIndex(n=>norm(n)===k);if(i<0)i=BB_KO.indexOf(k);if(i<0&&BB_AL[k]!==undefined)i=BB_AL[k];return i};
+  const put=(bi,ch,v,t)=>{ch=+ch;v=+v;t=String(t==null?'':t).replace(/[⟦⟧<>]/g,'').replace(/\s+/g,' ').trim();
+    if(bi<0||!(ch>=1&&ch<=200)||!(v>=1&&v<=200)||!t)return;
+    const c=books[bi].c;while(c.length<ch)c.push([]);const a=c[ch-1];while(a.length<v)a.push('');a[v-1]=t;count++};
+  const head=text.trimStart()[0];
+  if(head==='{'||head==='['){
+    let j;try{j=JSON.parse(text)}catch(e){throw new Error('That JSON file is damaged.')}
+    const list=Array.isArray(j)?j:j&&j.books;
+    if(!Array.isArray(list))throw new Error('This JSON file has no list of books.');
+    name=String(!Array.isArray(j)&&j.name||'');
+    list.forEach((b,i)=>{
+      const label=b&&(b.n||b.name||b.book)||'',chs=b&&(b.c||b.chapters);if(!Array.isArray(chs))return;
+      let bi=list.length===66?i:find(label);if(bi<0&&b.abbrev)bi=find(b.abbrev);if(bi<0)return;
+      if(label)books[bi].n=String(label).replace(/[<>]/g,'').slice(0,60);
+      chs.forEach((vs,ci)=>{if(Array.isArray(vs))vs.forEach((t,vi)=>put(bi,ci+1,vi+1,t))});
+    });
+  }else if(head==='<'){
+    const x=new DOMParser().parseFromString(text,'application/xml');
+    if(x.querySelector('parsererror'))throw new Error('That XML file is damaged.');
+    const bs=x.getElementsByTagName('BIBLEBOOK');
+    if(!bs.length)throw new Error('This XML file is not in the Zefania Bible format.');
+    const tn=x.getElementsByTagName('title')[0];name=x.documentElement.getAttribute('biblename')||(tn&&tn.textContent)||'';
+    Array.from(bs).forEach(b=>{
+      const num=+b.getAttribute('bnumber'),label=b.getAttribute('bname')||'',bi=num>=1&&num<=66?num-1:find(label);if(bi<0)return;
+      if(label)books[bi].n=label.replace(/[<>]/g,'').slice(0,60);
+      Array.from(b.getElementsByTagName('CHAPTER')).forEach(c=>Array.from(c.getElementsByTagName('VERS')).forEach(v=>{
+        const el=v.cloneNode(true);Array.from(el.getElementsByTagName('NOTE')).forEach(n=>n.remove());
+        put(bi,c.getAttribute('cnumber'),v.getAttribute('vnumber'),el.textContent);
+      }));
+    });
+  }else{
+    const sep=text.split('\n',1)[0].includes('\t')?'\t':',';
+    text.split(/\r?\n/).forEach(line=>{
+      const m=[];let cur='',q=false;
+      for(let i=0;i<line.length;i++){const ch=line[i];
+        if(q){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+        else if(ch==='"'&&!cur)q=true;else if(ch===sep&&m.length<3){m.push(cur);cur=''}else cur+=ch}
+      m.push(cur);if(m.length<4)return;
+      const bi=find(m[0]);if(bi<0)return;
+      if(!/^\s*\d+\s*$/.test(m[0]))books[bi].n=m[0].replace(/[<>]/g,'').trim().slice(0,60);
+      put(bi,m[1],m[2],m[3]);
+    });
+  }
+  if(!count)throw new Error('No verses found. Use a PreCenter JSON, Zefania XML, or CSV file (book, chapter, verse, text) with English book names or numbers 1 to 66.');
+  books.forEach(b=>{if(!b.c.length)b.c=[[]]});
+  return{name:(name||String(file||'My Bible').replace(/\.[^.]+$/,'')).replace(/[<>]/g,'').trim().slice(0,80),books,count};
+}
+function bbAddFile(done){
+  const f=document.createElement('input');f.type='file';f.accept='.json,.xml,.csv,.tsv,.txt';
+  f.onchange=async()=>{
+    const file=f.files&&f.files[0];if(!file)return;
+    try{
+      if(file.size>40*1024*1024)throw new Error('That file is too large (40 MB at most).');
+      const d=bbImportText(await file.text(),file.name);
+      const clean=x=>String(x||'').replace(/[<>]/g,'').trim();
+      const name=prompt('Name of this Bible version',d.name);if(name===null)return;
+      const tag=prompt('Short label shown on slides (for example MYV)',clean(name||d.name).split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,6));if(tag===null)return;
+      const note=prompt('Copyright credit to add as the last slide (leave empty for none)','');if(note===null)return;
+      const x={id:'my-'+Date.now().toString(36),name:clean(name).slice(0,80)||d.name,tag:clean(tag).slice(0,10)||'MINE',note:clean(note).slice(0,400),books:d.books};
+      await bbDb('readwrite',st=>st.put(x));
+      BIBLES.push([x.id,x.name,x.tag,x.note]);
+      toast(x.name+' added ('+d.count.toLocaleString()+' verses). It is saved on this device.');
+      done(x.id);
+    }catch(e){alert('Could not add that Bible. '+(e&&e.message||e))}
+  };
+  f.click();
+}
+async function bbRemove(id){
+  await bbDb('readwrite',st=>st.delete(id));
+  const i=BIBLES.findIndex(b=>b[0]===id);if(i>=0)BIBLES.splice(i,1);delete BBC[id];
 }
 function bbBook(txt,d){
   const k=bbKey(txt);if(k.length<2)return -1;if(BB_AL[k]!==undefined)return BB_AL[k];
@@ -4548,10 +4634,11 @@ function bbSlides(V,o){
   }
   return out;
 }
-function openBible(sec){
+async function openBible(sec){
+  await bbReady;
   let saved={};try{saved=JSON.parse(localStorage.getItem('lp-bible')||'{}')}catch(e){}
   const ok=id=>BIBLES.some(b=>b[0]===id);
-  let tr1=ok(saved.tr)?saved.tr:'kjv',tr2=ok(saved.tr2)?saved.tr2:(tr1==='nkrv'?'niv':'nkrv'),dual=!!saved.dual;
+  let tr1=ok(saved.tr)?saved.tr:'kjv',tr2=ok(saved.tr2)?saved.tr2:(tr1==='asv'?'kjv':'asv'),dual=!!saved.dual;
   const w=document.createElement('div');w.className='qe';
   w.innerHTML=`<style>
 .bbx{width:min(1120px,96vw);height:min(90vh,860px);display:flex;flex-direction:column;gap:8px;overflow:hidden}
@@ -4665,6 +4752,15 @@ function openBible(sec){
     BIBLES.forEach(b=>{const x=mk('button','',b[1]);x.title=b[1];if(b[0]===(which==='1'?tr1:tr2))x.classList.add('act');
       x.onclick=()=>{if(which==='1')tr1=b[0];else tr2=b[0];pop.hidden=true;top();load()};g.appendChild(x)});
     pop.appendChild(g);
+    const row=mk('div','bbrow');row.style.marginTop='10px';
+    const add=mk('button','pri','+ Add your Bible file…');add.type='button';
+    add.onclick=()=>bbAddFile(id=>{if(which==='1')tr1=id;else tr2=id;pop.hidden=true;top();load()});row.appendChild(add);
+    const cur=which==='1'?tr1:tr2;
+    if(bbMine(cur)){const rm=mk('button','','Remove '+tagOf(cur));rm.type='button';rm.onclick=async()=>{
+      if(!confirm('Remove “'+labOf(cur)+'” from this device? Slides you already made stay.'))return;
+      await bbRemove(cur);if(tr1===cur)tr1='kjv';if(tr2===cur)tr2='asv';pop.hidden=true;top();load()};row.appendChild(rm)}
+    pop.appendChild(row);
+    pop.appendChild(mk('div','hint','PreCenter JSON, Zefania XML or CSV (book, chapter, verse, text). Kept on this device only. Use files you have permission to use.'));
   }
   function setRef(t){q('bbRef').value=t;render()}
   function openPick(step){
@@ -8466,10 +8562,10 @@ window.DSC_VERSION=DSC_VERSION;
     }
 
     function abt(){
-      const pd=BIBLES.filter(b=>!b[3]).map(b=>b[2]).join(', ');
+      const pd=BIBLES.filter(b=>!b[3]&&!bbMine(b[0])).map(b=>b[2]).join(', ');
       body.innerHTML='<h3>Disciples: PreCenter</h3><div style="margin:0"><b>Version '+DSC_VERSION+'</b> <span class="hint" style="margin:0">· released '+DSC_RELEASED+'</span></div><div class="hint" style="margin:0">Lyrics, scripture and stage display for worship, part of Disciples.</div><h4 style="margin:6px 0 0">Bible credits</h4><div class="hint" style="margin:0">Public domain (no credit needed): '+dscEsc(pd)+'.</div>'
-        +'<div class="pfCard" style="display:flex;flex-direction:column;gap:8px;font-size:12px">'+BIBLES.filter(b=>b[3]).map(b=>'<div><b>'+dscEsc(b[2])+'</b><br>'+dscEsc(b[3])+'</div>').join('')+'</div>'
-        +'<div class="hint">The matching credit is added as the last slide of each scripture. Check each publisher for how many verses you may quote.</div>';
+        +(BIBLES.some(b=>b[3])?'<div class="pfCard" style="display:flex;flex-direction:column;gap:8px;font-size:12px">'+BIBLES.filter(b=>b[3]).map(b=>'<div><b>'+dscEsc(b[2])+'</b><br>'+dscEsc(b[3])+'</div>').join('')+'</div>':'')
+        +'<div class="hint">For Bible files you add yourself, you are responsible for having permission to use them. A credit you enter is added as the last slide.</div>';
     }
 
     /*PREFS*/
@@ -13165,7 +13261,7 @@ const E=[
 ['Edit mode','Main screen','Top left, the Edit button','Edit the songs, slides and layouts of the playlist.','editor change','click:#mEdit'],
 ['Search songs','Main screen','Search box above the playlist, or press /','Find a song or text in the library and playlist.','find lookup lyrics','sel:#q'],
 ['Jump to a slide number','Main screen','Slide number box, press / to jump','Type a slide number and press Enter to go to that slide.','goto go to slide number','sel:#gotoN'],
-['Bible','Bible','Top bar, Bible button','Type a passage (or pick book and chapter), choose one or two versions and how many verses per slide, then add it to the Presentation.','scripture verse passage kjv niv tagalog korean','click:#tBible'],
+['Bible','Bible','Top bar, Bible button','Type a passage (or pick book and chapter), choose one or two versions and how many verses per slide, then add it to the Presentation.','scripture verse passage kjv asv tagalog import own file','click:#tBible'],
 ['Theme (backgrounds, fonts, colors)','Look','Top bar, Slide theme button','Change backgrounds, fonts and colours for the song or the whole service.','style design background font colour color','click:#mEdit'],
 ['Media bin','Media','Bottom of the screen, Media bin','Pictures and videos to use as backgrounds. Minimise or restore it with the arrow.','pictures images videos backgrounds motion','click:#mEdit'],
 ['Load a folder of media','Media','Media bin, Load folder','Add a whole folder of images and videos to the bin.','import folder pictures','sel:#mDir'],

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Disciples PreCenter: free church presentation software</title>
+<meta name="description" content="Free, open-source presentation software for worship services: songs, Bible passages, announcements, timers and media, with separate audience and stage screens.">
+<link rel="icon" href="home-assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap">
+<style>
+:root{--bg:#000;--panel:#151518;--line:#2a2a30;--ink:#f4f4f6;--mute:#a6a6b0;--gold:#e8b923;--live:#e5484d;--v:#1b7fa8;--c:#b4730c;--pre:#3c5b2b;--mus:#27506b;--pres:#6b4f27;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif}
+img{max-width:100%;display:block}a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+h1,h2,h3{font-family:Poppins,Inter,sans-serif;line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:clamp(40px,6.4vw,76px);font-weight:800;letter-spacing:-.025em}
+h2{font-size:clamp(28px,3.6vw,42px);font-weight:700;letter-spacing:-.015em;margin-bottom:12px}
+h3{font-size:19px;font-weight:600;margin-bottom:6px}
+p{margin:0 0 14px;max-width:68ch}.mute{color:var(--mute)}
+.wrap{width:min(1160px,100% - 32px);margin:0 auto}
+section{padding:88px 0;border-top:1px solid var(--line)}
+header{position:sticky;top:0;z-index:10;background:#000;border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:20px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font:700 17px Poppins,sans-serif}.brand img{width:32px;height:32px}
+nav{display:flex;gap:22px;margin-left:auto;font-size:14px}nav a{text-decoration:none;color:var(--mute)}nav a:hover{color:var(--ink)}
+.btn{display:inline-block;padding:12px 20px;border-radius:9px;border:1px solid var(--line);background:var(--panel);font:600 15px Inter,sans-serif;text-decoration:none;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--gold)}.btn.gold{background:var(--gold);border-color:var(--gold);color:#000}
+header .btn{padding:8px 14px;font-size:14px}
+@media(max-width:900px){nav{display:none}header .btn{margin-left:auto}}
+.hero{padding:72px 0 80px;border:0}
+.hero .top{display:grid;grid-template-columns:1.15fr 1fr;gap:40px;align-items:end;margin-bottom:44px}
+.hero .top p{font-size:18px}.row{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:860px){.hero .top{grid-template-columns:1fr;gap:20px}}
+/* live demo */
+.demo{border:1px solid var(--line);border-radius:16px;background:#0d0d10;padding:18px;display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);gap:18px}
+.screen{container-type:inline-size;aspect-ratio:16/9;border-radius:8px;overflow:hidden;display:grid;place-items:center;text-align:center;background:linear-gradient(155deg,#0c0c0c,#3d2e07);font-family:Poppins,sans-serif;font-weight:700;line-height:1.45;white-space:pre-line}
+.screen>div{font-size:4.4cqw;padding:0 4cqw}
+.stage{background:#000;border:1px solid var(--line)}.stage>div{font-size:5cqw}
+.stage small{display:block;color:var(--gold);font-size:.9em;margin-top:4cqw;white-space:normal;line-height:1.35}
+.cap{font-size:13px;color:var(--mute);margin:6px 0 0}
+.side{display:flex;flex-direction:column;gap:14px;justify-content:space-between}
+.slides{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.slides button{border:2px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);padding:0;cursor:pointer;overflow:hidden;font:500 13px Inter,sans-serif;text-align:left}
+.slides span{display:block;padding:12px 10px;min-height:56px;color:var(--mute);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.slides b{display:block;padding:5px 10px;background:var(--v);font-weight:600}.slides .ch b{background:var(--c)}
+.slides button[aria-pressed=true]{border-color:var(--live)}.slides button[aria-pressed=true] b{background:var(--live)}
+@media(max-width:720px){.demo{grid-template-columns:1fr;padding:12px}.slides{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* feature tour */
+.feature{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:36px;align-items:center;margin-top:56px}
+.feature:nth-of-type(even) .text{order:2}.feature:nth-of-type(even){grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+.feature img{border:1px solid var(--line);border-radius:12px;width:100%;height:auto}
+@media(max-width:860px){.feature,.feature:nth-of-type(even){grid-template-columns:1fr;gap:16px}.feature:nth-of-type(even) .text{order:0}}
+.catalog{columns:3 280px;column-gap:40px;margin-top:36px}.catalog div{break-inside:avoid;padding:18px 0;border-top:1px solid var(--line)}.catalog p{margin:0;color:var(--mute)}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:36px;padding:0;list-style:none}
+@media(max-width:780px){.three{grid-template-columns:1fr}}
+.three li{background:var(--panel);border-radius:12px;overflow:hidden}.three li>div{padding:18px 20px 8px}
+.three .bar{padding:10px 20px;font:600 15px Poppins,sans-serif}
+.plain{border-top:3px solid var(--gold);padding-top:16px}
+details{border-top:1px solid var(--line);max-width:820px}details:last-of-type{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;padding:18px 0;font:600 17px Poppins,sans-serif}details p{color:var(--mute);padding-bottom:6px}
+.dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:32px}@media(max-width:720px){.dl{grid-template-columns:1fr}}
+.dl>div{border:1px solid var(--line);border-radius:14px;padding:26px;display:flex;flex-direction:column;align-items:flex-start}.dl p{color:var(--mute);flex:1}
+footer{border-top:1px solid var(--line);padding:40px 0 56px;font-size:14px;color:var(--mute)}
+footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}footer .row{gap:20px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="brand" href="#top"><img src="home-assets/logo.png" alt="">PreCenter</a>
+  <nav aria-label="Page"><a href="#features">Features</a><a href="#workflow">Service workflow</a><a href="#why">Why PreCenter</a><a href="#about">About</a><a href="#faq">FAQs</a><a href="#download">Download</a></nav>
+  <a class="btn gold" href="/">Open PreCenter</a>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="wrap">
+  <div class="top">
+    <h1>Every word on screen, right on cue.</h1>
+    <div>
+      <p>Disciples PreCenter is free presentation software for worship services. Songs, Bible passages, announcements, timers and media live in one place, with separate screens for your congregation and your stage.</p>
+      <div class="row"><a class="btn gold" href="#download">Download for Windows</a><a class="btn" href="/">Use it in your browser</a></div>
+    </div>
+  </div>
+  <div class="demo" aria-label="Try it: choose a slide">
+    <div><div class="screen" aria-live="polite"><div id="aud">Amazing grace, how sweet the sound
+That saved a wretch like me</div></div><p class="cap">Audience screen: what the congregation sees</p></div>
+    <div class="side">
+      <div><div class="screen stage"><div><span id="stg">Amazing grace, how sweet the sound
+That saved a wretch like me</span><small id="nxt">Next: I once was lost, but now am found</small></div></div><p class="cap">Stage screen: the current slide and what's next</p></div>
+      <p class="mute" style="margin:0;font-size:14px">Choose a slide below and watch both screens change.</p>
+    </div>
+    <div class="slides" id="sl"></div>
+  </div>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <h2>From planning to presenting</h2>
+  <p class="mute">The screenshots below come from the app itself.</p>
+  <div class="feature"><div class="text"><h3>Run the whole service from one window</h3><p class="mute">Arrange your playlist into sections, click a slide to send it live, and always see what's up next. Clear text, media or everything with one button.</p></div><img src="home-assets/show.jpg" width="2160" height="1290" loading="lazy" alt="PreCenter operator window with a playlist, song slides and live preview"></div>
+  <div class="feature"><div class="text"><h3>Turn a passage into slides</h3><p class="mute">Type a reference such as John 3:16-18, or pick the book, chapter and verses. Choose how many verses go on a slide, and add a second version beside the first.</p></div><img src="home-assets/bible.jpg" width="2160" height="1290" loading="lazy" alt="Bible window showing John 3:16 to 18 ready to add as slides"></div>
+  <div class="feature"><div class="text"><h3>Make moving backgrounds</h3><p class="mute">Disciples Loop builds animated backgrounds. Change colours, speed and brightness, then use the loop on one slide or a whole song.</p></div><img src="home-assets/loop.jpg" width="2160" height="1290" loading="lazy" alt="Disciples Loop background editor"></div>
+  <div class="feature"><div class="text"><h3>Connect phones and your livestream</h3><p class="mute">With the desktop app, control slides from a phone on the same Wi-Fi by scanning a QR code, or add the audience screen or a lyrics overlay to OBS.</p></div><img src="home-assets/screens.jpg" width="2160" height="1290" loading="lazy" alt="Connection window listing Wi-Fi remote and broadcast options"></div>
+</div></section>
+
+<section id="all"><div class="wrap">
+  <h2>What's inside</h2>
+  <div class="catalog">
+    <div><h3>Song library</h3><p>Keep songs organised by verse, chorus and bridge, and reuse them in any service.</p></div>
+    <div><h3>Import what you have</h3><p>Bring in PowerPoint files, images, ChordPro, OpenLyrics, OpenSong and SongSelect lyric files.</p></div>
+    <div><h3>Slide editor</h3><p>Edit text, backgrounds, shapes, animations and transitions.</p></div>
+    <div><h3>Stage screen</h3><p>Give singers and speakers their own view, with the next slide and private messages.</p></div>
+    <div><h3>Looks and layers</h3><p>Save screen setups for different moments and clear one layer without touching the rest.</p></div>
+    <div><h3>Timers and countdowns</h3><p>Count down to the start of service or time a segment.</p></div>
+    <div><h3>Messages</h3><p>Show a notice to the congregation, such as a nursery call, or send one to the stage only.</p></div>
+    <div><h3>Auto-advance and notes</h3><p>Let announcements move on by themselves and keep notes only the operator sees.</p></div>
+    <div><h3>Service files</h3><p>Save a whole service with its backgrounds and audio to one file and open it on another computer.</p></div>
+  </div>
+</div></section>
+
+<section id="workflow"><div class="wrap">
+  <h2>A Sunday in three steps</h2>
+  <ol class="three">
+    <li><div class="bar" style="background:var(--pre)">1. Build</div><div><p>Create a playlist, add songs, Scripture and the sermon, and drag them into order.</p></div></li>
+    <li><div class="bar" style="background:var(--mus)">2. Check</div><div><p>Set which monitor shows the audience and stage screens, then step through the slides with your team.</p></div></li>
+    <li><div class="bar" style="background:var(--pres)">3. Present</div><div><p>Press Space or the arrow keys to move through the service. Number keys jump to a song section.</p></div></li>
+  </ol>
+</div></section>
+
+<section id="why"><div class="wrap">
+  <h2>Why churches can start today</h2>
+  <div class="three">
+    <div class="plain"><h3>Free and open source</h3><p class="mute">No subscription. The code is published under the GPL-3.0 licence.</p></div>
+    <div class="plain"><h3>No account needed</h3><p class="mute">Start as a guest. Sign in with Google only if you want your songs backed up and synced.</p></div>
+    <div class="plain"><h3>Your songs stay yours</h3><p class="mute">They are saved on your computer. Online backups are visible only to your account, not to other users.</p></div>
+  </div>
+</div></section>
+
+<section id="about"><div class="wrap">
+  <h2>About the project</h2>
+  <p>PreCenter is part of the Disciples family of worship tools. It was made to ease the work of presenting church services, so worship teams can run a service smoothly.</p>
+  <p class="mute">It is developed in the open. You can read the code, report a problem or suggest a feature on GitHub.</p>
+  <div class="row"><a class="btn" href="https://github.com/markebora/precenter">View on GitHub</a><a class="btn" href="https://github.com/markebora/precenter/releases">Release notes</a></div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <h2>Good to know before Sunday</h2>
+  <details><summary>Is it really free?</summary><p>Yes. There is no paid version or subscription.</p></details>
+  <details><summary>Do I need an account?</summary><p>No. Guest mode works without one. Google sign-in adds private song backup and sync. Some team features need an invited Disciples team account.</p></details>
+  <details><summary>Does it work without internet?</summary><p>Your work is saved on your device, and the Windows app carries a built-in copy for when the online page can't be reached. Sync and online services need a connection. Test your setup offline before relying on it.</p></details>
+  <details><summary>Who can see my songs?</summary><p>If you are signed in, your songs are backed up online and other users cannot see them. The people running the service have technical access, as explained in the <a href="privacy.html">Privacy Policy</a>.</p></details>
+  <details><summary>Can I show any song's lyrics?</summary><p>Many lyrics are protected by copyright. Use songs that are public domain or that your church has permission or a licence to use.</p></details>
+  <details><summary>Windows warns about an unknown publisher. Why?</summary><p>An installer that isn't code-signed triggers this warning. Download only from the official releases page, then choose More info and Run anyway.</p></details>
+</div></section>
+
+<section id="download"><div class="wrap">
+  <h2>Ready for your next service?</h2>
+  <div class="dl">
+    <div><h3>Windows app</h3><p>Includes the Wi-Fi phone remote, OBS broadcast links and a folder copy of your songs.</p><a class="btn gold" href="https://github.com/markebora/precenter/releases/latest">Download for Windows</a></div>
+    <div><h3>Web browser</h3><p>Nothing to install. Open PreCenter and start building your service.</p><a class="btn" href="/">Open PreCenter</a></div>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <div>Disciples PreCenter. Free software under GPL-3.0.</div>
+  <div class="row"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="https://github.com/markebora/precenter">GitHub</a><a href="https://github.com/markebora/precenter/issues">Contact</a></div>
+</div></footer>
+
+<script>
+/* Amazing Grace (1779) is in the public domain */
+const S=[['Verse 1','Amazing grace, how sweet the sound\nThat saved a wretch like me'],['Verse 1','I once was lost, but now am found\nWas blind, but now I see'],['Verse 2',"'Twas grace that taught my heart to fear\nAnd grace my fears relieved"],['Verse 2','How precious did that grace appear\nThe hour I first believed']];
+const box=document.getElementById('sl'),$=i=>document.getElementById(i);
+function go(i){$('aud').textContent=$('stg').textContent=S[i][1];$('nxt').textContent=S[i+1]?'Next: '+S[i+1][1].split('\n')[0]:'Next: end of song';[...box.children].forEach((b,n)=>b.setAttribute('aria-pressed',n===i))}
+S.forEach((s,i)=>{const b=document.createElement('button');b.type='button';b.innerHTML='<span></span><b></b>';b.querySelector('span').textContent=s[1].split('\n')[0];b.querySelector('b').textContent=(i+1)+'  '+s[0];b.onclick=()=>go(i);box.appendChild(b)});
+go(0);
+</script>
+</body>
+</html>
