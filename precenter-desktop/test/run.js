@@ -635,7 +635,7 @@ test('Broadcast links: OBS sources get the slide messages and the overlay text, 
     assert.strictEqual(o.msgs[o.msgs.length - 1].d.ref, 'John 3:16');
     assert.ok(!o.msgs.some(m => m.t === 'f'));
     assert.deepStrictEqual(srv.info().bcast.full, 1); assert.deepStrictEqual(srv.info().bcast.overlay, 1);
-    assert.deepStrictEqual(seen.counts[seen.counts.length - 1], { full: 1, overlay: 1 });
+    assert.deepStrictEqual(seen.counts[seen.counts.length - 1], { full: 1, overlay: 1, phones: 0 });
     const old = key; srv.newKey();
     await wait(100);
     assert.deepStrictEqual(srv.info().bcast.full, 0);
@@ -643,7 +643,11 @@ test('Broadcast links: OBS sources get the slide messages and the overlay text, 
     await assert.rejects(wsPath(port, '/bws?k=' + old + '&m=full'), /401/);
     assert.strictEqual((await httpGet(port, '/broadcast/overlay?k=' + old)).status, 401);
     // the phone remote still works with its own PIN
-    const ph = await wsPath(port, '/ws?pin=123456'); await wait(50); assert.strictEqual(ph.msgs[0].t, 'hello'); ph.socket.destroy();
+    const ph = await wsPath(port, '/ws?pin=123456'); await wait(50); assert.strictEqual(ph.msgs[0].t, 'hello'); assert.strictEqual(ph.msgs[0].bk, srv.info().bcast.key, 'a phone on the Wi-Fi is given the link key so it can show the real audience screen'); ph.socket.destroy();
+    const pv = await wsPath(port, '/bws?k=' + srv.info().bcast.key + '&m=full&p=1'); await wait(80);
+    assert.deepStrictEqual([srv.info().bcast.full, srv.info().bcast.phones], [0, 1], 'a phone preview is counted apart from OBS sources'); pv.socket.destroy();
+    const pg = await httpGet(port, '/broadcast/full?k=' + srv.info().bcast.key + '&n=1&p=1&lite=1');
+    assert.ok(pg.body.indexOf('/bcast.js?k=' + srv.info().bcast.key + '&n=1&p=1&lite=1') >= 0, 'the phone options reach the shim');
   } finally { srv.stop(); }
 });
 

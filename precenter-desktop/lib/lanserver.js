@@ -17,7 +17,7 @@ const path = require('path');
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const MAX_FRAME = 64 * 1024;        // a phone only sends small button presses
 const MAX_CLIENTS = 12;
-const MAX_BCLIENTS = 8;             // OBS browser sources
+const MAX_BCLIENTS = 16;             // OBS browser sources
 const MAX_BCACHE = 300;
 const MAX_BUFFER = 8 * 1024 * 1024; // drop a phone that cannot keep up
 
@@ -74,7 +74,7 @@ function create(opt) {
 
   const count = () => clients.size;
   const tell = () => { try { if (opt.onClients) opt.onClients(count()); } catch (e) { /* page gone */ } };
-  const bcount = () => { let full = 0, overlay = 0; for (const c of bclients) { if (c.mode === 'overlay') overlay++; else full++; } return { full, overlay }; };
+  const bcount = () => { let full = 0, overlay = 0, phones = 0; for (const c of bclients) { if (c.mode === 'overlay') overlay++; else if (c.ph) phones++; else full++; } return { full, overlay, phones }; };
   const tellB = () => { try { if (opt.onBClients) opt.onBClients(bcount()); } catch (e) { /* page gone */ } };
   function keyOk(given) {
     const a = Buffer.from(String(given || '')), b = Buffer.from(bkey);
@@ -136,7 +136,7 @@ function create(opt) {
     const accept = crypto.createHash('sha1').update(key + GUID).digest('base64');
     socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
     socket.setNoDelay(true);
-    const c = { socket, buf: Buffer.alloc(0), alive: true, dead: false, frag: null, b: isB, mode: u.searchParams.get('m') === 'overlay' ? 'overlay' : 'full' };
+    const c = { socket, buf: Buffer.alloc(0), alive: true, dead: false, frag: null, b: isB, ph: isB && u.searchParams.get('p') === '1', mode: u.searchParams.get('m') === 'overlay' ? 'overlay' : 'full' };
     (isB ? bclients : clients).add(c);
     socket.on('data', chunk => {
       c.buf = Buffer.concat([c.buf, chunk]);
@@ -162,7 +162,7 @@ function create(opt) {
     socket.on('end', () => drop(c));    // http servers keep half-open sockets: a phone that closed must be dropped now
     socket.on('close', () => drop(c));
     socket.on('error', () => drop(c));
-    send(c, JSON.stringify({ t: 'hello', ok: true }));
+    send(c, JSON.stringify(isB ? { t: 'hello', ok: true } : { t: 'hello', ok: true, bk: bkey }));   // a phone on the Wi-Fi may show the real audience screen, so it gets the link key
     if (isB) {
       if (c.mode === 'overlay') { if (ovStyle) send(c, ovStyle); if (ovState) send(c, ovState); }
       else for (const j of bcache.values()) send(c, j);
@@ -222,7 +222,7 @@ function create(opt) {
       const fail = () => { res.writeHead(500, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, headers)); res.end('The page could not be loaded.'); };
       if (u.pathname === '/broadcast/overlay') { try { page(fs.readFileSync(opt.overlayFile, 'utf8')); } catch (e) { fail(); } return; }
       const n = Math.max(0, Math.min(20, parseInt(u.searchParams.get('n') || '0', 10) || 0));
-      const tag = '<script src="/bcast.js?k=' + bkey + '&n=' + n + (u.searchParams.get('sound') === '1' ? '&sound=1' : '') + '"></script>';
+      const tag = '<script src="/bcast.js?k=' + bkey + '&n=' + n + (u.searchParams.get('sound') === '1' ? '&sound=1' : '') + (u.searchParams.get('p') === '1' ? '&p=1' : '') + (u.searchParams.get('lite') === '1' ? '&lite=1' : '') + '"></script>';
       Promise.resolve().then(() => opt.appHtml()).then(h => {
         h = String(h || '');
         const i = h.search(/<head[^>]*>/i);
@@ -313,7 +313,7 @@ function create(opt) {
     const hosts = port ? [{ name: 'This computer', address: '127.0.0.1' }].concat(lanAddresses()) : [];
     const bc = bcount();
     return { running: !!server, port, pin, urls, clients: count(),
-      bcast: { key: bkey, hosts: hosts.map(h => ({ name: h.name, address: h.address, full: 'http://' + h.address + ':' + port + '/broadcast/full?k=' + bkey, overlay: 'http://' + h.address + ':' + port + '/broadcast/overlay?k=' + bkey })), full: bc.full, overlay: bc.overlay } };
+      bcast: { key: bkey, hosts: hosts.map(h => ({ name: h.name, address: h.address, full: 'http://' + h.address + ':' + port + '/broadcast/full?k=' + bkey, overlay: 'http://' + h.address + ':' + port + '/broadcast/overlay?k=' + bkey })), full: bc.full, overlay: bc.overlay, phones: bc.phones } };
   }
 
   return { start, stop, setState, newPin, info, count, putMedia, bFrame, bOverlay, bStyle, newKey };

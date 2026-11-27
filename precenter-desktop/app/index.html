@@ -7383,7 +7383,7 @@ function remoteState(){
     return{l:cbase?(ck?cbase+(ck<26?String.fromCharCode(65+ck):ck):cbase):'',t:rtStrip(String(x.text||'')).slice(0,140)};
   });
   return{
-    on:true,v:1,hb:Date.now(),
+    on:true,v:1,hb:Date.now(),mn:prevN(),
     sid:s.id,title:s.title||'Untitled',type:s.type||'song',
     idx,n:sl.length,label:lab,
     text:rtStrip(String(p.text||'')).slice(0,700),next:rtStrip(String(p.next||'')).slice(0,300),
@@ -7740,14 +7740,14 @@ function ovPublish(force){
   const k=JSON.stringify(d);if(!force&&k===ovKey)return;ovKey=k;
   try{N.bov(k)}catch(e){}
 }
-var BCH={full:0,overlay:0};
+var BCH={full:0,overlay:0,phones:0};
 (function(){
   const N=window.dscNative&&dscNative.lan;
   if(!N||!N.bframe||/^#(output|stage|layout)/.test(location.hash))return;
   const done=new Set();
   /* every message the audience window gets is also sent to the OBS full-screen sources; library files go as links */
   window.dscBcFeed=function(m){
-    if(!BCH.full||!m||typeof m!=='object')return;
+    if((!BCH.full&&!BCH.phones)||!m||typeof m!=='object')return;
     if(m.blob){
       const f=m.blob.file,nm=String(m.blob.name||'');if(!f||!nm)return;
       const sig=nm+'|'+f.size+'|'+(f.lastModified||0);if(done.has(sig))return;
@@ -7755,7 +7755,7 @@ var BCH={full:0,overlay:0};
       done.add(sig);
       (async()=>{try{
         const ext=(nm.split('.').pop()||'bin').replace(/[^a-z0-9]/gi,'').slice(0,5)||'bin',key='bc/'+rmHash(sig)+'.'+ext;
-        if(await N.media(key,await f.arrayBuffer(),f.type||''))N.bframe(JSON.stringify({bcBlob:{name:nm,url:'/m/'+key,type:f.type||''}}));
+        if(await N.media(key,await f.arrayBuffer(),f.type||''))N.bframe(JSON.stringify({bcBlob:{name:nm,url:'/m/'+key,type:f.type||'',size:f.size}}));
         else done.delete(sig);
       }catch(e){done.delete(sig)}})();
       return;
