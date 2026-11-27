@@ -14,6 +14,7 @@ const lanPageLib = require('./lib/lanpage');
 const linkBridge = require('./lib/linkbridge');
 const saveBridge = require('./lib/savebridge');
 const lanServer = require('./lib/lanserver');
+const snapperLib = require('./lib/snapper');
  
 // The bundled app is served from its own address (dsc://app/) instead of file://, so storage,
 // BroadcastChannel between windows, file pickers and sign-in behave as they do on the web.
@@ -31,6 +32,7 @@ let policy = null;
 let mainWin = null;
 let pendingFiles = [];
 let rendererReady = false;
+let snapper = null;       // hidden page that takes the picture of the audience screen for the cloud remote
 let lan = null;           // Wi-Fi remote server (null when turned off in config.json)
  
 function defaultConfigFile() {
@@ -265,7 +267,7 @@ function createMain() {
     }
   });
   mainWin.webContents.on('render-process-gone', (_e, d) => log.error('Renderer gone: ' + d.reason));
-  mainWin.on('closed', () => { ndi.stopAll(); if (lan) lan.stop(); mainWin = null; app.quit(); });
+  mainWin.on('closed', () => { ndi.stopAll(); if (snapper) snapper.close(); if (lan) lan.stop(); mainWin = null; app.quit(); });
   mainWin.loadURL(policy.startUrl());
 }
  
@@ -389,6 +391,12 @@ function setupLan() {
   ipcMain.handle('lan:media', (e, key, data, type) => {
     if (!lan || !fromMain(e) || !data) return false;
     try { return lan.putMedia(String(key), Buffer.from(data), String(type || '')); } catch (err) { return false; }
+  });
+  // Picture of the real audience screen for the cloud remote (see lib/snapper.js). Empty text when it cannot be made.
+  ipcMain.handle('lan:snap', async e => {
+    if (!lan || !fromMain(e)) return '';
+    if (!snapper) snapper = snapperLib.create({ BrowserWindow, log, url: () => { const i = lan.info(); return (i.running && i.port && i.bcast && i.bcast.key) ? 'http://127.0.0.1:' + i.port + '/broadcast/full?k=' + i.bcast.key + '&n=0&p=1&lite=1' : ''; } });
+    try { return await snapper.capture(); } catch (err) { return ''; }
   });
   ipcMain.on('lan:state', (e, json) => {
     if (!lan || !fromMain(e) || typeof json !== 'string' || json.length > 2 * 1024 * 1024) return;

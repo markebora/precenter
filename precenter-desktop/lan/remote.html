@@ -42,6 +42,7 @@ button{font:inherit;cursor:pointer}
 .rmtPrev.live>.rmtPrevBg,.rmtPrev.live>.rmtPrevVid,.rmtPrev.live>.rmtPrevDim,.rmtPrev.live>.rmtPrevTx{display:none!important}
 .rmtPrevVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent;pointer-events:none}
 .rmtPrevVid[hidden]{display:none}
+.rmtPrev.snap>.rmtPrevVid,.rmtPrev.snap>.rmtPrevDim,.rmtPrev.snap>.rmtPrevTx,.rmtPrev.snap>.rmtPrevDbg{display:none!important}
 .rmtPrevDbg{position:absolute;left:6px;bottom:6px;z-index:3;font:600 10px/1.3 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.6);border-radius:6px;padding:2px 7px;pointer-events:none;max-width:90%}
 .rmtPrevDbg[hidden]{display:none}
 .rmtPrevDim{position:absolute;inset:0;background:rgba(0,0,0,.35)}
@@ -330,7 +331,10 @@ button{font:inherit;cursor:pointer}
     const prev=$('rmtPv'),plain=$('rmtText');
     if(!prev)return;
     if(window.dscLan&&window.dscLan.bk){try{paintLive();return}catch(e){}}
-    prev.classList.remove('live');
+    prev.classList.remove('live');prev.classList.remove('snap');
+    /* cloud: PreCenter sends a picture of the real audience screen (state.snap), so the preview is exactly what the room sees */
+    const sn=state&&typeof state.snap==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(state.snap)?state.snap:'';
+    if(sn){prev.classList.add('snap');prev.hidden=false;plain.hidden=true;$('rmtPrevBg').style.background='url("'+sn+'") center/contain no-repeat #000';paintVid(false);return}
     const b=bgResolve(state&&state.bg),css=bgCss(b),vu=bgVidList().length;
     const show=!!(css||vu);
     prev.hidden=!show;
@@ -805,6 +809,46 @@ button{font:inherit;cursor:pointer}
   document.addEventListener('click',e=>{
     if(e.target.closest&&e.target.closest('#remoteOpenBtn')){e.preventDefault();open()}
   });
+})();
+</script>
+<script id="lanLiveLayer">
+/* Live audience preview on the Wi-Fi page. The preview is the computer's own audience screen (same text, frame, fonts, background, black/clear),
+   drawn in a small frame, so it can never look different from the room. This layer does not depend on which version of the remote
+   screen was downloaded: whatever that screen does to the preview box, the live frame is put back. */
+(function(){
+  var L=window.dscLan;if(!L)return;
+  var st=document.createElement('style');
+  st.textContent='.rmtPrev.live>.rmtPrevBg,.rmtPrev.live>.rmtPrevVid,.rmtPrev.live>.rmtPrevDim,.rmtPrev.live>.rmtPrevTx,.rmtPrev.live>.rmtPrevDbg{display:none!important}'+
+    '.rmtPrev.live{background:#000}.rmtPrevLive{position:absolute;inset:0;overflow:hidden;background:#000}'+
+    '.rmtPrevLive iframe{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;pointer-events:none;background:#000}';
+  document.head.appendChild(st);
+  var mn=0,busy=false;
+  function $(i){return document.getElementById(i)}
+  function fit(){var pv=$('rmtPv'),f=$('rmtPrevFr');if(!pv||!f)return;var k=pv.clientWidth/1280;if(k>0)f.style.transform='scale('+k+')'}
+  function ensure(){
+    if(busy||!L.bk)return;
+    var pv=$('rmtPv');if(!pv)return;
+    busy=true;
+    try{
+      var host=$('rmtPrevLive');
+      if(!host){host=document.createElement('div');host.id='rmtPrevLive';host.className='rmtPrevLive';pv.insertBefore(host,pv.firstChild)}
+      if(host.hidden)host.hidden=false;
+      if(pv.hidden)pv.hidden=false;
+      if(!pv.classList.contains('live'))pv.classList.add('live');
+      var tx=$('rmtText');if(tx&&!tx.hidden)tx.hidden=true;
+      var f=$('rmtPrevFr');
+      if(!f){f=document.createElement('iframe');f.id='rmtPrevFr';f.setAttribute('tabindex','-1');f.setAttribute('aria-hidden','true');host.appendChild(f)}
+      var url='/broadcast/full?k='+encodeURIComponent(L.bk)+'&n='+mn+'&p=1&lite=1';
+      if(f.dataset.u!==url){f.dataset.u=url;f.src=url}
+      fit();
+    }catch(e){}
+    busy=false;
+  }
+  new MutationObserver(function(){ensure()}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});
+  window.addEventListener('resize',fit);
+  try{if(typeof ResizeObserver==='function')new ResizeObserver(fit).observe(document.body)}catch(e){}
+  try{window.firestoreDb.collection('presenter').doc('lan').onSnapshot(function(s){var d=s.exists?s.data():null;var n=d?parseInt(d.mn,10)||0:0;if(n!==mn){mn=n;ensure()}else if(!$('rmtPrevFr'))ensure()},function(){})}catch(e){}
+  setInterval(ensure,1500);
 })();
 </script>
 <script>

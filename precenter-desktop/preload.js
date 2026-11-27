@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld('dscNative', {
     updatePage: () => ipcRenderer.invoke('lan:updatePage'),
     openPageFolder: () => ipcRenderer.invoke('lan:openPageFolder'),
     state: json => ipcRenderer.send('lan:state', String(json)),
+    snap: () => ipcRenderer.invoke('lan:snap'),
     media: (key, data, type) => ipcRenderer.invoke('lan:media', String(key), data, String(type || '')),
     onCmd: cb => { ipcRenderer.on('lan:cmd', (_e, c) => cb(c)); },
     onClients: cb => { ipcRenderer.on('lan:clients', (_e, n) => cb(n)); },

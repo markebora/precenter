@@ -1,0 +1,15 @@
+Disciples (Harmony) remote screen: show PreCenter's picture of the real audience screen
+===========================================================================================
+PreCenter (v1.0.19, desktop app) now publishes presenter/{teamId}.snap = 'data:image/jpeg;base64,...' (640x360),
+a capture of the real audience screen. In the Harmony repo's remote script (script#remoteJs), in paintPrev(),
+right after   prev.classList.remove('live');   add:
+
+    prev.classList.remove('snap');
+    const sn=state&&typeof state.snap==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(state.snap)?state.snap:'';
+    if(sn){prev.classList.add('snap');prev.hidden=false;plain.hidden=true;$('rmtPrevBg').style.background='url("'+sn+'") center/contain no-repeat #000';paintVid(false);return}
+
+and in style#remoteCss add:
+
+    .rmtPrev.snap>.rmtPrevVid,.rmtPrev.snap>.rmtPrevDim,.rmtPrev.snap>.rmtPrevTx,.rmtPrev.snap>.rmtPrevDbg{display:none!important}
+
+Also make sure the Firestore rules allow the larger presenter document (it stays well under 1 MB: the picture is capped at ~380 KB).
