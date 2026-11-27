@@ -39,6 +39,8 @@ jobs:
           path: |
             precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe
             precenter-desktop/dist/Disciples-PreCenter-Portable-*.exe
+            precenter-desktop/dist/latest.yml
+            precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe.blockmap
           if-no-files-found: error
 
       - name: Publish a release (tags only)
@@ -48,3 +50,5 @@ jobs:
           files: |
             precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe
             precenter-desktop/dist/Disciples-PreCenter-Portable-*.exe
+            precenter-desktop/dist/latest.yml
+            precenter-desktop/dist/Disciples-PreCenter-Setup-*.exe.blockmap
